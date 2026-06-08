@@ -13,6 +13,7 @@ import {
   shouldCutJump,
   cutJumpVelocity,
 } from '../systems/playerMovement';
+import { getSound } from '../systems/SoundManager';
 import { Projectile } from './Projectile';
 
 // プレイヤー(最後のロボット)。移動/ジャンプ/発射/被弾を担う。
@@ -24,6 +25,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   private chargeStartedAt = 0;
   private isCharging = false;
+  private chargeReadyNotified = false;
   private lastShotAt = 0;
   private invincibleUntil = 0;
   private isJumping = false;
@@ -64,6 +66,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (shouldJump(input, this.onGround)) {
       this.setVelocityY(PLAYER.jumpVelocity);
       this.isJumping = true;
+      getSound().playSe('jump');
     }
 
     // 可変ジャンプ: 上昇中に離したら上向き速度をカットして低いジャンプにする
@@ -82,6 +85,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.startCharge(now);
     }
 
+    // チャージ成立(しきい値到達)の瞬間に一度だけ通知音
+    if (
+      this.isCharging &&
+      !this.chargeReadyNotified &&
+      isChargedShot(this.chargeElapsed(now))
+    ) {
+      this.chargeReadyNotified = true;
+      getSound().playSe('chargeReady');
+    }
+
     // 発射(離した瞬間)
     if (input.shootReleased) {
       this.releaseShot(now);
@@ -93,6 +106,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   startCharge(now: number): void {
     this.isCharging = true;
     this.chargeStartedAt = now;
+    this.chargeReadyNotified = false;
+    getSound().playSe('chargeStart');
   }
 
   /**
@@ -103,6 +118,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     const elapsed = this.chargeElapsed(now);
     this.isCharging = false;
     this.chargeStartedAt = 0;
+    this.chargeReadyNotified = false;
 
     if (!this.projectiles || !canFire(now, this.lastShotAt)) {
       return;
@@ -116,6 +132,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (!projectile) return;
     const velocity = dir * createProjectileSpec(kind).speed;
     projectile.fire(muzzleX, this.y, velocity, kind, 'player');
+    getSound().playSe(kind === 'charged' ? 'shootCharged' : 'shootNormal');
   }
 
   /** 被弾。無敵中は無効。HP0 で撃破。 */

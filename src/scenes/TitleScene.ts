@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
+import { getSound } from '../systems/SoundManager';
 
 // タイトル画面。ロゴ + スタート導線。クリア済みフラグと最速タイムを表示する。
 
@@ -65,11 +66,15 @@ export class TitleScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
+    // タイトル BGM(初回タップで AudioContext が解放されると鳴り出す)
+    getSound().playBgm('title');
+
     this.input.once(Phaser.Input.Events.POINTER_DOWN, () => this.startGame());
     this.input.keyboard?.once('keydown', () => this.startGame());
   }
 
   private startGame(): void {
+    getSound().playSe('uiTap');
     this.scene.start(SCENE_KEYS.game);
   }
 

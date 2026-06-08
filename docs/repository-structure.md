@@ -91,13 +91,17 @@ last-spark/
 - `InputController.ts`: タッチ/キーボード入力を抽象操作(`InputState`)に変換
 - `CombatSystem.ts`: 衝突登録・ダメージ適用・撃破処理
 - `SpawnSystem.ts`: 敵出現・ボストリガ
+- `SoundManager.ts`: サウンド出力サービス(Web Audio で BGM/SE を合成。`getSound()` シングルトンで全シーン横断。外部音源ファイルは使わない)
 - `bossAi.ts`: ボス行動抽選(`pickNextAction` 等の純粋関数。Phaser 非依存でテスト可能に)
+- `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュールの純粋関数(Phaser/Web Audio 非依存)
 
-**命名規則**: System クラスは PascalCase + `System`/`Controller`。純粋ロジック関数群は camelCase(例: `bossAi.ts`)。
+**命名規則**: System クラスは PascalCase + `System`/`Controller`/`Manager`。純粋ロジック関数群は camelCase(例: `bossAi.ts` / `soundSynth.ts`)。
 
 **依存関係**:
-- 依存可能: `entities/`, `config/`, `types/`
+- 依存可能: `entities/`, `config/`, `types/`, `persistence/`(`SoundManager` が設定読込に `SaveManager` を利用)
 - 依存禁止: `scenes/`(Scene へはイベント/コールバックで通知)
+
+**横断的出力サービスの例外**: `SoundManager` は `CombatSystem`/`SpawnSystem` 等の「Entity を操作する System」とは異なり、**Entity への参照を一切持たない出力専用サービス**。`getSound()` 経由で Scene/Entity から呼び出してよい(`entities/` → `SoundManager` の依存を許容)。`SoundManager` は `entities/`・`scenes/` を import しないため逆依存・循環は生じない(`console` ロギングと同種の横断関心事)。
 
 #### src/persistence/ (Persistence レイヤー)
 
@@ -116,6 +120,7 @@ last-spark/
 
 **配置ファイル**:
 - `balance.ts`: プレイヤー/ショット/ボスのパラメータ(`PLAYER`, `SHOT`, `BOSS` 等)
+- `audio.ts`: サウンド定義(`SE` 13種の合成仕様 + `BGM` 3トラックのノート列。Phaser/Web Audio 非依存のデータ)
 - `gameConfig.ts`: `Phaser.Types.Core.GameConfig`(解像度/スケール/物理設定)
 - `sceneKeys.ts`: シーンキー定数(文字列の重複防止)
 - `storageKeys.ts`: localStorage キー定数(`lastspark:save`)

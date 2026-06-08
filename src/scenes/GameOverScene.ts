@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
+import { getSound } from '../systems/SoundManager';
 
 // ゲームオーバー表示とリトライ/タイトル導線。
 
@@ -10,6 +11,11 @@ export class GameOverScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+
+    // BGM を止めてゲームオーバー音を鳴らす
+    getSound().stopBgm();
+    getSound().playSe('gameOver');
+
     this.add.rectangle(0, 0, width, height, 0x05080c, 0.85).setOrigin(0);
 
     this.add
@@ -40,7 +46,10 @@ export class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setPadding(16, 8)
       .setInteractive({ useHandCursor: true });
-    text.on(Phaser.Input.Events.POINTER_DOWN, onClick);
+    text.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      getSound().playSe('uiTap');
+      onClick();
+    });
     text.on(Phaser.Input.Events.POINTER_OVER, () => text.setScale(1.1));
     text.on(Phaser.Input.Events.POINTER_OUT, () => text.setScale(1));
   }

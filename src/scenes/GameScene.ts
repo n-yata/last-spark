@@ -12,6 +12,7 @@ import { InputController } from '../systems/InputController';
 import { CombatSystem } from '../systems/CombatSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { chargeRatio } from '../systems/shot';
+import { getSound } from '../systems/SoundManager';
 
 // ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括する。
 
@@ -51,6 +52,7 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch(SCENE_KEYS.ui);
     this.initHud();
     this.setupOrientationHandling();
+    getSound().playBgm('stage');
   }
 
   private buildPlatforms(): void {
@@ -91,7 +93,12 @@ export class GameScene extends Phaser.Scene {
     this.inputController.attachTouchZones();
 
     this.combat = new CombatSystem(this, {
-      onHit: (x, y) => this.spawnHitEffect(x, y),
+      onHit: (x, y, target) => {
+        this.spawnHitEffect(x, y);
+        getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
+      },
+      onEnemyDefeated: () => getSound().playSe('enemyDefeated'),
+      onPlayerDamaged: () => getSound().playSe('playerDamaged'),
       onBossDefeated: () => this.handleClear(),
       onPlayerDeath: () => this.handleGameOver(),
     });
@@ -150,6 +157,7 @@ export class GameScene extends Phaser.Scene {
 
     this.registry.set(HUD.bossActive, true);
     this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
+    getSound().playBgm('boss');
   }
 
   private addArenaWall(x: number): void {
@@ -225,6 +233,8 @@ export class GameScene extends Phaser.Scene {
   private handleClear(): void {
     if (this.ended) return;
     this.ended = true;
+    getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
+    getSound().playSe('bossDefeated');
     const clearTimeMs = this.time.now - this.startTime;
     this.inputController.destroy();
     this.scene.stop(SCENE_KEYS.ui);

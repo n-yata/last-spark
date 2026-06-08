@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
+import { getSound } from '../systems/SoundManager';
 
 interface ClearData {
   clearTimeMs: number;
@@ -19,6 +20,10 @@ export class ClearScene extends Phaser.Scene {
 
     // クリアを永続化(localStorage 不可でも throw しない)
     new SaveManager().markCleared(clearTimeMs);
+
+    // BGM を止めてクリアジングルを鳴らす
+    getSound().stopBgm();
+    getSound().playSe('stageClear');
 
     this.add.rectangle(0, 0, width, height, 0x06121a, 0.85).setOrigin(0);
 
@@ -59,8 +64,12 @@ export class ClearScene extends Phaser.Scene {
 
     // 演出を読ませるため、短い猶予の後に入力を受け付ける
     this.time.delayedCall(600, () => {
-      this.input.once(Phaser.Input.Events.POINTER_DOWN, () => this.scene.start(SCENE_KEYS.title));
-      this.input.keyboard?.once('keydown', () => this.scene.start(SCENE_KEYS.title));
+      const toTitle = (): void => {
+        getSound().playSe('uiTap');
+        this.scene.start(SCENE_KEYS.title);
+      };
+      this.input.once(Phaser.Input.Events.POINTER_DOWN, toTitle);
+      this.input.keyboard?.once('keydown', toTitle);
     });
   }
 

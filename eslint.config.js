@@ -25,6 +25,16 @@ export default [
         console: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        // Web Audio API(サウンド合成)
+        AudioContext: 'readonly',
+        AudioBuffer: 'readonly',
+        AudioBufferSourceNode: 'readonly',
+        GainNode: 'readonly',
+        OscillatorNode: 'readonly',
+        OscillatorType: 'readonly',
+        AudioParam: 'readonly',
       },
     },
     plugins: {

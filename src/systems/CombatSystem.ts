@@ -8,7 +8,7 @@ import { Projectile } from '../entities/Projectile';
 // 衝突登録・ダメージ適用・撃破処理。Scene へはコールバックで通知し、逆依存しない。
 
 export interface CombatCallbacks {
-  onHit?: (x: number, y: number) => void;
+  onHit?: (x: number, y: number, target: 'enemy' | 'boss') => void;
   onEnemyDefeated?: (enemy: Enemy) => void;
   onBossDefeated?: (boss: Boss) => void;
   onPlayerDamaged?: (player: Player) => void;
@@ -42,7 +42,7 @@ export class CombatSystem {
       const projectile = this.asProjectile(a, b);
       const enemy = this.asInstance(a, b, Enemy);
       if (!projectile || !enemy || !projectile.active || !enemy.active) return;
-      this.hitDamageable(enemy, projectile.damage, projectile.x, projectile.y);
+      this.hitDamageable(enemy, projectile.damage, projectile.x, projectile.y, 'enemy');
       projectile.deactivate();
       if (enemy.isDead()) this.callbacks.onEnemyDefeated?.(enemy);
     });
@@ -72,7 +72,7 @@ export class CombatSystem {
     physics.add.overlap(this.refs.playerShots, boss, (a, b) => {
       const projectile = this.asProjectile(a, b);
       if (!projectile || !projectile.active || boss.isDead()) return;
-      this.hitDamageable(boss, projectile.damage, projectile.x, projectile.y);
+      this.hitDamageable(boss, projectile.damage, projectile.x, projectile.y, 'boss');
       projectile.deactivate();
       if (boss.isDead()) this.callbacks.onBossDefeated?.(boss);
     });
@@ -89,9 +89,15 @@ export class CombatSystem {
     target.takeDamage(amount);
   }
 
-  private hitDamageable(target: Damageable, amount: number, x: number, y: number): void {
+  private hitDamageable(
+    target: Damageable,
+    amount: number,
+    x: number,
+    y: number,
+    kind: 'enemy' | 'boss',
+  ): void {
     this.applyDamage(target, amount);
-    this.callbacks.onHit?.(x, y);
+    this.callbacks.onHit?.(x, y, kind);
   }
 
   private damagePlayer(player: Player, amount: number): void {
