@@ -46,25 +46,22 @@ const STAGE1: StageData = {
   platforms: [
     // 地面セグメント 1(スタート〜奈落手前)
     { x: 0, y: GROUND_TOP, width: 1400, height: GROUND_THICK },
-    // 奈落: 1400–1560(幅 160px のギャップ)
+    // 奈落: 1400–1464(幅 64px のギャップ。ジャンプ飛距離 ≈165px で余裕を持って越えられる)
     // 地面セグメント 2
-    { x: 1560, y: GROUND_TOP, width: 2040, height: GROUND_THICK },
+    { x: 1464, y: GROUND_TOP, width: 2136, height: GROUND_THICK },
     // 地面セグメント 3(ボスアリーナまで)
     { x: 3600, y: GROUND_TOP, width: 1600, height: GROUND_THICK },
 
-    // 導入区間: ジャンプ+ショットを要する段差(90 秒以内通過の導線)
+    // 導入区間: 任意で登れる高台(地上ルートは平坦なので必須ではない、操作練習用)
     { x: 460, y: GROUND_TOP - 110, width: 160, height: 24 },
     { x: 740, y: GROUND_TOP - 170, width: 160, height: 24 },
 
-    // 奈落をまたぐ中継足場
-    { x: 1420, y: GROUND_TOP - 120, width: 120, height: 24 },
-
-    // 中盤の高台
+    // 中盤の高台(任意)
     { x: 2000, y: GROUND_TOP - 130, width: 200, height: 24 },
     { x: 2360, y: GROUND_TOP - 220, width: 180, height: 24 },
     { x: 2760, y: GROUND_TOP - 140, width: 200, height: 24 },
 
-    // 終盤の段差
+    // 終盤の高台(任意)
     { x: 3300, y: GROUND_TOP - 120, width: 180, height: 24 },
   ],
   enemies: [
@@ -78,9 +75,10 @@ const STAGE1: StageData = {
     { pattern: 'turret', x: 3380, y: GROUND_TOP - 150 },
   ],
   bossTriggerX: 4200,
-  // ボスを地面に接地させる(本体下端=地面)。これにより地上のプレイヤーの
-  // 水平ショット(プレイヤー中心の高さ)がボスの当たり判定に重なり、撃破できる。
-  bossSpawn: { x: 4950, y: GROUND_TOP - BOSS.height / 2 },
+  // ボスはトリガー地点(プレイヤー x≈3720, カメラ右端4200)のすぐ先に出現させ、
+  // 間合いが開きすぎて戦闘が成立しないのを防ぐ。本体下端=地面で接地させ、
+  // 地上ショット(プレイヤー中心の高さ)が当たり判定に重なるようにする。
+  bossSpawn: { x: 4350, y: GROUND_TOP - BOSS.height / 2 },
   bossArenaMinX: 4400,
   width: STAGE.width,
 };

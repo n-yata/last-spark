@@ -64,15 +64,23 @@ test('ボスにショットを当てると HP が減る', async ({ page }) => {
       }
     });
 
+  // 命中の確認が目的。撃破まで撃ち切るとクリア遷移でシーンが変わるため、
+  // 目標(HP が明確に減少)を達したら早期に抜ける。
+  let bossHp = maxHp;
   for (let i = 0; i < 30; i++) {
+    const onGame = (await page.evaluate(() =>
+      window.lastSpark!.scene.getScenes(true).map((s) => s.scene.key),
+    )).includes('GameScene');
+    if (!onGame) break;
     await pin();
     await page.keyboard.down('KeyJ');
     await page.waitForTimeout(80); // しきい値未満=通常弾
     await page.keyboard.up('KeyJ');
     await page.waitForTimeout(140);
+    bossHp = await page.evaluate(() => window.lastSpark!.registry.get('hud.boss.hp') as number);
+    if (bossHp <= maxHp - 6) break; // 命中を十分確認できたら終了(撃破までは撃たない)
   }
 
-  const bossHp = await page.evaluate(() => window.lastSpark!.registry.get('hud.boss.hp') as number);
   // 命中していれば HP は明確に減少する(数発以上当たっている)
   expect(bossHp).toBeLessThan(maxHp);
   expect(bossHp).toBeLessThanOrEqual(maxHp - 5);

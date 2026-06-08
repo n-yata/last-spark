@@ -25,33 +25,34 @@ export const SHOT = {
   cooldownMs: 180, // 連射間隔
   normalSize: 8,
   chargedSize: 18,
-  lifespanMs: 1400, // 画面外まで届く前に自動回収する寿命
+  // 弾の寿命。射程 = speed × lifespan。ボス戦の間合い(アリーナ幅)で弾が届くよう確保する。
+  lifespanMs: 2400,
 } as const;
 
 export const ENEMY = {
   walker: {
     hp: 2,
-    contactDamage: 2,
+    contactDamage: 1,
     moveSpeed: 60,
     width: 30,
     height: 30,
   },
   turret: {
     hp: 3,
-    contactDamage: 2,
+    contactDamage: 1,
     shootIntervalMs: 1600,
     bulletSpeed: 220,
-    bulletDamage: 2,
+    bulletDamage: 1,
     width: 32,
     height: 32,
   },
 } as const;
 
 export const BOSS = {
-  maxHp: 40,
+  maxHp: 24,
   phase2HpRatio: 0.5, // この比率以下で phase2 へ移行
-  contactDamage: 3,
-  bulletDamage: 2,
+  contactDamage: 2,
+  bulletDamage: 1,
   bulletSpeed: 260,
   moveSpeed: 90,
   chargeSpeed: 340, // phase2 の突進速度
