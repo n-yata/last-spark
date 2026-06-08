@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
-import { SHOOT_BUTTON } from '../config/touchLayout';
+import type { CircleButton } from '../config/touchLayout';
 
 // チャージ蓄積を示す円形ゲージ。ショットボタン付近に表示し、満タンで発光する。
 
-const RADIUS = SHOOT_BUTTON.radius + 10;
 const COLOR_PROGRESS = 0x9b8cff;
 const COLOR_FULL = 0xfff27a; // しきい値到達で発光色に切り替え
 
@@ -15,10 +14,11 @@ export class ChargeGauge {
     this.gfx.setScrollFactor(0).setDepth(101);
   }
 
-  /** チャージ比率(0–1)を反映。1 で発光色のフルリング。 */
-  render(ratio: number): void {
+  /** チャージ比率(0–1)を、現在のショットボタン位置に合わせて反映する。 */
+  render(ratio: number, shootButton: CircleButton): void {
     this.gfx.clear();
     if (ratio <= 0) return;
+    const radius = shootButton.radius + 10;
     const clamped = Math.max(0, Math.min(1, ratio));
     const isFull = clamped >= 1;
     const color = isFull ? COLOR_FULL : COLOR_PROGRESS;
@@ -27,13 +27,13 @@ export class ChargeGauge {
 
     this.gfx.lineStyle(6, color, isFull ? 1 : 0.85);
     this.gfx.beginPath();
-    this.gfx.arc(SHOOT_BUTTON.x, SHOOT_BUTTON.y, RADIUS, startAngle, endAngle, false);
+    this.gfx.arc(shootButton.x, shootButton.y, radius, startAngle, endAngle, false);
     this.gfx.strokePath();
 
     if (isFull) {
       // 発光感を出す外側の薄いリング
       this.gfx.lineStyle(3, COLOR_FULL, 0.35);
-      this.gfx.strokeCircle(SHOOT_BUTTON.x, SHOOT_BUTTON.y, RADIUS + 6);
+      this.gfx.strokeCircle(shootButton.x, shootButton.y, radius + 6);
     }
   }
 

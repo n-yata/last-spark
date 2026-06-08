@@ -1,7 +1,6 @@
-import { GAME_WIDTH, GAME_HEIGHT } from './dimensions';
-
 // 横向き・両手持ち専用のタッチUIレイアウト。
-// InputController(入力判定)と TouchControls(描画)で共有する。
+// InputController(入力判定)と UI(描画)で共有する。
+// RESIZE スケールに対応するため、レイアウトは実画面サイズから動的に算出する。
 
 export interface CircleButton {
   x: number;
@@ -9,13 +8,32 @@ export interface CircleButton {
   radius: number;
 }
 
-/** 画面左半分=移動ゾーン。 */
-export const MOVE_ZONE = {
-  x: 0,
-  y: 0,
-  width: GAME_WIDTH / 2,
-  height: GAME_HEIGHT,
-} as const;
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TouchLayout {
+  /** 画面左半分=移動ゾーン。 */
+  moveZone: Rect;
+  /** 右手親指で押すジャンプボタン(右下寄り)。 */
+  jumpButton: CircleButton;
+  /** 右手親指で押すショットボタン(ジャンプの左上)。 */
+  shootButton: CircleButton;
+}
+
+const BUTTON_RADIUS = 64;
+
+/** 実画面サイズからタッチUIレイアウトを算出する。 */
+export function createTouchLayout(width: number, height: number): TouchLayout {
+  return {
+    moveZone: { x: 0, y: 0, width: width / 2, height },
+    jumpButton: { x: width - 110, y: height - 90, radius: BUTTON_RADIUS },
+    shootButton: { x: width - 252, y: height - 148, radius: BUTTON_RADIUS },
+  };
+}
 
 /** 追従式タッチパッドの不感帯(px)。原点からこの距離を超えて動かすと移動入力になる。 */
 export const MOVE_DEADZONE_PX = 22;
@@ -58,20 +76,6 @@ export function clampStick(
   return { x: baseX + dx * scale, y: baseY + dy * scale };
 }
 
-/** 右手親指で押すジャンプボタン(右下寄り)。 */
-export const JUMP_BUTTON: CircleButton = {
-  x: GAME_WIDTH - 110,
-  y: GAME_HEIGHT - 90,
-  radius: 64,
-};
-
-/** 右手親指で押すショットボタン(ジャンプの左上)。 */
-export const SHOOT_BUTTON: CircleButton = {
-  x: GAME_WIDTH - 252,
-  y: GAME_HEIGHT - 148,
-  radius: 64,
-};
-
 /** 点 (px,py) がボタン円内かを判定する。 */
 export function isInsideButton(button: CircleButton, px: number, py: number): boolean {
   const dx = px - button.x;
@@ -79,7 +83,7 @@ export function isInsideButton(button: CircleButton, px: number, py: number): bo
   return dx * dx + dy * dy <= button.radius * button.radius;
 }
 
-/** 点 (px) が移動ゾーン(左半分)内かを判定する。 */
-export function isInMoveZone(px: number): boolean {
-  return px < MOVE_ZONE.width;
+/** 点 (px) が移動ゾーン内かを判定する。 */
+export function isInMoveZone(moveZone: Rect, px: number): boolean {
+  return px >= moveZone.x && px < moveZone.x + moveZone.width;
 }

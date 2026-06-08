@@ -54,8 +54,8 @@ export const BOSS = {
   contactDamage: 2,
   bulletDamage: 1,
   bulletSpeed: 260,
-  moveSpeed: 90,
-  chargeSpeed: 340, // phase2 の突進速度
+  moveSpeed: 55, // プレイヤーへ詰める速度(速すぎないよう抑える)
+  chargeSpeed: 280, // phase2 の突進速度(山場の単発攻撃)
   staggerDamageThreshold: 8, // 連続被ダメ蓄積でのけぞる量
   width: 80,
   height: 88,

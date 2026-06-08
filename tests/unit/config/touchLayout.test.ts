@@ -1,14 +1,35 @@
 import { describe, it, expect } from 'vitest';
 import {
+  createTouchLayout,
   moveDirFromDelta,
   clampStick,
   isInMoveZone,
   isInsideButton,
-  MOVE_ZONE,
   MOVE_DEADZONE_PX,
   MOVE_PAD_MAX_RADIUS,
-  JUMP_BUTTON,
 } from '../../../src/config/touchLayout';
+
+describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => {
+  it('移動ゾーンは画面左半分を占め、左端は x=0(物理画面端まで届く)', () => {
+    const layout = createTouchLayout(1200, 540);
+    expect(layout.moveZone.x).toBe(0);
+    expect(layout.moveZone.width).toBe(600);
+    expect(layout.moveZone.height).toBe(540);
+  });
+
+  it('画面が広い端末では移動ゾーンもその分広がる', () => {
+    const wide = createTouchLayout(1600, 540);
+    expect(wide.moveZone.width).toBe(800);
+  });
+
+  it('ジャンプ/ショットボタンは画面右下に配置される', () => {
+    const layout = createTouchLayout(1200, 540);
+    expect(layout.jumpButton.x).toBe(1200 - 110);
+    expect(layout.jumpButton.y).toBe(540 - 90);
+    expect(layout.shootButton.x).toBe(1200 - 252);
+    expect(layout.shootButton.x).toBeLessThan(layout.jumpButton.x); // ショットはジャンプの左
+  });
+});
 
 describe('moveDirFromDelta(追従式パッドの方向判定)', () => {
   it('原点から左へ不感帯を超えて動かすと左(-1)', () => {
@@ -26,7 +47,6 @@ describe('moveDirFromDelta(追従式パッドの方向判定)', () => {
   });
 
   it('原点相対なので画面位置に依存せず左右どちらにも入力できる(後退できないバグの回帰防止)', () => {
-    // 原点が画面左端(0)でも、そこから左へ動かせば左入力が成立する
     expect(moveDirFromDelta(-30)).toBe(-1);
     expect(moveDirFromDelta(30)).toBe(1);
   });
@@ -49,16 +69,19 @@ describe('clampStick(スティック表示位置のクランプ)', () => {
 });
 
 describe('isInMoveZone', () => {
-  it('左半分はゾーン内、右半分はゾーン外', () => {
-    expect(isInMoveZone(MOVE_ZONE.width - 1)).toBe(true);
-    expect(isInMoveZone(MOVE_ZONE.width + 1)).toBe(false);
+  it('ゾーン内(左端0含む)は true、ゾーン外(右半分)は false', () => {
+    const { moveZone } = createTouchLayout(1200, 540);
+    expect(isInMoveZone(moveZone, 0)).toBe(true);
+    expect(isInMoveZone(moveZone, moveZone.width - 1)).toBe(true);
+    expect(isInMoveZone(moveZone, moveZone.width + 1)).toBe(false);
   });
 });
 
 describe('isInsideButton', () => {
   it('ボタン中心はヒット、半径外は非ヒット', () => {
-    expect(isInsideButton(JUMP_BUTTON, JUMP_BUTTON.x, JUMP_BUTTON.y)).toBe(true);
-    expect(isInsideButton(JUMP_BUTTON, JUMP_BUTTON.x + JUMP_BUTTON.radius + 5, JUMP_BUTTON.y)).toBe(
+    const { jumpButton } = createTouchLayout(1200, 540);
+    expect(isInsideButton(jumpButton, jumpButton.x, jumpButton.y)).toBe(true);
+    expect(isInsideButton(jumpButton, jumpButton.x + jumpButton.radius + 5, jumpButton.y)).toBe(
       false,
     );
   });

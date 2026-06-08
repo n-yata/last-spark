@@ -3,6 +3,7 @@ import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
 import { STAGE, BOSS } from '../config/balance';
+import { GAME_HEIGHT } from '../config/dimensions';
 import { getStageData, type StageData } from '../config/stage1';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
@@ -111,6 +112,18 @@ export class GameScene extends Phaser.Scene {
     cam.setBounds(0, 0, this.stage.width, STAGE.height);
     cam.startFollow(this.player, true, 0.12, 0.12);
     cam.setBackgroundColor('#0a0e14');
+    this.applyCameraZoom();
+    // RESIZE でキャンバスが伸縮しても、ワールドの縦の見え方(高さ540相当)を一定に保つ
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+    });
+  }
+
+  private applyCameraZoom(): void {
+    // 高さ基準のズーム。画面高さ = ワールド高さ(GAME_HEIGHT)になるよう拡大率を合わせる。
+    const zoom = this.scale.height / GAME_HEIGHT;
+    this.cameras.main.setZoom(zoom > 0 ? zoom : 1);
   }
 
   private spawnBoss(): void {

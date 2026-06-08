@@ -1,75 +1,69 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT } from '../config/gameConfig';
-import { JUMP_BUTTON, SHOOT_BUTTON, MOVE_ZONE } from '../config/touchLayout';
+import type { TouchLayout } from '../config/touchLayout';
 
 // 仮想ボタン/移動ゾーンの半透明ガイドを描画する(操作はしない=表示のみ)。
-// 親指で隠れにくい位置・サイズ。実機調整前提。
+// 実画面サイズに追従するため、毎フレーム render(layout) で再描画する。
 
 const ZONE_COLOR = 0x37f7d8;
 const JUMP_COLOR = 0x6cf0ff;
 const SHOOT_COLOR = 0xfff27a;
 
 export class TouchControls {
-  private readonly container: Phaser.GameObjects.Container;
+  private readonly gfx: Phaser.GameObjects.Graphics;
+  private readonly jumpLabel: Phaser.GameObjects.Text;
+  private readonly shootLabel: Phaser.GameObjects.Text;
+  private readonly moveHint: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
-    const gfx = scene.add.graphics();
-
-    // 左: 移動ゾーンの境界と方向ヒント
-    gfx.lineStyle(2, ZONE_COLOR, 0.12);
-    gfx.strokeRect(MOVE_ZONE.x + 4, MOVE_ZONE.y + 4, MOVE_ZONE.width - 8, MOVE_ZONE.height - 8);
-    gfx.fillStyle(ZONE_COLOR, 0.06);
-    gfx.fillRect(MOVE_ZONE.x, MOVE_ZONE.y, MOVE_ZONE.width, MOVE_ZONE.height);
-
-    // 右: 仮想ボタン
-    this.drawButton(gfx, JUMP_BUTTON.x, JUMP_BUTTON.y, JUMP_BUTTON.radius, JUMP_COLOR);
-    this.drawButton(gfx, SHOOT_BUTTON.x, SHOOT_BUTTON.y, SHOOT_BUTTON.radius, SHOOT_COLOR);
-
-    const jumpLabel = scene.add
-      .text(JUMP_BUTTON.x, JUMP_BUTTON.y, 'JUMP', {
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        color: '#cdefff',
-      })
-      .setOrigin(0.5);
-    const shootLabel = scene.add
-      .text(SHOOT_BUTTON.x, SHOOT_BUTTON.y, 'SHOT', {
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        color: '#fff6c2',
-      })
-      .setOrigin(0.5);
-    const moveHint = scene.add
-      .text(MOVE_ZONE.width / 2, GAME_HEIGHT - 26, '◀  MOVE  ▶', {
-        fontFamily: 'monospace',
-        fontSize: '16px',
-        color: '#7fe9dd',
-      })
+    this.gfx = scene.add.graphics().setScrollFactor(0).setDepth(95).setAlpha(0.85);
+    const labelStyle = { fontFamily: 'monospace', fontSize: '14px' };
+    this.jumpLabel = scene.add
+      .text(0, 0, 'JUMP', { ...labelStyle, color: '#cdefff' })
       .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(95);
+    this.shootLabel = scene.add
+      .text(0, 0, 'SHOT', { ...labelStyle, color: '#fff6c2' })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(95);
+    this.moveHint = scene.add
+      .text(0, 0, '◀  MOVE  ▶', { fontFamily: 'monospace', fontSize: '16px', color: '#7fe9dd' })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(95)
       .setAlpha(0.5);
-
-    this.container = scene.add.container(0, 0, [gfx, jumpLabel, shootLabel, moveHint]);
-    this.container.setScrollFactor(0).setDepth(95).setAlpha(0.85);
   }
 
-  private drawButton(
-    gfx: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    radius: number,
-    color: number,
-  ): void {
-    gfx.fillStyle(color, 0.12);
-    gfx.fillCircle(x, y, radius);
-    gfx.lineStyle(2, color, 0.5);
-    gfx.strokeCircle(x, y, radius);
+  /** 現在のレイアウト(実画面サイズ基準)に合わせてガイドを再描画する。 */
+  render(layout: TouchLayout, height: number): void {
+    const { moveZone, jumpButton, shootButton } = layout;
+    this.gfx.clear();
+    // 左: 移動ゾーンの境界
+    this.gfx.lineStyle(2, ZONE_COLOR, 0.12);
+    this.gfx.strokeRect(moveZone.x + 4, moveZone.y + 4, moveZone.width - 8, moveZone.height - 8);
+    this.gfx.fillStyle(ZONE_COLOR, 0.06);
+    this.gfx.fillRect(moveZone.x, moveZone.y, moveZone.width, moveZone.height);
+    // 右: 仮想ボタン
+    this.drawButton(jumpButton.x, jumpButton.y, jumpButton.radius, JUMP_COLOR);
+    this.drawButton(shootButton.x, shootButton.y, shootButton.radius, SHOOT_COLOR);
+
+    this.jumpLabel.setPosition(jumpButton.x, jumpButton.y);
+    this.shootLabel.setPosition(shootButton.x, shootButton.y);
+    this.moveHint.setPosition(moveZone.x + moveZone.width / 2, height - 26);
   }
 
-  setVisible(visible: boolean): void {
-    this.container.setVisible(visible);
+  private drawButton(x: number, y: number, radius: number, color: number): void {
+    this.gfx.fillStyle(color, 0.12);
+    this.gfx.fillCircle(x, y, radius);
+    this.gfx.lineStyle(2, color, 0.5);
+    this.gfx.strokeCircle(x, y, radius);
   }
 
   destroy(): void {
-    this.container.destroy();
+    this.gfx.destroy();
+    this.jumpLabel.destroy();
+    this.shootLabel.destroy();
+    this.moveHint.destroy();
   }
 }

@@ -17,8 +17,11 @@ export function createGameConfig(
     parent: 'game-root',
     backgroundColor: '#0a0e14',
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      // RESIZE でキャンバスを常に画面いっぱいに広げ、レターボックス(左右の黒帯)を
+      // 作らない。これによりタッチ操作ゾーンが物理画面の端まで届く。
+      // ワールドの見え方は GameScene でカメラズーム(高さ基準)を合わせて一定に保つ。
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER,
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
     },

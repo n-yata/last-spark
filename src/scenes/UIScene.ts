@@ -6,6 +6,7 @@ import { BossHpBar } from '../ui/BossHpBar';
 import { ChargeGauge } from '../ui/ChargeGauge';
 import { TouchControls } from '../ui/TouchControls';
 import { MovePad } from '../ui/MovePad';
+import { createTouchLayout } from '../config/touchLayout';
 
 // HUD(ライフ/ボスHP/チャージゲージ)+ タッチ操作ガイド。GameScene と並行起動。
 // 状態は registry 経由で受け取り、GameScene を直接参照しない。
@@ -15,6 +16,7 @@ export class UIScene extends Phaser.Scene {
   private bossHpBar!: BossHpBar;
   private chargeGauge!: ChargeGauge;
   private movePad!: MovePad;
+  private touchControls!: TouchControls;
   private bossShown = false;
 
   constructor() {
@@ -26,7 +28,7 @@ export class UIScene extends Phaser.Scene {
     this.bossHpBar = new BossHpBar(this);
     this.chargeGauge = new ChargeGauge(this);
     this.movePad = new MovePad(this);
-    new TouchControls(this);
+    this.touchControls = new TouchControls(this);
     this.bossShown = false;
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -34,17 +36,21 @@ export class UIScene extends Phaser.Scene {
       this.bossHpBar.destroy();
       this.chargeGauge.destroy();
       this.movePad.destroy();
+      this.touchControls.destroy();
     });
   }
 
   override update(): void {
     const reg = this.registry;
+    const layout = createTouchLayout(this.scale.width, this.scale.height);
+    this.touchControls.render(layout, this.scale.height);
+
     const hp = (reg.get(HUD.playerHp) as number) ?? 0;
     const maxHp = (reg.get(HUD.playerMaxHp) as number) ?? 0;
     this.lifeBar.render(hp, maxHp);
 
     const ratio = (reg.get(HUD.chargeRatio) as number) ?? 0;
-    this.chargeGauge.render(ratio);
+    this.chargeGauge.render(ratio, layout.shootButton);
 
     const padActive = (reg.get(HUD.movePadActive) as boolean) ?? false;
     this.movePad.render(

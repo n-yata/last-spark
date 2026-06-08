@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 import type { InputState, MoveDir } from '../types/input';
 import {
-  JUMP_BUTTON,
-  SHOOT_BUTTON,
+  createTouchLayout,
   isInsideButton,
   isInMoveZone,
   moveDirFromDelta,
+  type TouchLayout,
 } from '../config/touchLayout';
 
 // タッチ/キーボード入力を抽象操作(InputState)に正規化する。
@@ -23,6 +23,7 @@ export interface MovePadState {
 
 export class InputController {
   private readonly scene: Phaser.Scene;
+  private layout: TouchLayout;
 
   private moveDir: MoveDir = 0;
   private movePointerId: number | null = null;
@@ -51,17 +52,24 @@ export class InputController {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.layout = createTouchLayout(scene.scale.width, scene.scale.height);
+  }
+
+  private refreshLayout(): void {
+    this.layout = createTouchLayout(this.scene.scale.width, this.scene.scale.height);
   }
 
   /** タッチゾーン/仮想ボタンとキーボードを登録する。 */
   attachTouchZones(): void {
     const input = this.scene.input;
     input.addPointer(2); // 既定 1 + 追加 2 = 3 ポインタ
+    this.refreshLayout();
 
     input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);
     input.on(Phaser.Input.Events.POINTER_MOVE, this.onPointerMove, this);
     input.on(Phaser.Input.Events.POINTER_UP, this.onPointerUp, this);
     input.on(Phaser.Input.Events.GAME_OUT, this.onGameOut, this);
+    this.scene.scale.on(Phaser.Scale.Events.RESIZE, this.refreshLayout, this);
 
     const kb = this.scene.input.keyboard;
     if (kb) {
@@ -76,18 +84,18 @@ export class InputController {
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
     const { x, y } = pointer;
-    if (isInsideButton(JUMP_BUTTON, x, y)) {
+    if (isInsideButton(this.layout.jumpButton, x, y)) {
       this.jumpPressedEdge = true;
       this.jumpHeld = true;
       this.jumpPointerId = pointer.id;
       return;
     }
-    if (isInsideButton(SHOOT_BUTTON, x, y)) {
+    if (isInsideButton(this.layout.shootButton, x, y)) {
       this.shootHeld = true;
       this.shootPointerId = pointer.id;
       return;
     }
-    if (isInMoveZone(x) && this.movePointerId === null) {
+    if (isInMoveZone(this.layout.moveZone, x) && this.movePointerId === null) {
       // 触れた箇所をパッドの原点にする(追従式)
       this.movePointerId = pointer.id;
       this.moveOriginX = x;
@@ -185,5 +193,6 @@ export class InputController {
     input.off(Phaser.Input.Events.POINTER_MOVE, this.onPointerMove, this);
     input.off(Phaser.Input.Events.POINTER_UP, this.onPointerUp, this);
     input.off(Phaser.Input.Events.GAME_OUT, this.onGameOut, this);
+    this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.refreshLayout, this);
   }
 }
