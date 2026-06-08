@@ -4,4 +4,4 @@
 export type BossPhase = 'phase1' | 'phase2';
 
 /** ボスが実行する個々の行動。フェーズ別の重み付き抽選で選ばれる。 */
-export type BossAction = 'idle' | 'move' | 'shoot' | 'charge' | 'stagger';
+export type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger';

@@ -59,22 +59,31 @@ describe('weightedRandom', () => {
 });
 
 describe('pickNextBossAction', () => {
-  it('phase1 では charge を選ばない', () => {
-    const results = new Set<BossAction>(
+  it('charge は廃止され、どのフェーズでも選ばれない', () => {
+    const all = new Set<BossAction>([
+      ...Array.from({ length: 300 }, (_, i) =>
+        pickNextBossAction('phase1', 'idle', () => (i + 0.5) / 300),
+      ),
+      ...Array.from({ length: 300 }, (_, i) =>
+        pickNextBossAction('phase2', 'idle', () => (i + 0.5) / 300),
+      ),
+    ]);
+    expect(all.has('charge' as BossAction)).toBe(false);
+  });
+
+  it('jump は両フェーズで選ばれうる', () => {
+    const phase1 = new Set<BossAction>(
       Array.from({ length: 300 }, (_, i) =>
         pickNextBossAction('phase1', 'idle', () => (i + 0.5) / 300),
       ),
     );
-    expect(results.has('charge')).toBe(false);
-  });
-
-  it('phase2 では charge が選ばれうる', () => {
-    const results = new Set<BossAction>(
+    const phase2 = new Set<BossAction>(
       Array.from({ length: 300 }, (_, i) =>
         pickNextBossAction('phase2', 'idle', () => (i + 0.5) / 300),
       ),
     );
-    expect(results.has('charge')).toBe(true);
+    expect(phase1.has('jump')).toBe(true);
+    expect(phase2.has('jump')).toBe(true);
   });
 
   it('直前と同じアクションは重み半減で出にくくなる(連続抑制)', () => {

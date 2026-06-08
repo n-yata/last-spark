@@ -284,8 +284,8 @@ Scene → Persistence(persistence/) ← セーブ/ロード
 
 | フェーズ | 意味 | 遷移条件 | 行動の特徴 |
 |----------|------|---------|-----------|
-| `phase1` | 第1段階 | HP > 50% | 標準的な間隔。move/shoot/idle |
-| `phase2` | 第2段階 | HP <= 50%(`BOSS.phase2HpRatio`) | 間隔短縮 + charge(突進)解禁 |
+| `phase1` | 第1段階 | HP > 50% | 標準的な間隔。move/shoot/idle/jump |
+| `phase2` | 第2段階 | HP <= 50%(`BOSS.phase2HpRatio`) | 間隔短縮 + jump 頻度増 |
 
 **状態遷移図**:
 ```mermaid
@@ -306,14 +306,16 @@ stateDiagram-v2
 | アクション | 意味 | 備考 |
 |-----------|------|------|
 | `idle` | 短い静止 | 行動を読ませる間 |
-| `move` | プレイヤー方向へ移動 | 間合い調整 |
+| `move` | 前後に移動してペース | プレイヤーへ一方的に詰めず間合いを取り直す。アリーナ端で内向き |
 | `shoot` | 前方へ弾を発射 | phase2 で頻度増 |
-| `charge` | 溜め後に高速突進 | phase2 のみ |
+| `jump` | ジャンプ(前後ドリフト可) | 縦の動きで単調さを崩す。重力で着地 |
 | `stagger` | 短時間のけぞり | 一定ダメージ蓄積時。反撃チャンス |
 
 **関連アルゴリズム**: [ボス行動抽選](#ボス行動抽選-picknextbossaction)
 
-**実装(型)**: `type BossAction = 'idle' | 'move' | 'shoot' | 'charge' | 'stagger';`
+**実装(型)**: `type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger';`
+
+> ※ 突進(`charge`)は MVP の調整で廃止し、`jump` と前後移動(`move`)に置き換えた。
 
 ### 画面遷移(シーン遷移)
 
@@ -392,7 +394,7 @@ stateDiagram-v2
 **定義**: ボスの次アクションを、フェーズ別の重みで抽選するアルゴリズム。直前と同じアクションは重みを半減し連続を抑制する。
 
 **ロジック概要**:
-- フェーズ別の重みテーブル(phase1: move/shoot/idle、phase2: move/shoot/charge/idle)から抽選。
+- フェーズ別の重みテーブル(phase1: move/shoot/idle/jump、phase2: move/shoot/idle/jump で jump 増)から抽選。
 - 直前アクションと同一の候補は重みを 0.5 倍にして連続を抑える。
 
 **実装箇所**: `src/systems/bossAi.ts`
@@ -400,7 +402,7 @@ stateDiagram-v2
 **例**:
 ```
 入力: phase='phase1', last='shoot'
-出力: 'move'(shoot は重み半減のため出にくい。charge は phase1 では選ばれない)
+出力: 'move'(shoot は重み半減のため出にくい。move は前後にペースする)
 ```
 
 ### チャージ判定 (isChargedShot)

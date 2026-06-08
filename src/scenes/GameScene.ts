@@ -138,6 +138,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
+    this.physics.add.collider(this.boss, this.platforms); // 重力で接地・ジャンプ着地
     this.combat.registerBoss(this.boss);
 
     // アリーナ両端の壁(プレイヤーの後退・行き過ぎを防ぐ)

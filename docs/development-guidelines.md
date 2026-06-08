@@ -37,7 +37,7 @@ interface SaveData { }
 interface InputState { }
 
 // 型エイリアス: PascalCase
-type BossAction = 'idle' | 'move' | 'shoot' | 'charge' | 'stagger';
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger';
 ```
 
 ファイル命名はリポジトリ構造定義書に従う(シーン=PascalCase+`Scene`、定数=camelCase 等)。
@@ -148,7 +148,7 @@ main
 ```
 feat(system): ボスのフェーズ移行と行動抽選を実装
 
-HP 50% で phase2 に移行し、charge(突進)を解禁。
+HP 50% で phase2 に移行し、jump の頻度を上げて攻勢を強める。
 直前アクションの重みを半減して連続を抑制する。
 
 Closes #12
@@ -221,11 +221,11 @@ describe('isChargedShot', () => {
 
 ```typescript
 describe('pickNextBossAction', () => {
-  it('phase1 では charge を選ばない', () => {
+  it('jump は phase1 でも選ばれうる', () => {
     const results = new Set(
       Array.from({ length: 200 }, () => pickNextBossAction('phase1', 'idle'))
     );
-    expect(results.has('charge')).toBe(false);
+    expect(results.has('jump')).toBe(true);
   });
 });
 ```

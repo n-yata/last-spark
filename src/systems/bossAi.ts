@@ -6,10 +6,10 @@ import type { BossPhase, BossAction } from '../types/boss';
 /** 0 以上 1 未満の乱数を返す関数。テストでは決定的な実装を注入できる。 */
 export type Rng = () => number;
 
-/** フェーズ別の行動重みテーブル(相対値)。phase1 は charge を持たない。 */
+/** フェーズ別の行動重みテーブル(相対値)。phase2 は攻勢を強める。 */
 const WEIGHTS: Record<BossPhase, Partial<Record<BossAction, number>>> = {
-  phase1: { move: 40, shoot: 40, idle: 20 },
-  phase2: { move: 30, shoot: 35, charge: 30, idle: 5 },
+  phase1: { move: 35, shoot: 35, idle: 15, jump: 15 },
+  phase2: { move: 30, shoot: 35, idle: 5, jump: 30 },
 };
 
 /** 直前と同一アクションに掛ける重み係数(連続抑制)。 */

@@ -94,14 +94,14 @@ describe('ボス撃破フロー', () => {
     expect(boss.phase()).toBe('phase2');
   });
 
-  it('phase2 移行後はボス行動に charge が現れうる', () => {
+  it('phase2 移行後もボス行動に jump が現れうる(攻勢強化)', () => {
     const boss = new BossModel();
     boss.takeDamage(BOSS.maxHp * 0.6); // phase2 へ
     const phase = boss.phase();
     const actions = new Set(
       Array.from({ length: 200 }, (_, i) => pickNextBossAction(phase, 'idle', () => (i + 0.5) / 200)),
     );
-    expect(actions.has('charge')).toBe(true);
+    expect(actions.has('jump')).toBe(true);
   });
 
   it('チャージ弾を撃ち込み続けるとボスを撃破できる(クリア条件)', () => {

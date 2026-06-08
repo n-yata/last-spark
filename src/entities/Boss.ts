@@ -24,6 +24,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   // アリーナ内に閉じ込める中心 X の可動域。未設定時は無制限。
   private arenaMinX = -Infinity;
   private arenaMaxX = Infinity;
+  // 前後移動の現在向き(move/jump 開始時に決め直す)。
+  private paceDir: -1 | 1 = -1;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.boss);
@@ -31,9 +33,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(BOSS.width, BOSS.height);
-    body.setAllowGravity(false);
-    body.setImmovable(true);
+    // 重力ありの接地エンティティ(ジャンプ可能)。地面コライダーは GameScene 側で登録する。
+    body.setAllowGravity(true);
+    body.setImmovable(false);
     this.setDepth(9);
+  }
+
+  private get onGround(): boolean {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    return body.blocked.down || body.touching.down;
   }
 
   setProjectiles(group: Phaser.Physics.Arcade.Group): void {
@@ -90,17 +98,38 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     // アクション開始時の単発処理
     if (next === 'shoot') {
       this.fireVolley(playerX);
+    } else if (next === 'move') {
+      this.paceDir = this.chooseMoveDir();
+    } else if (next === 'jump') {
+      this.startJump();
     }
   }
 
+  /** 前後移動の向きを決める。アリーナ端付近では内側へ向ける。 */
+  private chooseMoveDir(): -1 | 1 {
+    const margin = 120;
+    if (this.x <= this.arenaMinX + margin) return 1;
+    if (this.x >= this.arenaMaxX - margin) return -1;
+    return Math.random() < 0.5 ? -1 : 1;
+  }
+
+  /** 接地中ならジャンプし、着地までの水平ドリフト向きを決める。 */
+  private startJump(): void {
+    if (this.onGround) {
+      this.setVelocityY(BOSS.jumpVelocity);
+    }
+    this.paceDir = this.chooseMoveDir();
+  }
+
   private executeAction(playerX: number): void {
-    const dir = playerX < this.x ? -1 : 1;
+    // 弾・向きはプレイヤー方向。移動は前後ペース(paceDir)で行う。
+    const faceDir = playerX < this.x ? -1 : 1;
     switch (this.currentAction) {
       case 'move':
-        this.setVelocityX(dir * BOSS.moveSpeed);
+        this.setVelocityX(this.paceDir * BOSS.moveSpeed);
         break;
-      case 'charge':
-        this.setVelocityX(dir * BOSS.chargeSpeed);
+      case 'jump':
+        this.setVelocityX(this.paceDir * BOSS.moveSpeed * 0.6); // 空中の水平ドリフト
         break;
       case 'idle':
       case 'shoot':
@@ -109,7 +138,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
         this.setVelocityX(0);
         break;
     }
-    this.setFlipX(dir > 0);
+    this.setFlipX(faceDir > 0);
     this.setTint(this.currentAction === 'stagger' ? 0xff6b6b : 0xffffff);
   }
 

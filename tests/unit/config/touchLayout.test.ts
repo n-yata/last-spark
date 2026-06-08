@@ -24,10 +24,11 @@ describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => 
 
   it('ジャンプ/ショットボタンは画面右下に配置される', () => {
     const layout = createTouchLayout(1200, 540);
-    expect(layout.jumpButton.x).toBe(1200 - 110);
-    expect(layout.jumpButton.y).toBe(540 - 90);
-    expect(layout.shootButton.x).toBe(1200 - 252);
+    expect(layout.jumpButton.x).toBe(1200 - 84);
+    expect(layout.jumpButton.y).toBe(540 - 72);
+    expect(layout.shootButton.x).toBe(1200 - 188);
     expect(layout.shootButton.x).toBeLessThan(layout.jumpButton.x); // ショットはジャンプの左
+    expect(layout.jumpButton.radius).toBe(44); // 親指で押しやすい控えめサイズ
   });
 });
 

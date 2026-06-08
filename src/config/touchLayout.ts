@@ -24,26 +24,26 @@ export interface TouchLayout {
   shootButton: CircleButton;
 }
 
-const BUTTON_RADIUS = 64;
+const BUTTON_RADIUS = 44;
 
 /** 実画面サイズからタッチUIレイアウトを算出する。 */
 export function createTouchLayout(width: number, height: number): TouchLayout {
   return {
     moveZone: { x: 0, y: 0, width: width / 2, height },
-    jumpButton: { x: width - 110, y: height - 90, radius: BUTTON_RADIUS },
-    shootButton: { x: width - 252, y: height - 148, radius: BUTTON_RADIUS },
+    jumpButton: { x: width - 84, y: height - 72, radius: BUTTON_RADIUS },
+    shootButton: { x: width - 188, y: height - 112, radius: BUTTON_RADIUS },
   };
 }
 
 /** 追従式タッチパッドの不感帯(px)。原点からこの距離を超えて動かすと移動入力になる。 */
-export const MOVE_DEADZONE_PX = 22;
+export const MOVE_DEADZONE_PX = 18;
 
-/** タッチパッドの見た目: 外周リング半径(親指で扱いやすい大きめサイズ)。 */
-export const MOVE_PAD_BASE_RADIUS = 88;
+/** タッチパッドの見た目: 外周リング半径。 */
+export const MOVE_PAD_BASE_RADIUS = 58;
 /** タッチパッドの見た目: スティック(指)ドット半径。 */
-export const MOVE_PAD_STICK_RADIUS = 48;
+export const MOVE_PAD_STICK_RADIUS = 32;
 /** スティック表示が原点から離れられる最大距離(描画クランプ用)。 */
-export const MOVE_PAD_MAX_RADIUS = 92;
+export const MOVE_PAD_MAX_RADIUS = 62;
 
 /**
  * タッチ原点からの横方向の移動量(delta = 現在X - 原点X)から進行方向を求める。

@@ -54,8 +54,8 @@ export const BOSS = {
   contactDamage: 2,
   bulletDamage: 1,
   bulletSpeed: 260,
-  moveSpeed: 55, // プレイヤーへ詰める速度(速すぎないよう抑える)
-  chargeSpeed: 280, // phase2 の突進速度(山場の単発攻撃)
+  moveSpeed: 55, // 前後にペースする速度(速すぎないよう抑える)
+  jumpVelocity: -520, // ジャンプ初速(上向き負)。重力1200 で約112px 上昇
   staggerDamageThreshold: 8, // 連続被ダメ蓄積でのけぞる量
   width: 80,
   height: 88,
@@ -64,7 +64,7 @@ export const BOSS = {
     idle: 700,
     move: 900,
     shoot: 600,
-    charge: 800,
+    jump: 900,
     stagger: 700,
   },
   // phase2 ではアクション間隔を短縮する係数

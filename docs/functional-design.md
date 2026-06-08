@@ -126,7 +126,7 @@ interface BossState {
 
 type EnemyPattern = 'walker' | 'turret';      // MVP の雑魚2種(案)
 type BossPhase = 'phase1' | 'phase2';          // HP 50% で移行
-type BossAction = 'idle' | 'move' | 'shoot' | 'charge' | 'stagger';
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger';
 ```
 
 ### パラメータ定義(チューニング値の集中管理)
@@ -325,7 +325,7 @@ sequenceDiagram
 
 ### フェーズ遷移
 - `phase1`: HP > 50%。アクション間隔は標準。
-- `phase2`: HP <= 50%(`BOSS.phase2HpRatio`)。アクション間隔短縮 + `charge`(突進)解禁で攻勢を強める。
+- `phase2`: HP <= 50%(`BOSS.phase2HpRatio`)。アクション間隔短縮 + `jump` の頻度増で攻勢を強める。
 
 ### アクション選択ロジック
 現在アクションが終了(`actionEndsAt` 到達)したら、次アクションをフェーズ別の重みで抽選する。直前と同じ攻撃の連続を避ける。
@@ -334,8 +334,8 @@ sequenceDiagram
 function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
   // フェーズ別の重みテーブル(合計は任意、相対値)
   const weights: Record<BossPhase, Partial<Record<BossAction, number>>> = {
-    phase1: { move: 40, shoot: 40, idle: 20 },
-    phase2: { move: 30, shoot: 35, charge: 30, idle: 5 },
+    phase1: { move: 35, shoot: 35, idle: 15, jump: 15 },
+    phase2: { move: 30, shoot: 35, idle: 5, jump: 30 },
   };
   const table = weights[phase];
   // 直前と同一アクションは重みを半減(連続を抑制)
@@ -346,11 +346,13 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 }
 ```
 
-- `move`: プレイヤー方向へ一定時間移動(間合い調整)。
-- `shoot`: 前方へ弾を発射(phase2 では弾数/頻度を上げる)。
-- `charge`(phase2 のみ): 短い溜めの後に高速突進。回避を促す山場。
+- `move`: 前後に移動してペースする(プレイヤーへ一方的に詰めず、間合いを取り直す)。アリーナ端では内側へ向く。
+- `shoot`: プレイヤー方向へ弾を発射(phase2 では弾数/頻度を上げる)。
+- `jump`: その場/前後ドリフトしながらジャンプする(縦の動きで単調さを崩す)。重力で着地する。
 - `stagger`: 一定ダメージ蓄積で短時間のけぞり(反撃チャンス)。
 - `idle`: 短い静止(プレイヤーに行動を読ませる間)。
+
+> ※ 突進(`charge`)は MVP の調整で廃止し、`jump` と前後移動(`move`)に置き換えた。
 
 ## UI設計(HUD / タッチUI)
 
