@@ -21,6 +21,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private staggerAccumulated = 0;
   private projectiles?: Phaser.Physics.Arcade.Group;
   private isAlive = true; // Phaser の active と区別する撃破フラグ
+  // アリーナ内に閉じ込める中心 X の可動域。未設定時は無制限。
+  private arenaMinX = -Infinity;
+  private arenaMaxX = Infinity;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.boss);
@@ -35,6 +38,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   setProjectiles(group: Phaser.Physics.Arcade.Group): void {
     this.projectiles = group;
+  }
+
+  /** アリーナの左右端(ワールド座標)を与え、ボスがその外へ出ないようにする。 */
+  setArenaBounds(left: number, right: number): void {
+    const halfW = BOSS.width / 2;
+    this.arenaMinX = left + halfW;
+    this.arenaMaxX = right - halfW;
   }
 
   getPhase(): BossPhase {
@@ -54,6 +64,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.beginNextAction(time, playerX);
     }
     this.executeAction(playerX);
+    this.clampToArena();
+  }
+
+  /** アリーナ範囲外へ出ようとしたら押し戻し、その方向の速度を止める。 */
+  private clampToArena(): void {
+    if (this.x < this.arenaMinX) {
+      this.x = this.arenaMinX;
+      this.setVelocityX(0);
+    } else if (this.x > this.arenaMaxX) {
+      this.x = this.arenaMaxX;
+      this.setVelocityX(0);
+    }
   }
 
   private beginNextAction(now: number, playerX: number): void {

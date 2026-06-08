@@ -4,9 +4,12 @@
 export const PLAYER = {
   maxHp: 16,
   moveSpeed: 160, // px/s
-  // 上向き負。最高到達点 ≈ jumpVelocity^2 / (2 * gravityY)。
+  // 上向き負。押し続けた場合の最高到達点 ≈ jumpVelocity^2 / (2 * gravityY)。
   // -620 / 重力1200 で約160px 上昇し、ステージの段差(最大140px)・奈落の中継足場(120px)に届く。
-  jumpVelocity: -620, // px/s
+  jumpVelocity: -620, // px/s(最大ジャンプ初速)
+  // 可変ジャンプ: ボタンを離した瞬間に上昇中なら上向き速度をこの倍率にカットする。
+  // 短押し=低いジャンプ(約40px)、押し続け=最大(約160px)。押している長さで高さが変わる。
+  jumpCutMultiplier: 0.5,
   invincibleMs: 800, // 被弾後の無敵時間
   blinkIntervalMs: 80, // 無敵中の点滅間隔
   width: 28,

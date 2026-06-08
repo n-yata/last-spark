@@ -28,3 +28,19 @@ export function resolveFacing(current: 'left' | 'right', moveDir: MoveDir): 'lef
 export function facingSign(facing: 'left' | 'right'): -1 | 1 {
   return facing === 'left' ? -1 : 1;
 }
+
+/**
+ * 可変ジャンプ: 上昇中(vy<0)にジャンプボタンを離したら上向き速度をカットすべきか。
+ * 押し続けるほど高く飛び、早く離すほど低くなる(押した長さで高さが変わる)。
+ * @param jumpHeld ジャンプボタン押下中か
+ * @param isJumping ジャンプ上昇フェーズ中か
+ * @param vy 現在の鉛直速度(上向き負)
+ */
+export function shouldCutJump(jumpHeld: boolean, isJumping: boolean, vy: number): boolean {
+  return isJumping && !jumpHeld && vy < 0;
+}
+
+/** カット後の鉛直速度を返す(上昇を弱める)。 */
+export function cutJumpVelocity(vy: number, multiplier: number): number {
+  return vy * multiplier;
+}

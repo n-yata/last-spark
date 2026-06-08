@@ -61,7 +61,13 @@ function newModel(): ControlModel {
   };
 }
 
-const idle: InputState = { moveDir: 0, jumpPressed: false, shootHeld: false, shootReleased: false };
+const idle: InputState = {
+  moveDir: 0,
+  jumpPressed: false,
+  jumpHeld: false,
+  shootHeld: false,
+  shootReleased: false,
+};
 
 describe('入力→プレイヤー移動', () => {
   it('左入力で左向き・負の速度、離すと停止', () => {

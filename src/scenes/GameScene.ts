@@ -115,30 +115,33 @@ export class GameScene extends Phaser.Scene {
 
   private spawnBoss(): void {
     if (this.boss) return;
+
+    // アリーナ左端は「現在のカメラ左端」にする。これによりカメラ範囲を固定しても
+    // 画面がジャンプせず(プレイヤーが画面外に消えない)、かつ後退も防げる。
+    const cam = this.cameras.main;
+    const arenaLeft = Math.floor(cam.scrollX);
+    const arenaRight = this.stage.width;
+
     this.boss = new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
     this.boss.setProjectiles(this.enemyShots);
+    this.boss.setArenaBounds(arenaLeft, arenaRight);
     this.combat.registerBoss(this.boss);
 
-    // ボスアリーナに閉じ込める(後退防止の壁 + カメラ範囲を固定)
-    const wall = this.add.rectangle(
-      this.stage.bossArenaMinX,
-      STAGE.height / 2,
-      8,
-      STAGE.height,
-      0x37f7d8,
-      0.15,
-    );
-    this.physics.add.existing(wall, true);
-    this.physics.add.collider(this.player, wall);
-    this.cameras.main.setBounds(
-      this.stage.bossArenaMinX,
-      0,
-      this.stage.width - this.stage.bossArenaMinX,
-      STAGE.height,
-    );
+    // アリーナ両端の壁(プレイヤーの後退・行き過ぎを防ぐ)
+    this.addArenaWall(arenaLeft);
+    this.addArenaWall(arenaRight);
+
+    // カメラはプレイヤー追従を維持しつつ、左へはこれ以上戻らないよう範囲を固定する
+    cam.setBounds(arenaLeft, 0, arenaRight - arenaLeft, STAGE.height);
 
     this.registry.set(HUD.bossActive, true);
     this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
+  }
+
+  private addArenaWall(x: number): void {
+    const wall = this.add.rectangle(x, STAGE.height / 2, 10, STAGE.height, 0x37f7d8, 0.12);
+    this.physics.add.existing(wall, true);
+    this.physics.add.collider(this.player, wall);
   }
 
   private spawnHitEffect(x: number, y: number): void {
@@ -178,7 +181,19 @@ export class GameScene extends Phaser.Scene {
 
     this.checkFallDeath();
     this.updateChargeHud(time, inputState.shootHeld);
+    this.publishMovePad();
     this.registry.set(HUD.playerHp, this.player.hp);
+  }
+
+  private publishMovePad(): void {
+    const pad = this.inputController.getMovePad();
+    this.registry.set(HUD.movePadActive, pad.active);
+    if (pad.active) {
+      this.registry.set(HUD.movePadBaseX, pad.baseX);
+      this.registry.set(HUD.movePadBaseY, pad.baseY);
+      this.registry.set(HUD.movePadCurX, pad.curX);
+      this.registry.set(HUD.movePadCurY, pad.curY);
+    }
   }
 
   private checkFallDeath(): void {

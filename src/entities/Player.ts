@@ -10,6 +10,8 @@ import {
   shouldJump,
   resolveFacing,
   facingSign,
+  shouldCutJump,
+  cutJumpVelocity,
 } from '../systems/playerMovement';
 import { Projectile } from './Projectile';
 
@@ -24,6 +26,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private isCharging = false;
   private lastShotAt = 0;
   private invincibleUntil = 0;
+  private isJumping = false;
   private projectiles?: Phaser.Physics.Arcade.Group;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -57,8 +60,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.facing = resolveFacing(this.facing, input.moveDir);
     this.setFlipX(this.facing === 'left');
 
+    // ジャンプ開始(接地中の立ち上がり入力)
     if (shouldJump(input, this.onGround)) {
       this.setVelocityY(PLAYER.jumpVelocity);
+      this.isJumping = true;
+    }
+
+    // 可変ジャンプ: 上昇中に離したら上向き速度をカットして低いジャンプにする
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (shouldCutJump(input.jumpHeld, this.isJumping, body.velocity.y)) {
+      this.setVelocityY(cutJumpVelocity(body.velocity.y, PLAYER.jumpCutMultiplier));
+      this.isJumping = false;
+    }
+    // 着地(または下降開始)で上昇フェーズを終える
+    if (this.onGround && body.velocity.y >= 0) {
+      this.isJumping = false;
     }
 
     // チャージ開始(ショット押下の立ち上がり)

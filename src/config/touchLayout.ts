@@ -17,20 +17,45 @@ export const MOVE_ZONE = {
   height: GAME_HEIGHT,
 } as const;
 
-/** 方向ゾーン式の押し分けデッドゾーン(px)。ゾーン中央からの不感帯の半幅。 */
-export const MOVE_DEADZONE_PX = 16;
+/** 追従式タッチパッドの不感帯(px)。原点からこの距離を超えて動かすと移動入力になる。 */
+export const MOVE_DEADZONE_PX = 18;
+
+/** タッチパッドの見た目: 外周リング半径。 */
+export const MOVE_PAD_BASE_RADIUS = 52;
+/** タッチパッドの見た目: スティック(指)ドット半径。 */
+export const MOVE_PAD_STICK_RADIUS = 30;
+/** スティック表示が原点から離れられる最大距離(描画クランプ用)。 */
+export const MOVE_PAD_MAX_RADIUS = 56;
 
 /**
- * 移動ゾーン内のタッチ X 座標から進行方向を求める(方向ゾーン式の押し分け)。
- * ゾーン中央より左を押せば左、右を押せば右、中央付近は停止。
- * 「押している間その向きへ歩き、離すと止まる」を、初期接地点に依存しない
- * 絶対位置で判定する(画面端でも左右どちらにも入力できる)。
+ * タッチ原点からの横方向の移動量(delta = 現在X - 原点X)から進行方向を求める。
+ * 触れた箇所を起点に、左へ動かせば左、右へ動かせば右、不感帯内は停止。
+ * 「押している間その向きへ歩き、離すと止まる」を原点相対で判定する。
  */
-export function moveDirFromX(px: number): -1 | 0 | 1 {
-  const center = MOVE_ZONE.x + MOVE_ZONE.width / 2;
-  if (px < center - MOVE_DEADZONE_PX) return -1;
-  if (px > center + MOVE_DEADZONE_PX) return 1;
+export function moveDirFromDelta(deltaX: number): -1 | 0 | 1 {
+  if (deltaX < -MOVE_DEADZONE_PX) return -1;
+  if (deltaX > MOVE_DEADZONE_PX) return 1;
   return 0;
+}
+
+/**
+ * スティックの表示位置を原点から最大半径内にクランプする。
+ * @returns 描画用のスティック座標
+ */
+export function clampStick(
+  baseX: number,
+  baseY: number,
+  curX: number,
+  curY: number,
+): { x: number; y: number } {
+  const dx = curX - baseX;
+  const dy = curY - baseY;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= MOVE_PAD_MAX_RADIUS || dist === 0) {
+    return { x: curX, y: curY };
+  }
+  const scale = MOVE_PAD_MAX_RADIUS / dist;
+  return { x: baseX + dx * scale, y: baseY + dy * scale };
 }
 
 /** 右手親指で押すジャンプボタン(右下寄り)。 */

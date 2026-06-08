@@ -5,6 +5,7 @@ import { LifeBar } from '../ui/LifeBar';
 import { BossHpBar } from '../ui/BossHpBar';
 import { ChargeGauge } from '../ui/ChargeGauge';
 import { TouchControls } from '../ui/TouchControls';
+import { MovePad } from '../ui/MovePad';
 
 // HUD(ライフ/ボスHP/チャージゲージ)+ タッチ操作ガイド。GameScene と並行起動。
 // 状態は registry 経由で受け取り、GameScene を直接参照しない。
@@ -13,6 +14,7 @@ export class UIScene extends Phaser.Scene {
   private lifeBar!: LifeBar;
   private bossHpBar!: BossHpBar;
   private chargeGauge!: ChargeGauge;
+  private movePad!: MovePad;
   private bossShown = false;
 
   constructor() {
@@ -23,6 +25,7 @@ export class UIScene extends Phaser.Scene {
     this.lifeBar = new LifeBar(this);
     this.bossHpBar = new BossHpBar(this);
     this.chargeGauge = new ChargeGauge(this);
+    this.movePad = new MovePad(this);
     new TouchControls(this);
     this.bossShown = false;
 
@@ -30,6 +33,7 @@ export class UIScene extends Phaser.Scene {
       this.lifeBar.destroy();
       this.bossHpBar.destroy();
       this.chargeGauge.destroy();
+      this.movePad.destroy();
     });
   }
 
@@ -41,6 +45,15 @@ export class UIScene extends Phaser.Scene {
 
     const ratio = (reg.get(HUD.chargeRatio) as number) ?? 0;
     this.chargeGauge.render(ratio);
+
+    const padActive = (reg.get(HUD.movePadActive) as boolean) ?? false;
+    this.movePad.render(
+      padActive,
+      (reg.get(HUD.movePadBaseX) as number) ?? 0,
+      (reg.get(HUD.movePadBaseY) as number) ?? 0,
+      (reg.get(HUD.movePadCurX) as number) ?? 0,
+      (reg.get(HUD.movePadCurY) as number) ?? 0,
+    );
 
     const bossActive = (reg.get(HUD.bossActive) as boolean) ?? false;
     if (bossActive && !this.bossShown) {

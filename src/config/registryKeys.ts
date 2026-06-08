@@ -8,4 +8,10 @@ export const HUD = {
   bossActive: 'hud.boss.active',
   bossHp: 'hud.boss.hp',
   bossMaxHp: 'hud.boss.maxHp',
+  // 追従式タッチパッド(描画用)
+  movePadActive: 'hud.movepad.active',
+  movePadBaseX: 'hud.movepad.baseX',
+  movePadBaseY: 'hud.movepad.baseY',
+  movePadCurX: 'hud.movepad.curX',
+  movePadCurY: 'hud.movepad.curY',
 } as const;
