@@ -18,14 +18,14 @@ export const MOVE_ZONE = {
 } as const;
 
 /** 追従式タッチパッドの不感帯(px)。原点からこの距離を超えて動かすと移動入力になる。 */
-export const MOVE_DEADZONE_PX = 18;
+export const MOVE_DEADZONE_PX = 22;
 
-/** タッチパッドの見た目: 外周リング半径。 */
-export const MOVE_PAD_BASE_RADIUS = 52;
+/** タッチパッドの見た目: 外周リング半径(親指で扱いやすい大きめサイズ)。 */
+export const MOVE_PAD_BASE_RADIUS = 88;
 /** タッチパッドの見た目: スティック(指)ドット半径。 */
-export const MOVE_PAD_STICK_RADIUS = 30;
+export const MOVE_PAD_STICK_RADIUS = 48;
 /** スティック表示が原点から離れられる最大距離(描画クランプ用)。 */
-export const MOVE_PAD_MAX_RADIUS = 56;
+export const MOVE_PAD_MAX_RADIUS = 92;
 
 /**
  * タッチ原点からの横方向の移動量(delta = 現在X - 原点X)から進行方向を求める。
@@ -62,14 +62,14 @@ export function clampStick(
 export const JUMP_BUTTON: CircleButton = {
   x: GAME_WIDTH - 110,
   y: GAME_HEIGHT - 90,
-  radius: 56,
+  radius: 64,
 };
 
 /** 右手親指で押すショットボタン(ジャンプの左上)。 */
 export const SHOOT_BUTTON: CircleButton = {
-  x: GAME_WIDTH - 250,
-  y: GAME_HEIGHT - 140,
-  radius: 56,
+  x: GAME_WIDTH - 252,
+  y: GAME_HEIGHT - 148,
+  radius: 64,
 };
 
 /** 点 (px,py) がボタン円内かを判定する。 */

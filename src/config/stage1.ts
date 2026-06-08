@@ -1,4 +1,4 @@
-import { STAGE } from './balance';
+import { STAGE, BOSS } from './balance';
 import type { EnemyPattern } from '../types/enemy';
 
 // ステージ1「崩れた都市」のコード定義データ。
@@ -78,7 +78,9 @@ const STAGE1: StageData = {
     { pattern: 'turret', x: 3380, y: GROUND_TOP - 150 },
   ],
   bossTriggerX: 4200,
-  bossSpawn: { x: 4950, y: GROUND_TOP - 100 },
+  // ボスを地面に接地させる(本体下端=地面)。これにより地上のプレイヤーの
+  // 水平ショット(プレイヤー中心の高さ)がボスの当たり判定に重なり、撃破できる。
+  bossSpawn: { x: 4950, y: GROUND_TOP - BOSS.height / 2 },
   bossArenaMinX: 4400,
   width: STAGE.width,
 };
