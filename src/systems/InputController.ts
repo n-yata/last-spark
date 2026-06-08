@@ -3,9 +3,9 @@ import type { InputState, MoveDir } from '../types/input';
 import {
   JUMP_BUTTON,
   SHOOT_BUTTON,
-  MOVE_DEADZONE_PX,
   isInsideButton,
   isInMoveZone,
+  moveDirFromX,
 } from '../config/touchLayout';
 
 // タッチ/キーボード入力を抽象操作(InputState)に正規化する。
@@ -17,7 +17,6 @@ export class InputController {
 
   private moveDir: MoveDir = 0;
   private movePointerId: number | null = null;
-  private moveOriginX = 0;
 
   private shootHeld = false;
   private shootPointerId: number | null = null;
@@ -74,21 +73,14 @@ export class InputController {
     }
     if (isInMoveZone(x) && this.movePointerId === null) {
       this.movePointerId = pointer.id;
-      this.moveOriginX = x;
-      this.moveDir = 0;
+      this.moveDir = moveDirFromX(x);
     }
   }
 
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
     if (pointer.id !== this.movePointerId) return;
-    const delta = pointer.x - this.moveOriginX;
-    if (delta < -MOVE_DEADZONE_PX) {
-      this.moveDir = -1;
-    } else if (delta > MOVE_DEADZONE_PX) {
-      this.moveDir = 1;
-    } else {
-      this.moveDir = 0;
-    }
+    // 初期接地点ではなく、ゾーン内の絶対位置で左右を判定する
+    this.moveDir = moveDirFromX(pointer.x);
   }
 
   private onPointerUp(pointer: Phaser.Input.Pointer): void {

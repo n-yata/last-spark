@@ -4,7 +4,9 @@
 export const PLAYER = {
   maxHp: 16,
   moveSpeed: 160, // px/s
-  jumpVelocity: -420, // px/s(上向き負)
+  // 上向き負。最高到達点 ≈ jumpVelocity^2 / (2 * gravityY)。
+  // -620 / 重力1200 で約160px 上昇し、ステージの段差(最大140px)・奈落の中継足場(120px)に届く。
+  jumpVelocity: -620, // px/s
   invincibleMs: 800, // 被弾後の無敵時間
   blinkIntervalMs: 80, // 無敵中の点滅間隔
   width: 28,

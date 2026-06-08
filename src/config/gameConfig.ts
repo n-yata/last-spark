@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import { STAGE } from './balance';
+import { GAME_WIDTH, GAME_HEIGHT } from './dimensions';
 
-/** 論理解像度(横向き 16:9)。Scale.FIT で端末画面にフィットさせる。 */
-export const GAME_WIDTH = 960;
-export const GAME_HEIGHT = 540;
+// 画面サイズ定数は dimensions.ts(Phaser非依存)に定義。既存 import 互換のため再エクスポートする。
+export { GAME_WIDTH, GAME_HEIGHT };
 
 /**
  * Phaser.Game の基本設定。シーン配列は main.ts で注入する。
