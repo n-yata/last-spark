@@ -1,0 +1,437 @@
+# 機能設計書 (Functional Design Document)
+
+> 本書は `docs/product-requirements.md`(PRD)で定義した MVP 要件(P0)を、Phaser 3 ベースの PWA としてどう実現するかを定義する。MVP のスコープは「タイトル画面 + 1 ステージ + ボス 1 体」「両手・横向き専用のタッチ操作」「完全オフライン(localStorage)」。
+
+## システム構成図
+
+```mermaid
+graph TB
+    User[プレイヤー]
+    subgraph Browser["ブラウザ / PWA"]
+        subgraph Phaser["Phaser 3 ゲーム"]
+            SceneLayer["Sceneレイヤー<br/>(Boot/Preload/Title/Game/UI/GameOver/Clear)"]
+            EntityLayer["Entityレイヤー<br/>(Player/Enemy/Boss/Projectile)"]
+            SystemLayer["Systemレイヤー<br/>(InputController/CombatSystem/SpawnSystem)"]
+        end
+        Persistence["Persistence<br/>(SaveManager → localStorage)"]
+        PWA["PWA基盤<br/>(Service Worker / Manifest)"]
+    end
+
+    User -->|タッチ入力| SceneLayer
+    SceneLayer --> EntityLayer
+    SceneLayer --> SystemLayer
+    SystemLayer --> EntityLayer
+    SceneLayer --> Persistence
+    Persistence --> LS[("localStorage")]
+    PWA -.キャッシュ.-> Browser
+```
+
+- **Sceneレイヤー**: Phaser の Scene 単位で画面/状態を管理。シーン遷移で画面遷移を表現する。
+- **Entityレイヤー**: プレイヤー・敵・ボス・弾など、ゲーム内オブジェクト。物理ボディと状態を持つ。
+- **Systemレイヤー**: 入力解釈・戦闘判定・敵出現など、Entity をまたぐ横断ロジック。
+- **Persistence**: クリア状況/設定の保存。`localStorage` のみ(サーバ通信なし)。
+- **PWA基盤**: Service Worker によるオフライン動作、Manifest によるホーム画面追加。
+
+## 技術スタック
+
+| 分類 | 技術 | 選定理由 |
+|------|------|----------|
+| 言語 | TypeScript 5.x | 型安全。Phaser が型定義を提供。CLAUDE.md の技術スタック準拠 |
+| ランタイム/PM | Node.js v24 / npm | devcontainer 環境の指定 |
+| ゲームエンジン | Phaser 3 | 2D の定番。スプライト/アニメ/Arcade Physics/タイルマップ/サウンド/入力を内包 |
+| 物理 | Phaser Arcade Physics | AABB ベースで軽量。横スクロールジャンプアクションに十分かつモバイルで高速 |
+| ビルド/開発サーバ | Vite | 高速 HMR、TS 標準対応。本番ビルドの最適化 |
+| PWA | vite-plugin-pwa (Workbox) | Service Worker / Manifest 生成を自動化。オフライン対応 |
+| 永続化 | Web Storage API (localStorage) | サーバ不要・端末内完結。MVP の完全オフライン方針に合致 |
+| アセット | CC0 等フリー素材 + 生成AI/自作 | 権利クリアなオリジナル構成 |
+
+## ゲーム状態(シーン)構成
+
+Phaser の Scene を画面/状態の単位とする。
+
+| シーン | 責務 |
+|--------|------|
+| `BootScene` | 最小設定の初期化、Preload への遷移。表示スケール/向き設定 |
+| `PreloadScene` | アセット(スプライト/タイルマップ/音)の一括ロード、ローディング表示 |
+| `TitleScene` | タイトル画面(`LAST SPARK` ロゴ + 「タップでスタート」)。クリア済みフラグの表示 |
+| `GameScene` | ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括 |
+| `UIScene` | HUD(プレイヤーライフ、ボスHP、チャージゲージ)。`GameScene` と並行起動 |
+| `GameOverScene` | ゲームオーバー表示とリトライ導線 |
+| `ClearScene` | ボス撃破時のクリア演出。クリア状況を保存しタイトルへ |
+| `OrientationScene`(オーバーレイ) | 縦持ち検知時に「横向きにしてください」案内を最前面表示 |
+
+## データモデル定義
+
+> ゲームの状態は実行時の Entity が保持する。永続化対象は最小限(クリア状況・設定)に絞る。
+
+### 永続データ: SaveData(localStorage)
+
+```typescript
+interface SaveData {
+  version: number;          // セーブ構造のバージョン(マイグレーション用)
+  cleared: boolean;         // ステージ1(ボス)をクリア済みか
+  bestTimeMs?: number;      // ステージクリア最速タイム(ミリ秒)、未クリアは undefined
+  settings: GameSettings;   // ユーザー設定
+}
+
+interface GameSettings {
+  muted: boolean;           // サウンドミュート(モバイル自動再生制約に配慮、既定 false)
+  bgmVolume: number;        // 0.0–1.0
+  seVolume: number;         // 0.0–1.0
+}
+```
+
+**制約**:
+- 保存キーは `lastspark:save`(名前空間付き)。
+- `localStorage` 利用不可・破損時は既定値で起動し、ゲーム自体は継続可能(進捗が無いだけ)。
+- `version` 不一致時は安全側にフォールバック(既定値で再生成)。
+
+### 実行時モデル: 主要 Entity
+
+```typescript
+// プレイヤー(最後のロボット)
+interface PlayerState {
+  hp: number;               // 現在ライフ(整数)
+  maxHp: number;            // 最大ライフ
+  facing: 'left' | 'right'; // 向き(ショット方向に使用)
+  onGround: boolean;        // 接地判定
+  isCharging: boolean;      // チャージ中か
+  chargeStartedAt: number;  // チャージ開始時刻(ms)。0=未チャージ
+  invincibleUntil: number;  // 無敵終了時刻(ms)。被弾後の点滅無敵
+}
+
+// 弾(通常/チャージ共通)
+interface ProjectileState {
+  kind: 'normal' | 'charged';
+  damage: number;           // kind により決定
+  velocityX: number;        // 進行方向 × 速度
+  owner: 'player' | 'enemy';
+}
+
+// 雑魚敵
+interface EnemyState {
+  hp: number;
+  contactDamage: number;    // 接触ダメージ
+  pattern: EnemyPattern;    // 移動/攻撃パターン識別子
+}
+
+// ボス(大型警備機)
+interface BossState {
+  hp: number;
+  maxHp: number;
+  phase: BossPhase;         // HP に応じた行動フェーズ
+  currentAction: BossAction;
+  actionEndsAt: number;     // 現在アクションの終了時刻(ms)
+}
+
+type EnemyPattern = 'walker' | 'turret';      // MVP の雑魚2種(案)
+type BossPhase = 'phase1' | 'phase2';          // HP 50% で移行
+type BossAction = 'idle' | 'move' | 'shoot' | 'charge' | 'stagger';
+```
+
+### パラメータ定義(チューニング値の集中管理)
+
+> マジックナンバーをコードに散らさず、定数モジュールに集約する(難易度調整・テストを容易にする)。
+
+```typescript
+// 例: src/config/balance.ts
+export const PLAYER = {
+  maxHp: 16,
+  moveSpeed: 160,        // px/s
+  jumpVelocity: -420,    // px/s(上向き負)
+  invincibleMs: 800,     // 被弾後の無敵時間
+} as const;
+
+export const SHOT = {
+  normalDamage: 1,
+  chargedDamage: 3,
+  chargeThresholdMs: 600, // この長さ以上の長押しでチャージ成立
+  normalSpeed: 420,
+  chargedSpeed: 480,
+  cooldownMs: 180,        // 連射間隔
+} as const;
+
+export const BOSS = {
+  maxHp: 40,
+  phase2HpRatio: 0.5,
+} as const;
+```
+
+## コンポーネント設計
+
+### InputController(Systemレイヤー)
+
+**責務**:
+- 横向き・両手前提のタッチ入力を、抽象的な操作意図(move/jump/shoot/charge)に変換する。
+- 画面左半分=方向ゾーン(左/右の押し分け)、右半分=ジャンプ/ショット仮想ボタンを管理する。
+- マルチタッチ(移動 + ジャンプ/ショット同時)を扱う。キーボード(開発時)もフォールバックで受ける。
+
+**インターフェース**:
+```typescript
+interface InputState {
+  moveDir: -1 | 0 | 1;   // -1=左, 0=停止, 1=右
+  jumpPressed: boolean;  // このフレームでジャンプ入力が立ち上がったか
+  shootHeld: boolean;    // ショットボタン押下中(チャージ判定に使用)
+  shootReleased: boolean;// このフレームで離されたか(発射トリガ)
+}
+
+class InputController {
+  update(): InputState;          // 毎フレーム最新の入力状態を返す
+  attachTouchZones(): void;      // 左右ゾーン/仮想ボタンの登録
+}
+```
+
+**依存関係**: Phaser の入力(Pointer/Keyboard)、`UIScene`(仮想ボタン描画)。
+
+### CombatSystem(Systemレイヤー)
+
+**責務**:
+- 弾⇔敵、弾⇔ボス、プレイヤー⇔敵/ボス/敵弾 の衝突処理とダメージ適用。
+- 被弾時の無敵・点滅、撃破時のヒット表現発火。
+
+**インターフェース**:
+```typescript
+class CombatSystem {
+  registerColliders(scene: GameScene): void;
+  applyDamage(target: Damageable, amount: number): void;
+}
+```
+
+**依存関係**: Arcade Physics、Entity 群、`UIScene`(HP 反映)。
+
+### SpawnSystem(Systemレイヤー)
+
+**責務**: ステージ進行(カメラ位置/トリガ)に応じた雑魚敵の出現、ボス戦エリアへの到達検知。
+
+```typescript
+class SpawnSystem {
+  loadStage(stageId: string): void;   // 敵配置データの読み込み
+  update(cameraX: number): void;       // 進行に応じた出現制御
+  onBossTrigger(cb: () => void): void; // ボス戦突入トリガ
+}
+```
+
+### Player / Enemy / Boss / Projectile(Entityレイヤー)
+
+各 Entity は Phaser の `Arcade.Sprite` を継承し、自身の状態(上記モデル)と振る舞い(`update`)を持つ。
+
+```typescript
+class Player extends Phaser.Physics.Arcade.Sprite {
+  applyInput(input: InputState): void; // 入力に基づく移動/ジャンプ/発射
+  takeDamage(amount: number): void;
+  startCharge(): void;
+  releaseShot(): Projectile;           // チャージ成立可否で kind を決定
+}
+
+class Boss extends Phaser.Physics.Arcade.Sprite {
+  update(time: number, playerX: number): void; // フェーズ/アクション遷移
+  takeDamage(amount: number): void;
+}
+```
+
+### SaveManager(Persistence)
+
+**責務**: `SaveData` の読み書き、既定値生成、バージョン検証。
+
+```typescript
+class SaveManager {
+  load(): SaveData;             // 失敗時は既定値を返す(throw しない)
+  save(data: SaveData): void;   // localStorage 不可時は黙って no-op + 警告ログ
+  markCleared(timeMs: number): void;
+  updateSettings(s: Partial<GameSettings>): void;
+}
+```
+
+## 画面遷移図
+
+```mermaid
+stateDiagram-v2
+    [*] --> Boot
+    Boot --> Preload
+    Preload --> Title
+    Title --> Game: タップでスタート
+    Game --> GameOver: ライフ0
+    Game --> Clear: ボス撃破
+    GameOver --> Game: リトライ
+    GameOver --> Title: タイトルへ
+    Clear --> Title: タイトルへ(クリア状況を保存)
+
+    note right of Game
+        UIScene を並行起動(HUD)
+        縦持ち検知時は
+        OrientationScene を最前面表示
+    end note
+```
+
+## ユースケース(主要フロー)
+
+### UC-1: チャージショットを撃つ
+
+```mermaid
+sequenceDiagram
+    participant User as プレイヤー
+    participant Input as InputController
+    participant Player
+    participant Combat as CombatSystem
+    participant UI as UIScene
+
+    User->>Input: ショットボタンを長押し
+    Input-->>Player: shootHeld = true
+    Player->>Player: startCharge() / chargeStartedAt 記録
+    Player->>UI: チャージゲージ更新(蓄積表示)
+    User->>Input: ボタンを離す
+    Input-->>Player: shootReleased = true
+    Player->>Player: 経過 >= chargeThresholdMs?
+    alt 成立(チャージ)
+        Player->>Combat: Projectile(kind='charged') 発射
+    else 未成立(通常)
+        Player->>Combat: Projectile(kind='normal') 発射
+    end
+    Combat->>Combat: 弾⇔敵の衝突監視
+```
+
+**フロー説明**:
+1. 右ゾーンのショットボタン押下で `shootHeld` が立ち、`startCharge()` がチャージ開始時刻を記録。
+2. 押下中は `UIScene` がチャージゲージを伸ばし、しきい値到達で発光(視覚フィードバック)。
+3. 離した瞬間に経過時間を判定し、`chargeThresholdMs` 以上ならチャージ弾、未満なら通常弾を発射。
+4. `cooldownMs` の連射間隔を超えていない場合は発射しない。
+
+### UC-2: ボス戦突入〜撃破
+
+```mermaid
+sequenceDiagram
+    participant Game as GameScene
+    participant Spawn as SpawnSystem
+    participant Boss
+    participant Combat as CombatSystem
+    participant Save as SaveManager
+
+    Game->>Spawn: update(cameraX)
+    Spawn-->>Game: onBossTrigger 発火
+    Game->>Boss: 出現 / ボスHUD表示
+    loop ボス戦
+        Boss->>Boss: update(フェーズ/アクション遷移)
+        Combat->>Boss: プレイヤー弾命中→takeDamage
+        Boss->>Game: HP 0?
+    end
+    Boss-->>Game: 撃破
+    Game->>Save: markCleared(timeMs)
+    Game->>Game: ClearScene へ遷移
+```
+
+## ボス行動設計(アルゴリズム)
+
+**目的**: ボス1体で「単調でない」行動を成立させる(PRD 受け入れ条件)。HP に応じた2フェーズ + 重み付きアクション選択。
+
+### フェーズ遷移
+- `phase1`: HP > 50%。アクション間隔は標準。
+- `phase2`: HP <= 50%(`BOSS.phase2HpRatio`)。アクション間隔短縮 + `charge`(突進)解禁で攻勢を強める。
+
+### アクション選択ロジック
+現在アクションが終了(`actionEndsAt` 到達)したら、次アクションをフェーズ別の重みで抽選する。直前と同じ攻撃の連続を避ける。
+
+```typescript
+function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
+  // フェーズ別の重みテーブル(合計は任意、相対値)
+  const weights: Record<BossPhase, Partial<Record<BossAction, number>>> = {
+    phase1: { move: 40, shoot: 40, idle: 20 },
+    phase2: { move: 30, shoot: 35, charge: 30, idle: 5 },
+  };
+  const table = weights[phase];
+  // 直前と同一アクションは重みを半減(連続を抑制)
+  const adjusted = Object.entries(table).map(([action, w]) =>
+    [action, action === last ? w * 0.5 : w] as [BossAction, number]
+  );
+  return weightedRandom(adjusted); // 重み付き抽選
+}
+```
+
+- `move`: プレイヤー方向へ一定時間移動(間合い調整)。
+- `shoot`: 前方へ弾を発射(phase2 では弾数/頻度を上げる)。
+- `charge`(phase2 のみ): 短い溜めの後に高速突進。回避を促す山場。
+- `stagger`: 一定ダメージ蓄積で短時間のけぞり(反撃チャンス)。
+- `idle`: 短い静止(プレイヤーに行動を読ませる間)。
+
+## UI設計(HUD / タッチUI)
+
+### HUD(UIScene)
+
+| 項目 | 説明 | 表示 |
+|------|------|------|
+| プレイヤーライフ | 現在/最大HP | 左上のエナジーバー(セグメント式) |
+| ボスHP | ボス戦中のみ | 画面下部または上部のボスゲージ |
+| チャージゲージ | チャージ蓄積量 | ショットボタン付近に円/バーで表示、しきい値で発光 |
+
+### タッチUI(横向き・両手専用)
+
+```
+（横向き / 両手持ち）
+┌───────────────────────────┬───────────────────────────┐
+│  左ゾーン(左手親指)        │   右ゾーン(右手親指)        │
+│   ◀ 歩行 ▶                │     ◯ジャンプ              │
+│   押している間その向きへ    │     ◯ショット(長押し=溜め) │
+└───────────────────────────┴───────────────────────────┘
+```
+
+- 仮想ボタンは半透明で、親指で隠れにくい位置(右下寄り)に配置。サイズ/透明度は実機調整。
+- 縦持ち検知時は `OrientationScene` を重ね、横向きへの回転を促す。
+
+### カラーコーディング(世界観: 暗め基調 + 発光アクセント)
+- 背景/廃墟: 低彩度の暗色。
+- プレイヤーのコア/弾/敵コア: ネオン発光色(グロー/明度差で表現)。
+- チャージ完了: 発光色を強めて成立を明示。
+
+## アセット / ファイル構造(ランタイム読み込み)
+
+```
+public/assets/
+├── sprites/      # プレイヤー/敵/ボス/弾のスプライトシート
+├── tilemaps/     # ステージ1(崩れた都市)のタイルマップ + タイルセット
+├── ui/           # 仮想ボタン/ロゴ/HUD 画像
+└── audio/        # BGM / SE(採用時)
+```
+
+- スプライトはスプライトシート + アニメ定義で管理。
+- ステージは Tiled 形式のタイルマップ(JSON) + 敵配置レイヤーで定義し、`SpawnSystem` が読む。
+
+## パフォーマンス最適化
+
+- **オブジェクトプール**: 弾・ヒットエフェクトは生成/破棄を繰り返すためプールで再利用し GC を抑制。
+- **テクスチャアトラス**: スプライトをアトラス化しドローコールを削減。
+- **Arcade Physics 限定**: 重い物理(Matter)は使わず AABB のみでモバイル 60fps を狙う。
+- **オフスクリーン非更新**: 画面外の敵は更新/描画を抑制(必要範囲のみアクティブ化)。
+- **Service Worker キャッシュ**: 2回目以降の起動を高速化。
+
+## セキュリティ考慮事項
+
+- **外部通信なし**: MVP はサーバ通信を行わず、外部送信による情報漏洩リスクを持たない。
+- **機密情報の非保持**: API エンドポイント/キー等をソース・ドキュメントに含めない(該当機能なし)。
+- **localStorage の扱い**: 保存値は信頼境界内の自端末データのみ。読み込み時は型/バージョン検証し、不正値は既定にフォールバック(改ざんされても進行不能にならない)。
+- **知的財産**: キャラ・スプライト・名称・音楽はオリジナル or CC0 等の商用利用可ライセンスに限定。
+
+## エラーハンドリング
+
+| エラー種別 | 処理 | プレイヤーへの表示 |
+|-----------|------|-----------------|
+| アセット読み込み失敗 | リトライ後、不可なら代替表示でフォールバック | "読み込みに失敗しました。再読み込みしてください" |
+| localStorage 利用不可/破損 | 既定値で起動、保存は no-op(警告ログのみ) | 表示なし(進捗が保存されないだけ、プレイは継続) |
+| 縦持ち(非対応の向き) | `OrientationScene` を表示、ゲームを一時停止 | "端末を横向きにしてください" |
+| サウンド自動再生ブロック | 初回タップ後にオーディオ解放、それまで無音 | 表示なし(タップで自然に解放) |
+| 想定外の実行時例外 | 当該シーンを安全に停止しタイトルへ復帰 | "エラーが発生しました。タイトルに戻ります" |
+
+## テスト戦略
+
+### ユニットテスト
+- `pickNextAction`(ボス行動抽選): 直前アクションの連続抑制、フェーズ別に許可アクションが選ばれること。
+- チャージ判定(`chargeThresholdMs` 境界): しきい値直前=通常弾、しきい値以上=チャージ弾。
+- `SaveManager`: 既定値生成、バージョン不一致のフォールバック、localStorage 例外時に throw しないこと。
+- ダメージ適用/無敵時間: 無敵中は重複ダメージを受けないこと。
+
+### 統合テスト
+- 入力 → プレイヤー移動/ジャンプ/発射の一連が `InputState` 経由で正しく反映される。
+- 弾⇔敵/ボスの衝突でHPが減少し、0で撃破/ゲームオーバーに遷移する。
+
+### E2Eテスト(Playwright)
+- タイトル → スタート → 導入区間突破 → ボス撃破 → クリア → タイトルへ、の一連が完了する。
+- 縦持ち(画面回転)で案内が表示され、横向きでプレイ再開できる。
+- リロード後もクリア状況が保持される(localStorage 永続化)。
