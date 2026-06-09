@@ -5,8 +5,12 @@ import {
   clampStick,
   isInMoveZone,
   isInsideButton,
+  isJumpSwipeHeld,
+  initialJumpSwipe,
+  stepJumpSwipe,
   MOVE_DEADZONE_PX,
   MOVE_PAD_MAX_RADIUS,
+  JUMP_SWIPE_PX,
 } from '../../../src/config/touchLayout';
 
 describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => {
@@ -22,13 +26,16 @@ describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => 
     expect(wide.moveZone.width).toBe(800);
   });
 
-  it('ジャンプ/ショットボタンは画面右下に配置される', () => {
+  it('ショットボタンは画面右下に配置される(ジャンプは左パッドの上スワイプへ移行)', () => {
     const layout = createTouchLayout(1200, 540);
-    expect(layout.jumpButton.x).toBe(1200 - 84);
-    expect(layout.jumpButton.y).toBe(540 - 72);
-    expect(layout.shootButton.x).toBe(1200 - 188);
-    expect(layout.shootButton.x).toBeLessThan(layout.jumpButton.x); // ショットはジャンプの左
-    expect(layout.jumpButton.radius).toBe(44); // 親指で押しやすい控えめサイズ
+    expect(layout.shootButton.x).toBe(1200 - 84);
+    expect(layout.shootButton.y).toBe(540 - 72);
+    expect(layout.shootButton.radius).toBe(44); // 親指で押しやすい控えめサイズ
+  });
+
+  it('JUMP ボタンはレイアウトから廃止されている', () => {
+    const layout = createTouchLayout(1200, 540);
+    expect('jumpButton' in layout).toBe(false);
   });
 });
 
@@ -80,10 +87,62 @@ describe('isInMoveZone', () => {
 
 describe('isInsideButton', () => {
   it('ボタン中心はヒット、半径外は非ヒット', () => {
-    const { jumpButton } = createTouchLayout(1200, 540);
-    expect(isInsideButton(jumpButton, jumpButton.x, jumpButton.y)).toBe(true);
-    expect(isInsideButton(jumpButton, jumpButton.x + jumpButton.radius + 5, jumpButton.y)).toBe(
+    const { shootButton } = createTouchLayout(1200, 540);
+    expect(isInsideButton(shootButton, shootButton.x, shootButton.y)).toBe(true);
+    expect(isInsideButton(shootButton, shootButton.x + shootButton.radius + 5, shootButton.y)).toBe(
       false,
     );
+  });
+});
+
+describe('上スワイプ・ジャンプ判定', () => {
+  it('上スワイプしきい値は横移動の不感帯より大きい(横移動の誤発火を防ぐ)', () => {
+    expect(JUMP_SWIPE_PX).toBeGreaterThan(MOVE_DEADZONE_PX);
+  });
+
+  it('initialJumpSwipe: 初期状態は未保持・発火可能(armed)', () => {
+    expect(initialJumpSwipe()).toEqual({ held: false, armed: true });
+  });
+
+  it('isJumpSwipeHeld: しきい値以上で保持、未満では非保持', () => {
+    expect(isJumpSwipeHeld(JUMP_SWIPE_PX)).toBe(true);
+    expect(isJumpSwipeHeld(JUMP_SWIPE_PX + 10)).toBe(true);
+    expect(isJumpSwipeHeld(JUMP_SWIPE_PX - 1)).toBe(false);
+    expect(isJumpSwipeHeld(0)).toBe(false);
+  });
+
+  it('しきい値未満→以上の立ち上がりで発火し、保持中は再発火しない', () => {
+    let s = initialJumpSwipe();
+    // しきい値未満: 発火しない・非保持
+    let r = stepJumpSwipe(s, MOVE_DEADZONE_PX);
+    s = r.state;
+    expect(r.pressed).toBe(false);
+    expect(s.held).toBe(false);
+
+    // しきい値以上にクロス: 発火・保持
+    r = stepJumpSwipe(s, JUMP_SWIPE_PX + 20);
+    s = r.state;
+    expect(r.pressed).toBe(true);
+    expect(s.held).toBe(true);
+
+    // 上に留め続ける: 保持継続・再発火なし(指保持で可変ジャンプ)
+    r = stepJumpSwipe(s, JUMP_SWIPE_PX + 40);
+    s = r.state;
+    expect(r.pressed).toBe(false);
+    expect(s.held).toBe(true);
+  });
+
+  it('原点側に戻すと再アームされ、再度上へ動かすと再ジャンプできる', () => {
+    let s = initialJumpSwipe();
+    s = stepJumpSwipe(s, JUMP_SWIPE_PX + 10).state; // 1回目発火
+    // 原点側に戻す: 保持解除・再アーム
+    const back = stepJumpSwipe(s, 0);
+    s = back.state;
+    expect(back.pressed).toBe(false);
+    expect(s.held).toBe(false);
+    // 再度上へ: 再ジャンプ発火
+    const again = stepJumpSwipe(s, JUMP_SWIPE_PX + 10);
+    expect(again.pressed).toBe(true);
+    expect(again.state.held).toBe(true);
   });
 });

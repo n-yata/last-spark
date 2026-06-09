@@ -18,9 +18,7 @@ export interface Rect {
 export interface TouchLayout {
   /** 画面左半分=移動ゾーン。 */
   moveZone: Rect;
-  /** 右手親指で押すジャンプボタン(右下寄り)。 */
-  jumpButton: CircleButton;
-  /** 右手親指で押すショットボタン(ジャンプの左上)。 */
+  /** 右手親指で押すショットボタン(右下)。ジャンプは左パッドの上スワイプへ移行。 */
   shootButton: CircleButton;
 }
 
@@ -30,13 +28,57 @@ const BUTTON_RADIUS = 44;
 export function createTouchLayout(width: number, height: number): TouchLayout {
   return {
     moveZone: { x: 0, y: 0, width: width / 2, height },
-    jumpButton: { x: width - 84, y: height - 72, radius: BUTTON_RADIUS },
-    shootButton: { x: width - 188, y: height - 112, radius: BUTTON_RADIUS },
+    shootButton: { x: width - 84, y: height - 72, radius: BUTTON_RADIUS },
   };
 }
 
 /** 追従式タッチパッドの不感帯(px)。原点からこの距離を超えて動かすと移動入力になる。 */
 export const MOVE_DEADZONE_PX = 18;
+
+/**
+ * 上スワイプでジャンプとみなす、原点からの上方向変位しきい値(px)。
+ * 横移動の不感帯(MOVE_DEADZONE_PX)より十分大きく取り、横移動の意図を上スワイプと誤検出しにくくする。
+ */
+export const JUMP_SWIPE_PX = 48;
+
+/** 原点からの上方向変位(px, 上が正)がジャンプ保持に相当するか。 */
+export function isJumpSwipeHeld(upwardDelta: number): boolean {
+  return upwardDelta >= JUMP_SWIPE_PX;
+}
+
+/** 上スワイプ・ジャンプの判定状態。立ち上がりエッジと連続発火防止を司る。 */
+export interface JumpSwipeState {
+  /** ジャンプ保持中(上変位がしきい値以上)。可変ジャンプの高さ制御に使う。 */
+  held: boolean;
+  /** 次の上方向クロスでジャンプを発火できる状態か(原点側に戻すと再アーム)。 */
+  armed: boolean;
+}
+
+/** ジャンプスワイプ判定の初期状態(未保持・発火可能)。 */
+export function initialJumpSwipe(): JumpSwipeState {
+  return { held: false, armed: true };
+}
+
+/**
+ * 上方向変位(upwardDelta = originY - curY, 上が正)を1ステップ評価し、
+ * 立ち上がりエッジ(pressed)と次状態を返す。
+ * - しきい値以上 かつ armed: 発火(pressed=true, held=true)し、再アームを解除する
+ * - しきい値未満: 保持解除(held=false)し、再アーム(armed=true)する(原点側に戻すと再ジャンプ可能)
+ * - しきい値以上 だが not armed: 保持を継続(held=true)するが新規発火はしない
+ */
+export function stepJumpSwipe(
+  prev: JumpSwipeState,
+  upwardDelta: number,
+): { state: JumpSwipeState; pressed: boolean } {
+  const over = isJumpSwipeHeld(upwardDelta);
+  if (over && prev.armed) {
+    return { state: { held: true, armed: false }, pressed: true };
+  }
+  if (!over) {
+    return { state: { held: false, armed: true }, pressed: false };
+  }
+  return { state: { held: true, armed: prev.armed }, pressed: false };
+}
 
 /** タッチパッドの見た目: 外周リング半径。 */
 export const MOVE_PAD_BASE_RADIUS = 58;
