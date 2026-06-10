@@ -28,10 +28,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private arenaMaxX = Infinity;
   // 前後移動の現在向き(move/jump 開始時に決め直す)。
   private paceDir: -1 | 1 = -1;
+  // 射撃の狙い高さ(プレイヤーの Y)。update 毎に更新し、fireVolley が参照する。
+  private targetY: number;
   private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.boss);
+    this.targetY = y;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -70,9 +73,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   }
 
   /** フェーズ/アクション遷移を駆動する。 */
-  override update(time: number, playerX: number): void {
+  override update(time: number, playerX: number, playerY: number): void {
     if (!this.isAlive || this.isDead()) return;
     this.phase = bossPhaseForHp(this.hp, this.maxHp);
+    // 射撃はプレイヤーの高さを狙う(ボス中心はプレイヤーより高く、水平発射だと頭上を越すため)。
+    this.targetY = playerY;
 
     if (time >= this.actionEndsAt) {
       this.beginNextAction(time, playerX);
@@ -176,12 +181,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (!this.projectiles) return;
     const dir = playerX < this.x ? -1 : 1;
     const muzzleX = this.x + dir * (BOSS.width / 2 + 4);
+    // 弾はプレイヤーの高さ(targetY)を中心に発射する。ボス中心はプレイヤーより
+    // 高いため、ボス中心から水平発射すると頭上を越えて当たらない不具合になる。
+    const baseY = this.targetY;
     // phase2 は弾数を増やして攻勢を強める
     const offsets = this.phase === 'phase2' ? [-24, 0, 24] : [0];
     for (const oy of offsets) {
-      const projectile = this.projectiles.get(muzzleX, this.y + oy) as Projectile | null;
+      const projectile = this.projectiles.get(muzzleX, baseY + oy) as Projectile | null;
       if (!projectile) continue;
-      projectile.fire(muzzleX, this.y + oy, dir * BOSS.bulletSpeed, 'normal', 'enemy');
+      projectile.fire(muzzleX, baseY + oy, dir * BOSS.bulletSpeed, 'normal', 'enemy');
     }
     this.rig.triggerAttack(this.scene.time.now);
   }

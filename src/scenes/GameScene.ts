@@ -201,7 +201,7 @@ export class GameScene extends Phaser.Scene {
     this.spawn.updateEnemies(time, this.player.x);
 
     if (this.boss) {
-      this.boss.update(time, this.player.x);
+      this.boss.update(time, this.player.x, this.player.y);
       this.registry.set(HUD.bossHp, this.boss.hp);
     }
 
