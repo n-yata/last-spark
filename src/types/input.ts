@@ -15,4 +15,6 @@ export interface InputState {
   shootHeld: boolean;
   /** このフレームで離されたか(タップ確定トリガ) */
   shootReleased: boolean;
+  /** ショット操作を強制中断するか(画面外フォーカス喪失等。チャージ含め待機へ戻す) */
+  shootCancel: boolean;
 }

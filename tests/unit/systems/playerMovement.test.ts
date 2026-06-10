@@ -17,6 +17,7 @@ const baseInput: InputState = {
   shootPressed: false,
   shootHeld: false,
   shootReleased: false,
+  shootCancel: false,
 };
 
 describe('resolveHorizontalVelocity', () => {

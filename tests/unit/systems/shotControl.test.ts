@@ -123,3 +123,25 @@ describe('shotControl: 長押しで連射', () => {
     expect(r.action).toBe('none');
   });
 });
+
+describe('shotControl: 強制中断(cancel)', () => {
+  it('チャージ中に cancel が来ると待機(idle)へ戻り発火しない', () => {
+    let s = initialShotState();
+    s = press(s, 1000).state;
+    s = release(s, 1100).state; // charging
+    expect(s.mode).toBe('charging');
+    const r = stepShot(s, { pressed: false, released: false, held: false, cancel: true, now: 1300 });
+    expect(r.state.mode).toBe('idle');
+    expect(r.action).toBe('none');
+    expect(chargingElapsed(r.state, 2000)).toBe(0);
+  });
+
+  it('連射中に cancel が来ても待機(idle)へ戻る', () => {
+    let s = initialShotState();
+    s = press(s, 0).state;
+    s = hold(s, SHOT.holdToAutoFireMs).state; // holding
+    const r = stepShot(s, { pressed: false, released: false, held: true, cancel: true, now: 999 });
+    expect(r.state.mode).toBe('idle');
+    expect(r.action).toBe('none');
+  });
+});

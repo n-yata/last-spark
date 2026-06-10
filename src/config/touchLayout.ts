@@ -18,22 +18,21 @@ export interface Rect {
 export interface TouchLayout {
   /** 画面左半分=移動ゾーン。 */
   moveZone: Rect;
-  /** 右手親指で押すショットボタン(右下、主操作)。 */
-  shootButton: CircleButton;
-  /** ジャンプボタン(ショットの左上に配置)。左パッドの上スワイプでもジャンプ可能。 */
+  /** ジャンプボタン(右下、親指のホームポジション)。 */
   jumpButton: CircleButton;
+  /** ショットボタン(ジャンプの左上に配置)。 */
+  shootButton: CircleButton;
 }
 
 const BUTTON_RADIUS = 44;
-const JUMP_BUTTON_RADIUS = 40;
 
 /** 実画面サイズからタッチUIレイアウトを算出する。 */
 export function createTouchLayout(width: number, height: number): TouchLayout {
   return {
     moveZone: { x: 0, y: 0, width: width / 2, height },
-    // ショット=右下(親指のホームポジション)。ジャンプ=その左上(A/B 配置)。
-    shootButton: { x: width - 88, y: height - 72, radius: BUTTON_RADIUS },
-    jumpButton: { x: width - 196, y: height - 104, radius: JUMP_BUTTON_RADIUS },
+    // ジャンプ=右下(親指のホームポジション)、ショット=その左上(A/B 配置)。
+    jumpButton: { x: width - 84, y: height - 72, radius: BUTTON_RADIUS },
+    shootButton: { x: width - 188, y: height - 112, radius: BUTTON_RADIUS },
   };
 }
 

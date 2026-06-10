@@ -107,6 +107,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       pressed: input.shootPressed,
       released: input.shootReleased,
       held: input.shootHeld,
+      cancel: input.shootCancel,
       now,
     });
     this.shotState = state;

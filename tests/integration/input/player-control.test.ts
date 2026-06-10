@@ -68,6 +68,7 @@ const idle: InputState = {
   shootPressed: false,
   shootHeld: false,
   shootReleased: false,
+  shootCancel: false,
 };
 
 describe('入力→プレイヤー移動', () => {

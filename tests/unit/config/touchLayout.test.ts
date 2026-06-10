@@ -22,18 +22,18 @@ describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => 
     expect(wide.moveZone.width).toBe(800);
   });
 
-  it('ショットボタンは画面右下に配置される(親指のホームポジション)', () => {
+  it('ジャンプボタンは画面右下に配置される(親指のホームポジション)', () => {
     const layout = createTouchLayout(1200, 540);
-    expect(layout.shootButton.x).toBe(1200 - 88);
-    expect(layout.shootButton.y).toBe(540 - 72);
-    expect(layout.shootButton.radius).toBe(44); // 親指で押しやすい控えめサイズ
+    expect(layout.jumpButton.x).toBe(1200 - 84);
+    expect(layout.jumpButton.y).toBe(540 - 72);
+    expect(layout.jumpButton.radius).toBe(44);
   });
 
-  it('ジャンプボタンはショットの左上に配置され、ショットと重ならない', () => {
+  it('ショットボタンはジャンプの左上に配置され、ジャンプと重ならない', () => {
     const layout = createTouchLayout(1200, 540);
-    expect(layout.jumpButton.x).toBe(1200 - 196);
-    expect(layout.jumpButton.y).toBe(540 - 104);
-    expect(layout.jumpButton.radius).toBe(40);
+    expect(layout.shootButton.x).toBe(1200 - 188);
+    expect(layout.shootButton.y).toBe(540 - 112);
+    expect(layout.shootButton.radius).toBe(44);
     // 2 ボタンの中心間距離が両半径の和より大きい(=円が重ならない)
     const dx = layout.shootButton.x - layout.jumpButton.x;
     const dy = layout.shootButton.y - layout.jumpButton.y;
@@ -41,9 +41,10 @@ describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => 
     expect(dist).toBeGreaterThan(layout.shootButton.radius + layout.jumpButton.radius);
   });
 
-  it('ジャンプボタンは画面右側(移動ゾーン外)にある', () => {
+  it('両ボタンとも画面右側(移動ゾーン外)にある', () => {
     const layout = createTouchLayout(1200, 540);
     expect(isInMoveZone(layout.moveZone, layout.jumpButton.x)).toBe(false);
+    expect(isInMoveZone(layout.moveZone, layout.shootButton.x)).toBe(false);
   });
 });
 

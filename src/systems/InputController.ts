@@ -37,6 +37,7 @@ export class InputController {
   private shootPointerId: number | null = null;
   private shootPressedEdge = false;
   private shootReleasedEdge = false;
+  private shootCancelEdge = false;
 
   private jumpPressedEdge = false;
   private jumpButtonHeld = false;
@@ -139,10 +140,9 @@ export class InputController {
     this.jumpButtonPointerId = null;
     this.moveDir = 0;
     this.jumpButtonHeld = false;
-    if (this.shootHeld) {
-      this.shootReleasedEdge = true;
-    }
     this.shootHeld = false;
+    // チャージ中(指が離れた armed 状態)も含めショット操作を強制中断して待機へ戻す。
+    this.shootCancelEdge = true;
   }
 
   /** 追従式タッチパッドの現在状態(描画用)を返す。 */
@@ -164,6 +164,7 @@ export class InputController {
     let shootPressed = this.shootPressedEdge;
     let shootHeld = this.shootHeld;
     let shootReleased = this.shootReleasedEdge;
+    const shootCancel = this.shootCancelEdge;
 
     // キーボードフォールバックを合成
     if (this.keys) {
@@ -183,8 +184,9 @@ export class InputController {
     this.jumpPressedEdge = false;
     this.shootPressedEdge = false;
     this.shootReleasedEdge = false;
+    this.shootCancelEdge = false;
 
-    return { moveDir, jumpPressed, jumpHeld, shootPressed, shootHeld, shootReleased };
+    return { moveDir, jumpPressed, jumpHeld, shootPressed, shootHeld, shootReleased, shootCancel };
   }
 
   /** チャージ表示用に現在のショット押下状態を返す。 */

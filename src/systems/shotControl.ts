@@ -39,6 +39,8 @@ export interface ShotFrame {
   released: boolean;
   /** 現在押下中か。 */
   held: boolean;
+  /** 強制中断(画面外フォーカス喪失等)。チャージ含め待機へ戻す。 */
+  cancel?: boolean;
   /** 現在時刻(ms)。 */
   now: number;
 }
@@ -60,9 +62,14 @@ export function stepShot(
   prev: ShotState,
   frame: ShotFrame,
 ): { state: ShotState; action: ShotAction } {
-  const { pressed, released, held, now } = frame;
+  const { pressed, released, held, cancel, now } = frame;
   let state: ShotState = { ...prev };
   let action: ShotAction = 'none';
+
+  // 強制中断: チャージ含め全状態を待機へ戻す(発火なし)。
+  if (cancel) {
+    return { state: initialShotState(), action: 'none' };
+  }
 
   if (pressed) {
     if (state.mode === 'charging') {
