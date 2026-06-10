@@ -95,8 +95,7 @@ interface PlayerState {
   maxHp: number;            // 最大ライフ
   facing: 'left' | 'right'; // 向き(ショット方向に使用)
   onGround: boolean;        // 接地判定
-  isCharging: boolean;      // チャージ中か
-  chargeStartedAt: number;  // チャージ開始時刻(ms)。0=未チャージ
+  shotState: ShotState;     // ショット操作の状態(shotControl: idle/pending/charging/holding/postFire)
   invincibleUntil: number;  // 無敵終了時刻(ms)。被弾後の点滅無敵
 }
 
@@ -162,18 +161,19 @@ export const BOSS = {
 ### InputController(Systemレイヤー)
 
 **責務**:
-- 横向き・両手前提のタッチ入力を、抽象的な操作意図(move/jump/shoot/charge)に変換する。
-- 画面左半分=追従パッド(左右の押し分け移動 + 上スワイプでジャンプ)、右半分=ショット仮想ボタンを管理する。
-- 左親指=移動+ジャンプ、右親指=チャージ専任に役割を分離し、チャージしながらジャンプを物理的に可能にする。
-- マルチタッチ(移動/ジャンプ + ショット同時)を扱う。キーボード(開発時)もフォールバックで受ける。
+- 横向き・両手前提のタッチ入力を、抽象的な操作意図(move/jump/shoot)に変換する。
+- 画面左半分=追従パッド(左右の押し分け移動のみ)、右側=ジャンプ/ショットの仮想ボタンを管理する。
+- 左親指=移動、右親指=ジャンプ/ショットに役割を分離する。3 ポインタのマルチタッチで移動とジャンプ・ショットを同時に扱う。キーボード(開発時)もフォールバックで受ける。
 
 **インターフェース**:
 ```typescript
 interface InputState {
   moveDir: -1 | 0 | 1;   // -1=左, 0=停止, 1=右
   jumpPressed: boolean;  // このフレームでジャンプ入力が立ち上がったか
-  shootHeld: boolean;    // ショットボタン押下中(チャージ判定に使用)
-  shootReleased: boolean;// このフレームで離されたか(発射トリガ)
+  jumpHeld: boolean;     // ジャンプボタン押下中(可変ジャンプ高さ制御)
+  shootPressed: boolean; // このフレームでショット入力が立ち上がったか(タップ/連射の起点)
+  shootHeld: boolean;    // ショットボタン押下中(連射・押下継続判定)
+  shootReleased: boolean;// このフレームで離されたか(タップ確定トリガ)
 }
 
 class InputController {
@@ -220,8 +220,8 @@ class SpawnSystem {
 class Player extends Phaser.Physics.Arcade.Sprite {
   applyInput(input: InputState): void; // 入力に基づく移動/ジャンプ/発射
   takeDamage(amount: number): void;
-  startCharge(): void;
-  releaseShot(): Projectile;           // チャージ成立可否で kind を決定
+  // ショット操作(タップ=チャージ、再タップ=発射、長押し=連射)は
+  // 純粋状態機械 systems/shotControl.ts(stepShot)で解釈する。
 }
 
 class Boss extends Phaser.Physics.Arcade.Sprite {
@@ -276,13 +276,13 @@ sequenceDiagram
     participant Combat as CombatSystem
     participant UI as UIScene
 
-    User->>Input: ショットボタンを長押し
-    Input-->>Player: shootHeld = true
-    Player->>Player: startCharge() / chargeStartedAt 記録
-    Player->>UI: チャージゲージ更新(蓄積表示)
-    User->>Input: ボタンを離す
-    Input-->>Player: shootReleased = true
-    Player->>Player: 経過 >= chargeThresholdMs?
+    User->>Input: ショットボタンをタップ(1回目)
+    Input-->>Player: shootPressed → 短時間で shootReleased
+    Player->>Player: stepShot → mode='charging'(チャージ開始)
+    Player->>UI: チャージゲージ更新(指を離しても蓄積)
+    User->>Input: ショットボタンをタップ(2回目)
+    Input-->>Player: shootPressed = true
+    Player->>Player: stepShot → 経過 >= chargeThresholdMs?
     alt 成立(チャージ)
         Player->>Combat: Projectile(kind='charged') 発射
     else 未成立(通常)
@@ -292,10 +292,11 @@ sequenceDiagram
 ```
 
 **フロー説明**:
-1. 右ゾーンのショットボタン押下で `shootHeld` が立ち、`startCharge()` がチャージ開始時刻を記録。
-2. 押下中は `UIScene` がチャージゲージを伸ばし、しきい値到達で発光(視覚フィードバック)。
-3. 離した瞬間に経過時間を判定し、`chargeThresholdMs` 以上ならチャージ弾、未満なら通常弾を発射。
-4. `cooldownMs` の連射間隔を超えていない場合は発射しない。
+1. ショットボタンの 1 回目タップ(短押し→離す)で `shotControl` が `charging` に遷移し、チャージ開始時刻を記録。指を離してもゲージは蓄積し続ける。
+2. `UIScene` がチャージゲージを伸ばし、しきい値到達で発光(視覚フィードバック)。
+3. 2 回目タップ(`shootPressed`)で経過時間を判定し、`chargeThresholdMs` 以上ならチャージ弾、未満なら通常弾を発射。
+4. ショットボタンを `holdToAutoFireMs` 以上押し続けた場合は、チャージせず通常弾を `cooldownMs` 間隔で連射する。
+5. いずれも `cooldownMs` の連射間隔を超えていない場合は発射しない。
 
 ### UC-2: ボス戦突入〜撃破
 
@@ -371,14 +372,15 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 （横向き / 両手持ち）
 ┌───────────────────────────┬───────────────────────────┐
 │  左ゾーン(左手親指)        │   右ゾーン(右手親指)        │
-│   ▲ ジャンプ(上スワイプ)  │                            │
-│   ◀ 歩行 ▶ (追従パッド)   │     ◯ショット(長押し=溜め) │
+│                            │        ◯ジャンプ           │
+│   ◀ 歩行 ▶ (追従パッド)   │     ◯ショット(タップ=溜め) │
 └───────────────────────────┴───────────────────────────┘
 ```
 
-- 左の追従パッドは触れた箇所を原点とし、横変位で左右移動、上方向へしきい値以上動かすとジャンプ(上に留めるほど高く跳ぶ可変ジャンプ)。
-- 右のショットボタンは半透明で、親指で隠れにくい位置(右下寄り)に配置。サイズ/透明度は実機調整。
-- ジャンプを左パッドへ移したことで、右親指のチャージ(長押し)と左親指のジャンプを同時に行える。
+- 左の追従パッドは触れた箇所を原点とし、横変位で左右移動する(移動専用)。
+- 右側はジャンプボタン(左上)とショットボタン(右下)の 2 ボタン。半透明で親指で隠れにくい位置に配置し、サイズ/透明度は実機調整。
+- ショット操作: 1 回目タップでチャージ開始(離してもゲージ蓄積)、2 回目タップで発射。長押しはチャージせず通常弾を連射。
+- 移動(左親指)とジャンプ/ショット(右親指)を別ポインタで同時操作できる。
 - 縦持ち検知時は `OrientationScene` を重ね、横向きへの回転を促す。
 
 ### カラーコーディング(世界観: 暗め基調 + 発光アクセント)

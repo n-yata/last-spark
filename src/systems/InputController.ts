@@ -2,18 +2,15 @@ import Phaser from 'phaser';
 import type { InputState, MoveDir } from '../types/input';
 import {
   createTouchLayout,
-  initialJumpSwipe,
   isInsideButton,
   isInMoveZone,
   moveDirFromDelta,
-  stepJumpSwipe,
-  type JumpSwipeState,
   type TouchLayout,
 } from '../config/touchLayout';
 
 // タッチ/キーボード入力を抽象操作(InputState)に正規化する。
-// 左半分=追従式タッチパッド(触れた箇所を原点に左右移動 + 上スワイプでジャンプ)、右半分=ショット仮想ボタン。
-// 左親指=移動+ジャンプ、右親指=チャージ専任に分離し、チャージしながらジャンプを可能にする。
+// 左半分=追従式タッチパッド(触れた箇所を原点に左右移動)、右側=ジャンプ/ショットの仮想ボタン。
+// 移動とジャンプ/ショットを別ポインタに分離し、同時操作を可能にする。
 
 /** 追従式タッチパッドの状態(描画用)。 */
 export interface MovePadState {
@@ -38,12 +35,12 @@ export class InputController {
 
   private shootHeld = false;
   private shootPointerId: number | null = null;
+  private shootPressedEdge = false;
   private shootReleasedEdge = false;
 
   private jumpPressedEdge = false;
-  private jumpHeld = false;
-  // 上スワイプ・ジャンプの判定状態(移動ポインタに紐づく)
-  private jumpSwipe: JumpSwipeState = initialJumpSwipe();
+  private jumpButtonHeld = false;
+  private jumpButtonPointerId: number | null = null;
 
   // キーボード(開発時フォールバック)
   private keys?: {
@@ -66,7 +63,7 @@ export class InputController {
   /** タッチゾーン/仮想ボタンとキーボードを登録する。 */
   attachTouchZones(): void {
     const input = this.scene.input;
-    input.addPointer(2); // 既定 1 + 追加 2 = 3 ポインタ
+    input.addPointer(2); // 既定 1 + 追加 2 = 3 ポインタ(移動 + ジャンプ + ショット)
     this.refreshLayout();
 
     input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);
@@ -90,19 +87,24 @@ export class InputController {
     const { x, y } = pointer;
     if (isInsideButton(this.layout.shootButton, x, y)) {
       this.shootHeld = true;
+      this.shootPressedEdge = true;
       this.shootPointerId = pointer.id;
       return;
     }
+    if (isInsideButton(this.layout.jumpButton, x, y) && this.jumpButtonPointerId === null) {
+      this.jumpButtonHeld = true;
+      this.jumpButtonPointerId = pointer.id;
+      this.jumpPressedEdge = true;
+      return;
+    }
     if (isInMoveZone(this.layout.moveZone, x) && this.movePointerId === null) {
-      // 触れた箇所をパッドの原点にする(追従式)。上スワイプ判定もここから再アーム。
+      // 触れた箇所をパッドの原点にする(追従式)。
       this.movePointerId = pointer.id;
       this.moveOriginX = x;
       this.moveOriginY = y;
       this.moveCurX = x;
       this.moveCurY = y;
       this.moveDir = 0;
-      this.jumpSwipe = initialJumpSwipe();
-      this.jumpHeld = false;
     }
   }
 
@@ -112,20 +114,16 @@ export class InputController {
     this.moveCurY = pointer.y;
     // 原点からの横方向の移動量で左右を判定する
     this.moveDir = moveDirFromDelta(pointer.x - this.moveOriginX);
-    // 原点からの上方向変位で上スワイプ・ジャンプを判定する(横移動と同時に成立)
-    const upwardDelta = this.moveOriginY - pointer.y;
-    const { state, pressed } = stepJumpSwipe(this.jumpSwipe, upwardDelta);
-    this.jumpSwipe = state;
-    this.jumpHeld = state.held;
-    if (pressed) this.jumpPressedEdge = true;
   }
 
   private onPointerUp(pointer: Phaser.Input.Pointer): void {
     if (pointer.id === this.movePointerId) {
       this.movePointerId = null;
       this.moveDir = 0;
-      this.jumpSwipe = initialJumpSwipe();
-      this.jumpHeld = false;
+    }
+    if (pointer.id === this.jumpButtonPointerId) {
+      this.jumpButtonPointerId = null;
+      this.jumpButtonHeld = false;
     }
     if (pointer.id === this.shootPointerId) {
       this.shootPointerId = null;
@@ -138,9 +136,9 @@ export class InputController {
     // 画面外に出た場合は安全側で入力をクリアする
     this.movePointerId = null;
     this.shootPointerId = null;
+    this.jumpButtonPointerId = null;
     this.moveDir = 0;
-    this.jumpSwipe = initialJumpSwipe();
-    this.jumpHeld = false;
+    this.jumpButtonHeld = false;
     if (this.shootHeld) {
       this.shootReleasedEdge = true;
     }
@@ -158,11 +156,12 @@ export class InputController {
     };
   }
 
-  /** 毎フレーム最新の入力状態を返す。エッジ(jump/shootReleased)は消費する。 */
+  /** 毎フレーム最新の入力状態を返す。エッジ(jump/shoot)は消費する。 */
   update(): InputState {
     let moveDir = this.moveDir;
     let jumpPressed = this.jumpPressedEdge;
-    let jumpHeld = this.jumpHeld;
+    let jumpHeld = this.jumpButtonHeld;
+    let shootPressed = this.shootPressedEdge;
     let shootHeld = this.shootHeld;
     let shootReleased = this.shootReleasedEdge;
 
@@ -175,15 +174,17 @@ export class InputController {
 
       const keyShootDown = this.keys.shoot.isDown;
       if (keyShootDown) shootHeld = true;
+      if (keyShootDown && !this.keyShootWasDown) shootPressed = true;
       if (!keyShootDown && this.keyShootWasDown) shootReleased = true;
       this.keyShootWasDown = keyShootDown;
     }
 
     // エッジを消費
     this.jumpPressedEdge = false;
+    this.shootPressedEdge = false;
     this.shootReleasedEdge = false;
 
-    return { moveDir, jumpPressed, jumpHeld, shootHeld, shootReleased };
+    return { moveDir, jumpPressed, jumpHeld, shootPressed, shootHeld, shootReleased };
   }
 
   /** チャージ表示用に現在のショット押下状態を返す。 */

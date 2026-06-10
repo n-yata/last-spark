@@ -19,7 +19,10 @@ export const PLAYER = {
 export const SHOT = {
   normalDamage: 1,
   chargedDamage: 3,
-  chargeThresholdMs: 600, // この長さ以上の長押しでチャージ成立
+  chargeThresholdMs: 600, // チャージ開始からこの長さでチャージ弾が成立
+  // ショットボタンをこの時間以上押し続けたら「長押し=通常弾の連射」とみなす。
+  // チャージ成立しきい値より十分短くし、タップ(チャージ)と長押し(連射)を判別する。
+  holdToAutoFireMs: 200,
   normalSpeed: 420,
   chargedSpeed: 480,
   cooldownMs: 180, // 連射間隔

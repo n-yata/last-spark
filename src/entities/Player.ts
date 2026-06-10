@@ -4,6 +4,13 @@ import { PLAYER } from '../config/balance';
 import type { InputState } from '../types/input';
 import type { Damageable } from '../types/combat';
 import { isChargedShot, canFire, createProjectileSpec } from '../systems/shot';
+import {
+  initialShotState,
+  stepShot,
+  chargingElapsed,
+  type ShotState,
+  type ShotAction,
+} from '../systems/shotControl';
 import { isDead, isInvincible, resolveInvincibleDamage } from '../systems/combatRules';
 import {
   resolveHorizontalVelocity,
@@ -25,8 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   maxHp: number = PLAYER.maxHp;
   facing: 'left' | 'right' = 'right';
 
-  private chargeStartedAt = 0;
-  private isCharging = false;
+  private shotState: ShotState = initialShotState();
   private chargeReadyNotified = false;
   private lastShotAt = 0;
   private invincibleUntil = 0;
@@ -57,9 +63,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     return body.blocked.down || body.touching.down;
   }
 
-  /** チャージ蓄積の経過時間(ms)。未チャージは 0。 */
+  /** チャージ蓄積の経過時間(ms)。チャージ中以外は 0(UI ゲージ表示用)。 */
   chargeElapsed(now: number): number {
-    return this.isCharging ? now - this.chargeStartedAt : 0;
+    return chargingElapsed(this.shotState, now);
   }
 
   /** 入力に基づいて移動・ジャンプ・発射を行う。 */
@@ -85,28 +91,47 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.isJumping = false;
     }
 
-    // チャージ開始(ショット押下の立ち上がり)
-    if (input.shootHeld && !this.isCharging) {
-      this.startCharge(now);
-    }
+    this.updateShot(input, now);
 
+    this.updateBlink(now);
+    this.updateRig(input, now);
+  }
+
+  /**
+   * ショット操作(タップ=チャージ、再タップ=発射、長押し=連射)を 1 フレーム評価する。
+   * 状態機械(shotControl)が発火アクションを返し、ここで実際の発射・音・チャージ通知を行う。
+   */
+  private updateShot(input: InputState, now: number): void {
+    const prevMode = this.shotState.mode;
+    const { state, action } = stepShot(this.shotState, {
+      pressed: input.shootPressed,
+      released: input.shootReleased,
+      held: input.shootHeld,
+      now,
+    });
+    this.shotState = state;
+
+    // チャージ開始の効果音(idle/その他 → charging への遷移時)
+    if (prevMode !== 'charging' && state.mode === 'charging') {
+      this.chargeReadyNotified = false;
+      getSound().playSe('chargeStart');
+    }
     // チャージ成立(しきい値到達)の瞬間に一度だけ通知音
     if (
-      this.isCharging &&
+      state.mode === 'charging' &&
       !this.chargeReadyNotified &&
       isChargedShot(this.chargeElapsed(now))
     ) {
       this.chargeReadyNotified = true;
       getSound().playSe('chargeReady');
     }
-
-    // 発射(離した瞬間)
-    if (input.shootReleased) {
-      this.releaseShot(now);
+    if (state.mode !== 'charging') {
+      this.chargeReadyNotified = false;
     }
 
-    this.updateBlink(now);
-    this.updateRig(input, now);
+    if (action !== 'none') {
+      this.fire(action, now);
+    }
   }
 
   /** 入力・物理状態から MotionState を導出し、リグへ同期する。 */
@@ -126,29 +151,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.rig.update(now, vy);
   }
 
-  startCharge(now: number): void {
-    this.isCharging = true;
-    this.chargeStartedAt = now;
-    this.chargeReadyNotified = false;
-    getSound().playSe('chargeStart');
-  }
-
   /**
-   * 押下を離した際にチャージ成立可否で弾種を決めて発射する。
-   * クールダウン中は発射しない。
+   * 指定種別の弾を前方へ発射する。クールダウン中は発射しない。
+   * アクションは shotControl が決定(fireNormal=通常弾、fireCharged=チャージ弾)。
    */
-  releaseShot(now: number): void {
-    const elapsed = this.chargeElapsed(now);
-    this.isCharging = false;
-    this.chargeStartedAt = 0;
-    this.chargeReadyNotified = false;
-
+  private fire(action: ShotAction, now: number): void {
     if (!this.projectiles || !canFire(now, this.lastShotAt)) {
       return;
     }
     this.lastShotAt = now;
 
-    const kind = isChargedShot(elapsed) ? 'charged' : 'normal';
+    const kind = action === 'fireCharged' ? 'charged' : 'normal';
     const dir = facingSign(this.facing);
     const muzzleX = this.x + dir * (PLAYER.width / 2 + 6);
     const projectile = this.projectiles.get(muzzleX, this.y) as Projectile | null;

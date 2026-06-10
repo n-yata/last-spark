@@ -193,7 +193,11 @@ export class GameScene extends Phaser.Scene {
     this.player.applyInput(inputState, time);
 
     const cam = this.cameras.main;
-    this.spawn.update(cam.scrollX + cam.width);
+    // カメラ右端はワールド座標。ズーム適用時 cam.width(ビューポートpx)と実可視幅は
+    // 異なるため、displayWidth(=width/zoom)で算出する。これを誤ると画面アスペクト比に
+    // よってボストリガー地点に届かず「ボスが出ない」不具合になる。
+    const cameraRightX = cam.scrollX + cam.displayWidth;
+    this.spawn.update(cameraRightX);
     this.spawn.updateEnemies(time, this.player.x);
 
     if (this.boss) {
@@ -202,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.checkFallDeath();
-    this.updateChargeHud(time, inputState.shootHeld);
+    this.updateChargeHud(time);
     this.publishMovePad();
     this.registry.set(HUD.playerHp, this.player.hp);
   }
@@ -225,8 +229,9 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private updateChargeHud(time: number, shootHeld: boolean): void {
-    const ratio = shootHeld ? chargeRatio(this.player.chargeElapsed(time)) : 0;
+  private updateChargeHud(time: number): void {
+    // chargeElapsed はチャージ中のみ正、それ以外は 0 を返す(状態機械で管理)。
+    const ratio = chargeRatio(this.player.chargeElapsed(time));
     this.registry.set(HUD.chargeRatio, ratio);
   }
 

@@ -9,8 +9,10 @@ export interface InputState {
   jumpPressed: boolean;
   /** ジャンプボタン押下中か(可変ジャンプの高さ制御に使用) */
   jumpHeld: boolean;
-  /** ショットボタン押下中(チャージ判定に使用) */
+  /** このフレームでショット入力が立ち上がったか(タップ/連射判定の起点) */
+  shootPressed: boolean;
+  /** ショットボタン押下中(連射・押下継続判定に使用) */
   shootHeld: boolean;
-  /** このフレームで離されたか(発射トリガ) */
+  /** このフレームで離されたか(タップ確定トリガ) */
   shootReleased: boolean;
 }

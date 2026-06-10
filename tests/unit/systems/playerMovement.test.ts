@@ -14,6 +14,7 @@ const baseInput: InputState = {
   moveDir: 0,
   jumpPressed: false,
   jumpHeld: false,
+  shootPressed: false,
   shootHeld: false,
   shootReleased: false,
 };
