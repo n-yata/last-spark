@@ -18,9 +18,9 @@ export interface Rect {
 export interface TouchLayout {
   /** 画面左半分=移動ゾーン。 */
   moveZone: Rect;
-  /** ジャンプボタン(ショットの左上に配置)。 */
+  /** ジャンプボタン(右上に配置)。 */
   jumpButton: CircleButton;
-  /** ショットボタン(右下、親指のホームポジション)。 */
+  /** ショットボタン(左下に配置)。 */
   shootButton: CircleButton;
 }
 
@@ -30,9 +30,9 @@ const BUTTON_RADIUS = 44;
 export function createTouchLayout(width: number, height: number): TouchLayout {
   return {
     moveZone: { x: 0, y: 0, width: width / 2, height },
-    // ショット=右下(親指のホームポジション)、ジャンプ=その左上(A/B 配置)。
-    jumpButton: { x: width - 188, y: height - 112, radius: BUTTON_RADIUS },
-    shootButton: { x: width - 84, y: height - 72, radius: BUTTON_RADIUS },
+    // ジャンプ=右上、ショット=左下(対角配置)。
+    jumpButton: { x: width - 84, y: height - 112, radius: BUTTON_RADIUS },
+    shootButton: { x: width - 188, y: height - 72, radius: BUTTON_RADIUS },
   };
 }
 
