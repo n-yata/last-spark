@@ -14,6 +14,8 @@ import {
   cutJumpVelocity,
 } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
+import { CharacterRig } from './CharacterRig';
+import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
 
 // プレイヤー(最後のロボット)。移動/ジャンプ/発射/被弾を担う。
@@ -30,6 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private invincibleUntil = 0;
   private isJumping = false;
   private projectiles?: Phaser.Physics.Arcade.Group;
+  private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.player);
@@ -39,6 +42,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     body.setSize(PLAYER.width, PLAYER.height);
     body.setCollideWorldBounds(false);
     this.setDepth(10);
+    // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
+    this.setVisible(false);
+    this.rig = new CharacterRig(scene, 'player', 10);
   }
 
   /** 発射に使う弾プールを設定する。 */
@@ -60,7 +66,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   applyInput(input: InputState, now: number): void {
     this.setVelocityX(resolveHorizontalVelocity(input.moveDir));
     this.facing = resolveFacing(this.facing, input.moveDir);
-    this.setFlipX(this.facing === 'left');
 
     // ジャンプ開始(接地中の立ち上がり入力)
     if (shouldJump(input, this.onGround)) {
@@ -101,6 +106,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     }
 
     this.updateBlink(now);
+    this.updateRig(input, now);
+  }
+
+  /** 入力・物理状態から MotionState を導出し、リグへ同期する。 */
+  private updateRig(input: InputState, now: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const vy = body.velocity.y;
+    let state: MotionState;
+    if (!this.onGround) {
+      state = vy < 0 ? 'jump' : 'fall';
+    } else if (input.moveDir !== 0) {
+      state = 'walk';
+    } else {
+      state = 'idle';
+    }
+    this.rig.syncTo(this.x, this.y, true, facingSign(this.facing) as 1 | -1);
+    this.rig.setMotionState(state);
+    this.rig.update(now, vy);
   }
 
   startCharge(now: number): void {
@@ -132,12 +155,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (!projectile) return;
     const velocity = dir * createProjectileSpec(kind).speed;
     projectile.fire(muzzleX, this.y, velocity, kind, 'player');
+    this.rig.triggerAttack(now);
     getSound().playSe(kind === 'charged' ? 'shootCharged' : 'shootNormal');
   }
 
   /** 被弾。無敵中は無効。HP0 で撃破。 */
   takeDamage(amount: number): void {
     const now = this.scene.time.now;
+    const wasInvincible = isInvincible(now, this.invincibleUntil);
     const next = resolveInvincibleDamage(
       { hp: this.hp, invincibleUntil: this.invincibleUntil },
       amount,
@@ -146,6 +171,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     );
     this.hp = next.hp;
     this.invincibleUntil = next.invincibleUntil;
+    // 実際に被弾が通った時のみリグをのけぞらせる(無敵中は無反応)。
+    if (!wasInvincible) {
+      this.rig.triggerHit(now);
+    }
     if (this.isDead()) {
       this.setVelocity(0, 0);
     }
@@ -155,13 +184,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     return isDead(this.hp);
   }
 
-  /** 被弾後の無敵中は点滅させる(視覚フィードバック)。 */
+  /** 被弾後の無敵中は点滅させる(視覚フィードバック)。リグへ適用する。 */
   private updateBlink(now: number): void {
     if (isInvincible(now, this.invincibleUntil)) {
       const phase = Math.floor(now / PLAYER.blinkIntervalMs) % 2;
-      this.setAlpha(phase === 0 ? 0.35 : 1);
+      this.rig.setAlpha(phase === 0 ? 0.35 : 1);
     } else {
-      this.setAlpha(1);
+      this.rig.setAlpha(1);
     }
+  }
+
+  /** エンティティ破棄時にリグも破棄する(リーク防止)。 */
+  override destroy(fromScene?: boolean): void {
+    this.rig.destroy();
+    super.destroy(fromScene);
   }
 }

@@ -63,6 +63,8 @@
 - **許可される操作**: 自身の物理ボディ操作、自状態の更新。
 - **禁止される操作**: 他 Entity の探索や全体ロジック(System が統括)。
 
+> **補足(見た目リグの分離)**: キャラの物理(`Phaser.Physics.Arcade.Sprite`)と見た目を分離している。物理エンティティは自スプライトを非表示にし、頭・胴・腕・脚のパーツを `Container` で関節化した `CharacterRig`(`entities/CharacterRig.ts`)へ表示を委譲する。各パーツの変位は Phaser 非依存の純粋関数 `systems/rigAnimation.ts`(歩行スイング・スクワッシュ&ストレッチ・発射反動・被弾のけぞり)で算出し、系統別の構成は `config/characterRig.ts` に集約する。テクスチャは外部素材を使わず `PreloadScene` が同定義から手続き生成する(知財・コンプライアンス方針に準拠)。将来の外部スプライトシート移行時も、物理に触れず `CharacterRig` 差し替えで対応できる。
+
 #### Persistence レイヤー
 - **責務**: `SaveData` の読み書き、既定値生成、バージョン検証。
 - **許可される操作**: `localStorage` へのアクセス。

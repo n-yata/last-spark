@@ -5,6 +5,8 @@ import type { BossPhase, BossAction } from '../types/boss';
 import type { Damageable } from '../types/combat';
 import { applyDamageToHp, isDead, bossPhaseForHp } from '../systems/combatRules';
 import { pickNextBossAction } from '../systems/bossAi';
+import { CharacterRig } from './CharacterRig';
+import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
 
 // ボス(大型警備機)。HP に応じた 2 フェーズ + 重み付き行動抽選で動く。
@@ -26,6 +28,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private arenaMaxX = Infinity;
   // 前後移動の現在向き(move/jump 開始時に決め直す)。
   private paceDir: -1 | 1 = -1;
+  private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.boss);
@@ -37,6 +40,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     body.setAllowGravity(true);
     body.setImmovable(false);
     this.setDepth(9);
+    // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
+    this.setVisible(false);
+    this.rig = new CharacterRig(scene, 'boss', 9);
   }
 
   private get onGround(): boolean {
@@ -73,6 +79,33 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     }
     this.executeAction(playerX);
     this.clampToArena();
+    this.updateRig(time, playerX);
+  }
+
+  /** 現在のアクション・物理状態から MotionState を導出し、リグへ同期する。 */
+  private updateRig(time: number, playerX: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const vy = body.velocity.y;
+    const faceDir: 1 | -1 = playerX < this.x ? -1 : 1;
+    let state: MotionState;
+    if (this.currentAction === 'stagger') {
+      state = 'stagger';
+    } else if (!this.onGround) {
+      state = vy < 0 ? 'jump' : 'fall';
+    } else if (this.currentAction === 'move') {
+      state = 'walk';
+    } else {
+      state = 'idle';
+    }
+    this.rig.syncTo(this.x, this.y, true, faceDir);
+    this.rig.setMotionState(state);
+    // stagger 中は被弾色、それ以外は通常色。
+    if (state === 'stagger') {
+      this.rig.setTint(0xff6b6b);
+    } else {
+      this.rig.clearTint();
+    }
+    this.rig.update(time, vy);
   }
 
   /** アリーナ範囲外へ出ようとしたら押し戻し、その方向の速度を止める。 */
@@ -121,9 +154,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.paceDir = this.chooseMoveDir();
   }
 
-  private executeAction(playerX: number): void {
-    // 弾・向きはプレイヤー方向。移動は前後ペース(paceDir)で行う。
-    const faceDir = playerX < this.x ? -1 : 1;
+  private executeAction(_playerX: number): void {
+    // 移動は前後ペース(paceDir)で行う。向き・ティントはリグ側(updateRig)で扱う。
     switch (this.currentAction) {
       case 'move':
         this.setVelocityX(this.paceDir * BOSS.moveSpeed);
@@ -138,8 +170,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
         this.setVelocityX(0);
         break;
     }
-    this.setFlipX(faceDir > 0);
-    this.setTint(this.currentAction === 'stagger' ? 0xff6b6b : 0xffffff);
   }
 
   private fireVolley(playerX: number): void {
@@ -153,6 +183,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
       if (!projectile) continue;
       projectile.fire(muzzleX, this.y + oy, dir * BOSS.bulletSpeed, 'normal', 'enemy');
     }
+    this.rig.triggerAttack(this.scene.time.now);
   }
 
   takeDamage(amount: number): void {
@@ -171,10 +202,19 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (this.isDead()) {
       this.isAlive = false;
       this.setVelocity(0, 0);
+      this.rig.setVisible(false); // 撃破でリグも消す
+    } else {
+      this.rig.triggerHit(this.scene.time.now);
     }
   }
 
   isDead(): boolean {
     return isDead(this.hp);
+  }
+
+  /** エンティティ破棄時にリグも破棄する(リーク防止)。 */
+  override destroy(fromScene?: boolean): void {
+    this.rig.destroy();
+    super.destroy(fromScene);
   }
 }
