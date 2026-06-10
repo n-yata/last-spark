@@ -114,6 +114,38 @@ describe('shotControl: 長押しで連射', () => {
     expect(chargingElapsed(s, 9999)).toBe(0);
   });
 
+  it('burstSize 発撃つごとに小休止(burstPauseMs)を挟む', () => {
+    let s = initialShotState();
+    s = press(s, 0).state;
+    // 1 発目(連射開始)
+    let t = SHOT.holdToAutoFireMs;
+    let r = hold(s, t);
+    s = r.state;
+    expect(r.action).toBe('fireNormal');
+    let fired = 1;
+    // 2..burstSize 発目はクールダウン間隔で発火する
+    for (let i = 2; i <= SHOT.burstSize; i++) {
+      t += SHOT.cooldownMs;
+      r = hold(s, t);
+      s = r.state;
+      expect(r.action).toBe('fireNormal');
+      fired++;
+    }
+    expect(fired).toBe(SHOT.burstSize);
+    expect(s.burstCount).toBe(SHOT.burstSize);
+
+    // バースト到達後はクールダウンが明けても発火しない(小休止中)
+    r = hold(s, t + SHOT.cooldownMs);
+    s = r.state;
+    expect(r.action).toBe('none');
+
+    // burstPauseMs 経過で次バーストの 1 発目が発火し、カウントがリセットされる
+    r = hold(s, t + SHOT.burstPauseMs);
+    s = r.state;
+    expect(r.action).toBe('fireNormal');
+    expect(s.burstCount).toBe(1);
+  });
+
   it('連射中に離すと停止(idle)する', () => {
     let s = initialShotState();
     s = press(s, 0).state;

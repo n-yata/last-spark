@@ -29,6 +29,8 @@ export interface ShotState {
   chargeStartAt: number;
   /** 直近の連射発火時刻(ms)。mode==='holding' のクールダウン管理。 */
   lastFireAt: number;
+  /** 現在のバースト内で撃った弾数(mode==='holding')。burstSize で小休止を挟む。 */
+  burstCount: number;
 }
 
 /** 1 フレーム分のショットボタン入力。 */
@@ -47,7 +49,7 @@ export interface ShotFrame {
 
 /** 初期状態(未操作)。 */
 export function initialShotState(): ShotState {
-  return { mode: 'idle', pressStartAt: 0, chargeStartAt: 0, lastFireAt: 0 };
+  return { mode: 'idle', pressStartAt: 0, chargeStartAt: 0, lastFireAt: 0, burstCount: 0 };
 }
 
 /** チャージ経過時間(ms)。charging 中のみ正、それ以外は 0(UI ゲージ表示用)。 */
@@ -76,24 +78,29 @@ export function stepShot(
       // 2回目タップ: チャージ弾(不足なら通常弾)を発射。継続押下なら連射へ。
       const elapsed = now - state.chargeStartAt;
       action = isChargedShot(elapsed) ? 'fireCharged' : 'fireNormal';
-      state = { mode: 'postFire', pressStartAt: now, chargeStartAt: 0, lastFireAt: now };
+      state = { mode: 'postFire', pressStartAt: now, chargeStartAt: 0, lastFireAt: now, burstCount: 0 };
     } else {
       // 1回目の押下開始。タップ/長押しは離すまで未確定。
       state = { ...state, mode: 'pending', pressStartAt: now };
     }
   } else if (held) {
     if (state.mode === 'pending' && now - state.pressStartAt >= SHOT.holdToAutoFireMs) {
-      // 長押し確定: チャージせず連射開始(1 発目を即発火)。
+      // 長押し確定: チャージせず連射開始(1 発目を即発火、バースト1発目)。
       action = 'fireNormal';
-      state = { ...state, mode: 'holding', lastFireAt: now };
+      state = { ...state, mode: 'holding', lastFireAt: now, burstCount: 1 };
     } else if (state.mode === 'postFire' && now - state.pressStartAt >= SHOT.holdToAutoFireMs) {
-      // チャージ弾発射後も押し続けた: 連射へ移行。
+      // チャージ弾発射後も押し続けた: 連射へ移行(バースト1発目)。
       action = 'fireNormal';
-      state = { ...state, mode: 'holding', lastFireAt: now };
-    } else if (state.mode === 'holding' && now - state.lastFireAt >= SHOT.cooldownMs) {
-      // 連射中: クールダウンごとに発火。
-      action = 'fireNormal';
-      state = { ...state, lastFireAt: now };
+      state = { ...state, mode: 'holding', lastFireAt: now, burstCount: 1 };
+    } else if (state.mode === 'holding') {
+      // 連射中: 通常はクールダウン間隔。バースト(burstSize 発)到達後は小休止を挟む。
+      const reachedBurst = state.burstCount >= SHOT.burstSize;
+      const interval = reachedBurst ? SHOT.burstPauseMs : SHOT.cooldownMs;
+      if (now - state.lastFireAt >= interval) {
+        action = 'fireNormal';
+        const nextCount = reachedBurst ? 1 : state.burstCount + 1;
+        state = { ...state, lastFireAt: now, burstCount: nextCount };
+      }
     }
   } else if (released) {
     if (state.mode === 'pending') {

@@ -56,11 +56,11 @@
 
 **定義**: ショットボタンを 1 回タップしてチャージを開始し、もう一度タップすると発射される、通常弾より強い弾。
 
-**説明**: 手触りの核となる要素。1 回目タップで `charging` に入りゲージが蓄積(指を離しても継続)、2 回目タップ時の経過が `SHOT.chargeThresholdMs` 以上でチャージ成立、未満なら通常弾になる。なおショットボタンを `SHOT.holdToAutoFireMs` 以上長押しした場合は、チャージせず通常弾を連射する。操作解釈は純粋状態機械 `systems/shotControl.ts` が担う。
+**説明**: 手触りの核となる要素。1 回目タップで `charging` に入りゲージが蓄積(指を離しても継続)、2 回目タップ時の経過が `SHOT.chargeThresholdMs` 以上でチャージ成立、未満なら通常弾になる。なおショットボタンを `SHOT.holdToAutoFireMs` 以上長押しした場合は、チャージせず通常弾を連射する(`SHOT.burstSize` 発ごとに `SHOT.burstPauseMs` の小休止)。操作解釈は純粋状態機械 `systems/shotControl.ts` が担う。
 
 **関連用語**: [方向ゾーン式](#方向ゾーン式), [チャージゲージ](#チャージゲージ)
 
-**実装(定数)**: `src/config/balance.ts`(`SHOT.chargeThresholdMs`, `SHOT.holdToAutoFireMs`)
+**実装(定数)**: `src/config/balance.ts`(`SHOT.chargeThresholdMs`, `SHOT.holdToAutoFireMs`, `SHOT.burstSize`, `SHOT.burstPauseMs`)
 
 ### 方向ゾーン式
 
@@ -80,7 +80,7 @@
 
 ### 仮想ボタン
 
-**定義**: 画面右側に配置される、ジャンプ/ショットのためのタッチUI要素(ジャンプボタン=右下、ショットボタン=左上)。
+**定義**: 画面右側に配置される、ジャンプ/ショットのためのタッチUI要素(ジャンプボタン=左上、ショットボタン=右下)。
 
 **説明**: 半透明で、親指で隠れにくい位置・サイズに配置する。具体的なレイアウト/サイズ/透明度は実機で調整する。
 

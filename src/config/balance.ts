@@ -23,9 +23,13 @@ export const SHOT = {
   // ショットボタンをこの時間以上押し続けたら「長押し=通常弾の連射」とみなす。
   // チャージ成立しきい値より十分短くし、タップ(チャージ)と長押し(連射)を判別する。
   holdToAutoFireMs: 200,
+  // 長押し連射のバースト制御: burstSize 発撃つごとに burstPauseMs の小休止を挟む
+  // (撃ち放題にせず、連射にリズムを与える)。
+  burstSize: 5,
+  burstPauseMs: 450,
   normalSpeed: 420,
   chargedSpeed: 480,
-  cooldownMs: 180, // 連射間隔
+  cooldownMs: 180, // 連射間隔(バースト内の発射間隔)
   normalSize: 8,
   chargedSize: 18,
   // 弾の寿命。射程 = speed × lifespan。ボス戦の間合い(アリーナ幅)で弾が届くよう確保する。
