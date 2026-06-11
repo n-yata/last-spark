@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   createTouchLayout,
   moveDirFromDelta,
+  climbDirFromDelta,
   clampStick,
   isInMoveZone,
   isInsideButton,
   MOVE_DEADZONE_PX,
+  CLIMB_DEADZONE_PX,
   MOVE_PAD_MAX_RADIUS,
 } from '../../../src/config/touchLayout';
 
@@ -66,6 +68,26 @@ describe('moveDirFromDelta(追従式パッドの方向判定)', () => {
   it('原点相対なので画面位置に依存せず左右どちらにも入力できる(後退できないバグの回帰防止)', () => {
     expect(moveDirFromDelta(-30)).toBe(-1);
     expect(moveDirFromDelta(30)).toBe(1);
+  });
+});
+
+describe('climbDirFromDelta(梯子昇降の上下判定)', () => {
+  it('原点から上へ不感帯を超えて動かすと登る(-1)', () => {
+    expect(climbDirFromDelta(-(CLIMB_DEADZONE_PX + 1))).toBe(-1);
+  });
+
+  it('原点から下へ不感帯を超えて動かすと降りる(1)', () => {
+    expect(climbDirFromDelta(CLIMB_DEADZONE_PX + 1)).toBe(1);
+  });
+
+  it('不感帯内(原点付近)は静止(0)', () => {
+    expect(climbDirFromDelta(0)).toBe(0);
+    expect(climbDirFromDelta(-CLIMB_DEADZONE_PX)).toBe(0);
+    expect(climbDirFromDelta(CLIMB_DEADZONE_PX)).toBe(0);
+  });
+
+  it('昇降の不感帯は横移動より大きい(縦ブレ誤反応の抑制)', () => {
+    expect(CLIMB_DEADZONE_PX).toBeGreaterThan(MOVE_DEADZONE_PX);
   });
 });
 

@@ -85,3 +85,8 @@ export const STAGE = {
   deathY: 600, // この Y を超えたら落下死
   gravityY: 1200,
 } as const;
+
+export const LADDER = {
+  // 梯子の昇降速度(px/s)。横移動より遅めにして「登る手応え」を出す。
+  climbSpeed: 130,
+} as const;

@@ -58,6 +58,22 @@ export function moveDirFromDelta(deltaX: number): -1 | 0 | 1 {
 }
 
 /**
+ * 梯子昇降の不感帯(px)。横移動より大きめにして、歩行中の縦ブレでの誤反応を抑える。
+ * (実害は「梯子に重なっている時だけ Player 側で climbDir を使う」ことでも二重に防ぐ)
+ */
+export const CLIMB_DEADZONE_PX = 28;
+
+/**
+ * タッチ原点からの縦方向の移動量(deltaY = 現在Y - 原点Y)から昇降方向を求める。
+ * 画面Y方向に一致: 上へ動かす(deltaY<0)=登る(-1)、下へ動かす(deltaY>0)=降りる(1)。
+ */
+export function climbDirFromDelta(deltaY: number): -1 | 0 | 1 {
+  if (deltaY < -CLIMB_DEADZONE_PX) return -1;
+  if (deltaY > CLIMB_DEADZONE_PX) return 1;
+  return 0;
+}
+
+/**
  * スティックの表示位置を原点から最大半径内にクランプする。
  * @returns 描画用のスティック座標
  */

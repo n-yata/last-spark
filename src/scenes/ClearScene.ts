@@ -5,9 +5,12 @@ import { getSound } from '../systems/SoundManager';
 
 interface ClearData {
   clearTimeMs: number;
+  /** 次ステージ ID(任意)。あれば中継表示で次ステージへ継続、なければ最終クリア。 */
+  nextStageId?: string;
 }
 
-// ボス撃破時のクリア演出。クリア状況を保存してタイトルへ。
+// ボス撃破時のクリア演出。
+// 次ステージがあれば「TAP TO CONTINUE」で継続、なければ最終クリアとして保存しタイトルへ。
 
 export class ClearScene extends Phaser.Scene {
   constructor() {
@@ -17,9 +20,13 @@ export class ClearScene extends Phaser.Scene {
   create(data: ClearData): void {
     const { width, height } = this.scale;
     const clearTimeMs = data?.clearTimeMs ?? 0;
+    const nextStageId = data?.nextStageId;
+    const isFinal = !nextStageId;
 
-    // クリアを永続化(localStorage 不可でも throw しない)
-    new SaveManager().markCleared(clearTimeMs);
+    // クリア記録は最終ステージ到達時のみ(途中ステージでは記録しない)。
+    if (isFinal) {
+      new SaveManager().markCleared(clearTimeMs);
+    }
 
     // BGM を止めてクリアジングルを鳴らす
     getSound().stopBgm();
@@ -28,7 +35,7 @@ export class ClearScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x06121a, 0.85).setOrigin(0);
 
     this.add
-      .text(width / 2, height * 0.3, 'STAGE CLEAR', {
+      .text(width / 2, height * 0.3, isFinal ? 'ALL CLEAR' : 'STAGE CLEAR', {
         fontFamily: 'monospace',
         fontSize: '56px',
         color: '#37f7d8',
@@ -46,15 +53,20 @@ export class ClearScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height * 0.6, '最後の灯は、まだ消えていない。', {
-        fontFamily: 'monospace',
-        fontSize: '16px',
-        color: '#7fe9dd',
-      })
+      .text(
+        width / 2,
+        height * 0.6,
+        isFinal ? '最後の灯は、まだ消えていない。' : '次の立坑へ——まだ先がある。',
+        {
+          fontFamily: 'monospace',
+          fontSize: '16px',
+          color: '#7fe9dd',
+        },
+      )
       .setOrigin(0.5);
 
     const back = this.add
-      .text(width / 2, height * 0.78, 'TAP TO TITLE', {
+      .text(width / 2, height * 0.78, isFinal ? 'TAP TO TITLE' : 'TAP TO CONTINUE', {
         fontFamily: 'monospace',
         fontSize: '22px',
         color: '#fff27a',
@@ -64,12 +76,16 @@ export class ClearScene extends Phaser.Scene {
 
     // 演出を読ませるため、短い猶予の後に入力を受け付ける
     this.time.delayedCall(600, () => {
-      const toTitle = (): void => {
+      const proceed = (): void => {
         getSound().playSe('uiTap');
-        this.scene.start(SCENE_KEYS.title);
+        if (nextStageId) {
+          this.scene.start(SCENE_KEYS.game, { stageId: nextStageId });
+        } else {
+          this.scene.start(SCENE_KEYS.title);
+        }
       };
-      this.input.once(Phaser.Input.Events.POINTER_DOWN, toTitle);
-      this.input.keyboard?.once('keydown', toTitle);
+      this.input.once(Phaser.Input.Events.POINTER_DOWN, proceed);
+      this.input.keyboard?.once('keydown', proceed);
     });
   }
 

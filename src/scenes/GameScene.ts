@@ -12,17 +12,34 @@ import { InputController } from '../systems/InputController';
 import { CombatSystem } from '../systems/CombatSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { chargeRatio } from '../systems/shot';
+import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
 
 // ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括する。
 
-const STAGE_ID = 'stage1';
+const DEFAULT_STAGE_ID = 'stage1';
 const PROJECTILE_POOL = 32;
+
+/** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
+export interface GameSceneData {
+  stageId?: string;
+}
+
+/** collider の processCallback が受け取りうるオブジェクト型(Phaser の ArcadePhysicsCallback 準拠)。 */
+type ArcadeColliderObject =
+  | Phaser.Types.Physics.Arcade.GameObjectWithBody
+  | Phaser.Physics.Arcade.Body
+  | Phaser.Physics.Arcade.StaticBody
+  | Phaser.Tilemaps.Tile;
 
 export class GameScene extends Phaser.Scene {
   private stage!: StageData;
+  private stageId = DEFAULT_STAGE_ID;
   private player!: Player;
-  private platforms!: Phaser.Physics.Arcade.StaticGroup;
+  /** 地面(全面衝突=壁/床)。 */
+  private groundGroup!: Phaser.Physics.Arcade.StaticGroup;
+  /** 浮遊足場(ワンウェイ=上からのみ着地、下から通過)。 */
+  private platformGroup!: Phaser.Physics.Arcade.StaticGroup;
   private enemies!: Phaser.Physics.Arcade.Group;
   private playerShots!: Phaser.Physics.Arcade.Group;
   private enemyShots!: Phaser.Physics.Arcade.Group;
@@ -37,12 +54,18 @@ export class GameScene extends Phaser.Scene {
     super(SCENE_KEYS.game);
   }
 
+  /** 起動データから開始ステージを決める(stage1→stage2 の遷移で stageId を渡す)。 */
+  init(data: GameSceneData): void {
+    this.stageId = data?.stageId ?? DEFAULT_STAGE_ID;
+  }
+
   create(): void {
     this.ended = false;
-    this.stage = getStageData(STAGE_ID);
+    this.stage = getStageData(this.stageId);
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 
     this.buildPlatforms();
+    this.buildLadders();
     this.createGroups();
     this.createPlayer();
     this.createSystems();
@@ -56,16 +79,52 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildPlatforms(): void {
-    this.platforms = this.physics.add.staticGroup();
+    // 地面(全面衝突)と浮遊足場(ワンウェイ)を別グループに分ける。
+    // 判定は従来どおり高さ: height>40 を地面、それ以下を足場とみなす。
+    this.groundGroup = this.physics.add.staticGroup();
+    this.platformGroup = this.physics.add.staticGroup();
     for (const rect of this.stage.platforms) {
       const isGround = rect.height > 40;
+      const group = isGround ? this.groundGroup : this.platformGroup;
       const tex = isGround ? TEX.ground : TEX.platform;
-      const img = this.platforms
+      const img = group
         .create(rect.x + rect.width / 2, rect.y + rect.height / 2, tex) as Phaser.Physics.Arcade.Sprite;
       img.setDisplaySize(rect.width, rect.height);
       img.refreshBody();
     }
   }
+
+  /** 梯子の見た目を敷き、矩形領域を Player の重なり判定へ渡す(物理衝突はさせない)。 */
+  private buildLadders(): void {
+    const ladders = this.stage.ladders ?? [];
+    for (const l of ladders) {
+      // テクスチャ(32x32)をタイル状に縦へ繰り返して梯子の見た目にする。
+      const img = this.add.tileSprite(
+        l.x + l.width / 2,
+        l.y + l.height / 2,
+        l.width,
+        l.height,
+        TEX.ladder,
+      );
+      img.setDepth(5); // プレイヤー(10)より背面、地形と同程度
+    }
+  }
+
+  /**
+   * ワンウェイ床のコライダ判定。対象(プレイヤー/敵)が下降中かつ足元が床上端付近の時だけ
+   * 衝突を有効化する。プレイヤーが梯子につかまっている間は衝突させない(梯子で貫通)。
+   */
+  private oneWayProcess = (
+    obj: ArcadeColliderObject,
+    platform: ArcadeColliderObject,
+  ): boolean => {
+    const objGo = obj as Phaser.Types.Physics.Arcade.GameObjectWithBody;
+    const platGo = platform as Phaser.Types.Physics.Arcade.GameObjectWithBody;
+    const objBody = objGo.body as Phaser.Physics.Arcade.Body;
+    const platBody = platGo.body as Phaser.Physics.Arcade.Body;
+    if (objGo === this.player && this.player.isOnLadder) return false;
+    return shouldLandOnOneWay(objBody.bottom, objBody.velocity.y, platBody.top);
+  };
 
   private createGroups(): void {
     this.enemies = this.physics.add.group();
@@ -84,8 +143,13 @@ export class GameScene extends Phaser.Scene {
   private createPlayer(): void {
     this.player = new Player(this, this.stage.playerStart.x, this.stage.playerStart.y);
     this.player.setProjectiles(this.playerShots);
-    this.physics.add.collider(this.player, this.platforms);
-    this.physics.add.collider(this.enemies, this.platforms);
+    this.player.setLadders(this.stage.ladders ?? []);
+    // 地面は全面衝突、足場はワンウェイ(上から着地・下から通過、梯子中は貫通)。
+    this.physics.add.collider(this.player, this.groundGroup);
+    this.physics.add.collider(this.player, this.platformGroup, undefined, this.oneWayProcess);
+    // 敵も地面+足場に乗る(足場は上からのみ。stage1 の足場上の配置を維持)。
+    this.physics.add.collider(this.enemies, this.groundGroup);
+    this.physics.add.collider(this.enemies, this.platformGroup, undefined, this.oneWayProcess);
   }
 
   private createSystems(): void {
@@ -110,7 +174,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
-    this.spawn.loadStage(STAGE_ID);
+    this.spawn.loadStage(this.stageId);
     this.spawn.onBossTrigger(() => this.spawnBoss());
   }
 
@@ -145,7 +209,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
-    this.physics.add.collider(this.boss, this.platforms); // 重力で接地・ジャンプ着地
+    this.physics.add.collider(this.boss, this.groundGroup); // 重力で接地・ジャンプ着地(地面のみ)
     this.combat.registerBoss(this.boss);
 
     // アリーナ両端の壁(プレイヤーの後退・行き過ぎを防ぐ)
@@ -243,7 +307,11 @@ export class GameScene extends Phaser.Scene {
     const clearTimeMs = this.time.now - this.startTime;
     this.inputController.destroy();
     this.scene.stop(SCENE_KEYS.ui);
-    this.scene.start(SCENE_KEYS.clear, { clearTimeMs });
+    // 次ステージがあれば中継して継続、なければ最終クリアとしてタイトルへ。
+    this.scene.start(SCENE_KEYS.clear, {
+      clearTimeMs,
+      nextStageId: this.stage.nextStageId,
+    });
   }
 
   private handleGameOver(): void {

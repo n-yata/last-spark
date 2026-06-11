@@ -5,6 +5,7 @@ import {
   isInsideButton,
   isInMoveZone,
   moveDirFromDelta,
+  climbDirFromDelta,
   type TouchLayout,
 } from '../config/touchLayout';
 
@@ -26,6 +27,7 @@ export class InputController {
   private layout: TouchLayout;
 
   private moveDir: MoveDir = 0;
+  private climbDir: -1 | 0 | 1 = 0;
   private movePointerId: number | null = null;
   // 追従式パッドの原点(触れた箇所)と現在位置
   private moveOriginX = 0;
@@ -47,6 +49,8 @@ export class InputController {
   private keys?: {
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
+    up: Phaser.Input.Keyboard.Key;
+    down: Phaser.Input.Keyboard.Key;
     jump: Phaser.Input.Keyboard.Key;
     shoot: Phaser.Input.Keyboard.Key;
   };
@@ -78,6 +82,8 @@ export class InputController {
       this.keys = {
         left: kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
         right: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+        up: kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+        down: kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
         jump: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
         shoot: kb.addKey(Phaser.Input.Keyboard.KeyCodes.J),
       };
@@ -106,6 +112,7 @@ export class InputController {
       this.moveCurX = x;
       this.moveCurY = y;
       this.moveDir = 0;
+      this.climbDir = 0;
     }
   }
 
@@ -113,14 +120,16 @@ export class InputController {
     if (pointer.id !== this.movePointerId) return;
     this.moveCurX = pointer.x;
     this.moveCurY = pointer.y;
-    // 原点からの横方向の移動量で左右を判定する
+    // 原点からの横方向で左右、縦方向で梯子昇降を判定する(追従式パッドの Y 成分)。
     this.moveDir = moveDirFromDelta(pointer.x - this.moveOriginX);
+    this.climbDir = climbDirFromDelta(pointer.y - this.moveOriginY);
   }
 
   private onPointerUp(pointer: Phaser.Input.Pointer): void {
     if (pointer.id === this.movePointerId) {
       this.movePointerId = null;
       this.moveDir = 0;
+      this.climbDir = 0;
     }
     if (pointer.id === this.jumpButtonPointerId) {
       this.jumpButtonPointerId = null;
@@ -139,6 +148,7 @@ export class InputController {
     this.shootPointerId = null;
     this.jumpButtonPointerId = null;
     this.moveDir = 0;
+    this.climbDir = 0;
     this.jumpButtonHeld = false;
     this.shootHeld = false;
     // チャージ中(指が離れた armed 状態)も含めショット操作を強制中断して待機へ戻す。
@@ -159,6 +169,7 @@ export class InputController {
   /** 毎フレーム最新の入力状態を返す。エッジ(jump/shoot)は消費する。 */
   update(): InputState {
     let moveDir = this.moveDir;
+    let climbDir = this.climbDir;
     let jumpPressed = this.jumpPressedEdge;
     let jumpHeld = this.jumpButtonHeld;
     let shootPressed = this.shootPressedEdge;
@@ -170,6 +181,8 @@ export class InputController {
     if (this.keys) {
       if (this.keys.left.isDown) moveDir = -1;
       else if (this.keys.right.isDown) moveDir = moveDir === -1 ? moveDir : 1;
+      if (this.keys.up.isDown) climbDir = -1;
+      else if (this.keys.down.isDown) climbDir = climbDir === -1 ? climbDir : 1;
       if (Phaser.Input.Keyboard.JustDown(this.keys.jump)) jumpPressed = true;
       if (this.keys.jump.isDown) jumpHeld = true;
 
@@ -186,7 +199,16 @@ export class InputController {
     this.shootReleasedEdge = false;
     this.shootCancelEdge = false;
 
-    return { moveDir, jumpPressed, jumpHeld, shootPressed, shootHeld, shootReleased, shootCancel };
+    return {
+      moveDir,
+      climbDir,
+      jumpPressed,
+      jumpHeld,
+      shootPressed,
+      shootHeld,
+      shootReleased,
+      shootCancel,
+    };
   }
 
   /** チャージ表示用に現在のショット押下状態を返す。 */

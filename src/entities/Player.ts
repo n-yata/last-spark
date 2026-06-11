@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { PLAYER } from '../config/balance';
+import { PLAYER, LADDER } from '../config/balance';
 import type { InputState } from '../types/input';
 import type { Damageable } from '../types/combat';
+import type { LadderRect } from '../config/stage1';
 import { isChargedShot, canFire, createProjectileSpec } from '../systems/shot';
 import {
   initialShotState,
@@ -19,6 +20,10 @@ import {
   facingSign,
   shouldCutJump,
   cutJumpVelocity,
+  overlapsAnyLadder,
+  resolveLadderState,
+  climbVelocity,
+  type Box,
 } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
 import { CharacterRig } from './CharacterRig';
@@ -37,6 +42,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private lastShotAt = 0;
   private invincibleUntil = 0;
   private isJumping = false;
+  private onLadder = false;
+  private ladderBoxes: Box[] = [];
   private projectiles?: Phaser.Physics.Arcade.Group;
   private readonly rig: CharacterRig;
 
@@ -58,9 +65,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.projectiles = group;
   }
 
+  /** このステージの梯子領域を設定する(重なり判定用の矩形へ変換して保持)。 */
+  setLadders(ladders: LadderRect[]): void {
+    this.ladderBoxes = ladders.map((l) => ({
+      left: l.x,
+      right: l.x + l.width,
+      top: l.y,
+      bottom: l.y + l.height,
+    }));
+  }
+
   get onGround(): boolean {
     const body = this.body as Phaser.Physics.Arcade.Body;
     return body.blocked.down || body.touching.down;
+  }
+
+  /** 梯子につかまっているか(ワンウェイ床コライダの抑制に使う)。 */
+  get isOnLadder(): boolean {
+    return this.onLadder;
   }
 
   /** チャージ蓄積の経過時間(ms)。チャージ中以外は 0(UI ゲージ表示用)。 */
@@ -70,6 +92,49 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   /** 入力に基づいて移動・ジャンプ・発射を行う。 */
   applyInput(input: InputState, now: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+
+    // 梯子状態の更新(重なり + 上下入力で把持、ジャンプ/離脱で解除)。
+    const playerBox: Box = {
+      left: body.x,
+      right: body.x + body.width,
+      top: body.y,
+      bottom: body.y + body.height,
+    };
+    const overlapping = overlapsAnyLadder(playerBox, this.ladderBoxes);
+    const wasOnLadder = this.onLadder;
+    this.onLadder = resolveLadderState(
+      wasOnLadder,
+      overlapping,
+      input.climbDir,
+      this.onGround,
+      input.jumpPressed,
+    );
+
+    if (this.onLadder) {
+      // 梯子モード: 重力を切り、上下入力で鉛直移動。横移動・ジャンプは無効。
+      if (!wasOnLadder) body.setAllowGravity(false);
+      this.setVelocityX(0);
+      this.setVelocityY(climbVelocity(input.climbDir, LADDER.climbSpeed));
+      this.facing = resolveFacing(this.facing, input.moveDir);
+      this.isJumping = false;
+      this.updateShot(input, now);
+      this.updateBlink(now);
+      this.updateRig(input, now);
+      return;
+    }
+
+    // 梯子から離れた直後は重力を必ず戻す(戻し忘れ=浮遊バグ防止)。
+    if (wasOnLadder) {
+      body.setAllowGravity(true);
+      // ジャンプで離脱した場合は飛び降り感を出すためジャンプ初速を与える。
+      if (input.jumpPressed) {
+        this.setVelocityY(PLAYER.jumpVelocity);
+        this.isJumping = true;
+        getSound().playSe('jump');
+      }
+    }
+
     this.setVelocityX(resolveHorizontalVelocity(input.moveDir));
     this.facing = resolveFacing(this.facing, input.moveDir);
 
@@ -81,7 +146,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     }
 
     // 可変ジャンプ: 上昇中に離したら上向き速度をカットして低いジャンプにする
-    const body = this.body as Phaser.Physics.Arcade.Body;
     if (shouldCutJump(input.jumpHeld, this.isJumping, body.velocity.y)) {
       this.setVelocityY(cutJumpVelocity(body.velocity.y, PLAYER.jumpCutMultiplier));
       this.isJumping = false;
@@ -140,7 +204,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const vy = body.velocity.y;
     let state: MotionState;
-    if (!this.onGround) {
+    if (this.onLadder) {
+      state = 'climb';
+    } else if (!this.onGround) {
       state = vy < 0 ? 'jump' : 'fall';
     } else if (input.moveDir !== 0) {
       state = 'walk';

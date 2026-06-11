@@ -12,6 +12,7 @@ export const TEX = {
   projectileEnemy: 'tex-projectile-enemy',
   ground: 'tex-ground',
   platform: 'tex-platform',
+  ladder: 'tex-ladder',
   hit: 'tex-hit',
   logo: 'tex-logo-spark',
   pixel: 'tex-pixel',

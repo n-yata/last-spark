@@ -44,3 +44,76 @@ export function shouldCutJump(jumpHeld: boolean, isJumping: boolean, vy: number)
 export function cutJumpVelocity(vy: number, multiplier: number): number {
   return vy * multiplier;
 }
+
+// ── すり抜け床(ワンウェイ床) ──────────────────────────────
+
+/**
+ * ワンウェイ床に着地(衝突)を有効化すべきか。
+ * 下降中(velY>=0)かつ足元(playerBottom)が床上端(platformTop)付近より上にある時だけ true。
+ * 上昇中・床より深く潜っている時は false(=下から通り抜けられる)。
+ * @param playerBottom プレイヤー足元の Y
+ * @param playerVelY   鉛直速度(下向き正)
+ * @param platformTop  床上端の Y
+ * @param tolerance    上端からの許容めり込み(px)
+ */
+export function shouldLandOnOneWay(
+  playerBottom: number,
+  playerVelY: number,
+  platformTop: number,
+  tolerance = 6,
+): boolean {
+  return playerVelY >= 0 && playerBottom <= platformTop + tolerance;
+}
+
+// ── 梯子ギミック ──────────────────────────────────────────
+
+/** AABB 矩形(左上 left/top、右下 right/bottom)。 */
+export interface Box {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** 2 つの矩形が重なっているか(辺の接触のみは非重複)。 */
+export function boxesOverlap(a: Box, b: Box): boolean {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+/** プレイヤー矩形がいずれかの梯子矩形に重なっているか。 */
+export function overlapsAnyLadder(player: Box, ladders: Box[]): boolean {
+  return ladders.some((ladder) => boxesOverlap(player, ladder));
+}
+
+/**
+ * 梯子の把持状態を決定する(純粋)。
+ * - ジャンプ入力があれば離脱(梯子から飛び降りる)。
+ * - 梯子に重なっていなければ離脱。
+ * - 把持中: 地面に着いて下入力なら降り切ったとみなし離脱。それ以外は把持継続。
+ * - 未把持: 上下入力(climbDir≠0)があれば把持開始。
+ * @param prevOnLadder 直前フレームの把持状態
+ * @param overlapping  梯子に重なっているか
+ * @param climbDir     上下入力(-1=上, 0=なし, 1=下)
+ * @param onGround     接地中か
+ * @param jumpPressed  このフレームのジャンプ立ち上がり
+ */
+export function resolveLadderState(
+  prevOnLadder: boolean,
+  overlapping: boolean,
+  climbDir: -1 | 0 | 1,
+  onGround: boolean,
+  jumpPressed: boolean,
+): boolean {
+  if (jumpPressed) return false;
+  if (!overlapping) return false;
+  if (prevOnLadder) {
+    if (onGround && climbDir > 0) return false;
+    return true;
+  }
+  return climbDir !== 0;
+}
+
+/** 梯子昇降の鉛直速度。climbDir: -1=上(負=上向き), 1=下(正=下向き), 0=静止。 */
+export function climbVelocity(climbDir: -1 | 0 | 1, speed: number): number {
+  return climbDir * speed;
+}

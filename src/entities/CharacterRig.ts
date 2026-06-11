@@ -95,13 +95,14 @@ export class CharacterRig {
     const dt = this.lastUpdateMs < 0 ? 0 : timeMs - this.lastUpdateMs;
     this.lastUpdateMs = timeMs;
 
-    const isWalking = this.motion === 'walk' && this.walkCycleMs > 0;
-    if (isWalking) {
+    // 歩行と梯子登りは脚/腕を交互に振る(climb は登っている手応えの表現に流用)。
+    const isStepping = (this.motion === 'walk' || this.motion === 'climb') && this.walkCycleMs > 0;
+    if (isStepping) {
       this.walkClockMs += dt;
     }
 
     const phase = walkPhase(this.walkClockMs, this.walkCycleMs);
-    const swing = isWalking ? this.swingRad : 0;
+    const swing = isStepping ? this.swingRad : 0;
 
     // 姿勢: ジャンプ/落下中はスクワッシュ&ストレッチ、それ以外は中立へ。
     const inAir = this.motion === 'jump' || this.motion === 'fall';

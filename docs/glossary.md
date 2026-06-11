@@ -4,7 +4,7 @@
 
 このドキュメントは、`LAST SPARK` プロジェクト内で使用される用語の定義を管理します。PRD・機能設計書・アーキテクチャ設計書・リポジトリ構造定義書・開発ガイドラインで使用される用語を統一する。
 
-**更新日**: 2026-06-08
+**更新日**: 2026-06-11
 
 ## ドメイン用語
 
@@ -62,6 +62,16 @@
 
 **実装(定数)**: `src/config/balance.ts`(`SHOT.chargeThresholdMs`, `SHOT.holdToAutoFireMs`, `SHOT.burstSize`, `SHOT.burstPauseMs`)
 
+### 長押し連射(バースト)
+
+**定義**: ショットボタンを `SHOT.holdToAutoFireMs` 以上押し続けたときに、チャージせず通常弾を連続発射する操作。一定発数ごとに小休止を挟む。
+
+**説明**: チャージ(タップ)と長押し(連射)を `holdToAutoFireMs` で判別する。連射は `SHOT.cooldownMs` 間隔で行い、`SHOT.burstSize` 発撃つごとに `SHOT.burstPauseMs` の小休止を入れることで、撃ち放題にせず連射にリズムを与える。操作解釈は純粋状態機械 `systems/shotControl.ts` が担う。
+
+**関連用語**: [チャージショット](#チャージショット), [仮想ボタン](#仮想ボタン)
+
+**実装(定数)**: `src/config/balance.ts`(`SHOT.holdToAutoFireMs`, `SHOT.burstSize`, `SHOT.burstPauseMs`, `SHOT.cooldownMs`)
+
 ### 方向ゾーン式
 
 **定義**: 画面左半分でのタッチ移動方式。押し続けている間その向きに歩き、離すと止まる「左右の押し分け」操作(移動専用)。
@@ -91,6 +101,36 @@
 **定義**: チャージの蓄積量を示す HUD 要素。ショットボタン付近に表示し、しきい値到達で発光する。
 
 **関連用語**: [チャージショット](#チャージショット), [HUD](#hud)
+
+### すり抜け床(ワンウェイ床)
+
+**定義**: 下から通り抜けて上に乗れる浮遊足場。上からは着地でき、下からジャンプしても頭をぶつけず通過できる。
+
+**説明**: 地形のうち高さ `height>40` を地面(全面衝突)、それ以下を浮遊足場=すり抜け床とみなして別グループにする。プレイヤー/敵×足場の当たり判定は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突する。地面は従来どおり全面衝突、ボスは地面のみと衝突する。梯子と組み合わせ「登り切って上の足場に乗る」動線を成立させる。
+
+**関連用語**: [梯子(ラダー)](#梯子ラダー), [当たり判定](#当たり判定)
+
+**実装**: `src/systems/playerMovement.ts`(`shouldLandOnOneWay`), `src/scenes/GameScene.ts`
+
+### 梯子(ラダー)
+
+**定義**: 上下方向に移動するためのギミック。重なって移動パッドの上下入力(`climbDir`)で登り降りできる。
+
+**説明**: `StageData.ladders` の矩形領域として定義し、見た目はタイルで敷く(物理衝突はさせない)。プレイヤーが重なって上下入力すると把持し、把持中は重力を切って鉛直移動する。離脱(梯子から外れる/ジャンプ)で通常の重力挙動へ戻る。昇降中はすり抜け床の衝突を抑制し、床を貫通して登り降りできる。把持/速度の判定は純粋関数(`overlapsAnyLadder` / `resolveLadderState` / `climbVelocity`)に委譲する。
+
+**関連用語**: [すり抜け床(ワンウェイ床)](#すり抜け床ワンウェイ床), [方向ゾーン式](#方向ゾーン式), [MotionState](#motionstateモーション状態)
+
+**実装(定数)**: `src/config/balance.ts`(`LADDER.climbSpeed`)、判定は `src/systems/playerMovement.ts`
+
+### ステージ進行(複数ステージ)
+
+**定義**: stage1 クリア後に stage2 へ続く、ステージ連結によるゲーム進行。
+
+**説明**: 各ステージは `StageData` をコード定義し、`nextStageId` で次ステージを指す(無し=最終ステージ)。ボス撃破時、`nextStageId` があれば `ClearScene` の中継表示(TAP TO CONTINUE)を経て次ステージへ、無ければ最終クリアとしてクリア記録を保存しタイトルへ戻る。`GameScene.init({ stageId })` で開始ステージを受ける。
+
+**関連用語**: [Scene(シーン)](#sceneシーン), [守護機械(大型警備機)](#守護機械大型警備機)
+
+**実装**: `src/config/stage1.ts`(`STAGES` / `getStageData` / `nextStageId`), `src/scenes/GameScene.ts`, `src/scenes/ClearScene.ts`
 
 ## 技術用語
 
@@ -274,6 +314,26 @@ Scene → Persistence(persistence/) ← セーブ/ロード
 
 **本プロジェクトでの適用**: 弾⇔敵/ボス、プレイヤー⇔敵/ボス/敵弾、プレイヤー⇔地形。`CombatSystem` が衝突を登録する。
 
+### CharacterRig(関節リグ)
+
+**定義**: キャラの見た目を、頭・胴・腕・脚のパーツを `Container` で関節化して表現する表示専用コンポーネント。物理エンティティ(`Arcade.Sprite`)から見た目を分離する仕組み。
+
+**説明**: 物理エンティティは自スプライトを非表示にし、表示を `CharacterRig`(`src/entities/CharacterRig.ts`)へ委譲する。各パーツの変位(歩行スイング・スクワッシュ&ストレッチ・発射反動・被弾のけぞり)は Phaser 非依存の純粋関数 `systems/rigAnimation.ts` が算出し、系統別の構成は `config/characterRig.ts` に集約する。テクスチャは外部素材を使わず手続き生成する(知財方針準拠)。将来の外部スプライトシート移行時も物理に触れず差し替えできる。
+
+**関連用語**: [Entity(エンティティ)](#entityエンティティ), [MotionState](#motionstate)
+
+**実装**: `src/entities/CharacterRig.ts`, `src/systems/rigAnimation.ts`, `src/config/characterRig.ts`
+
+### MotionState(モーション状態)
+
+**定義**: `CharacterRig` のアニメーションを駆動する、キャラの動作状態を示す識別子。
+
+**取りうる値**: `idle`(静止) / `walk`(歩行) / `climb`(梯子昇降) / `jump`(上昇) / `fall`(落下) / `hit`(被弾) / `stagger`(被弾のけぞり) / `dead`(撃破)。
+
+**説明**: 物理状態(接地・速度・被弾・梯子把持)から導出し、`rigAnimation.ts` が状態ごとのパーツ変位を計算する。`climb` は歩行スイングを流用して登り表現にする。
+
+**関連用語**: [CharacterRig](#characterrig関節リグ)
+
 ## ステータス・状態
 
 ### ボスフェーズ (Boss Phase)
@@ -329,7 +389,8 @@ stateDiagram-v2
     Game --> Clear: ボス撃破
     GameOver --> Game: リトライ
     GameOver --> Title: タイトルへ
-    Clear --> Title: タイトルへ(クリア保存)
+    Clear --> Game: 次ステージへ継続(nextStageId あり)
+    Clear --> Title: 最終クリア→タイトル(クリア保存)
 ```
 
 ## データモデル用語
@@ -365,6 +426,7 @@ stateDiagram-v2
 
 **主要フィールド**:
 - `moveDir`: -1(左) / 0(停止) / 1(右)
+- `climbDir`: -1(上=登る) / 0(なし) / 1(下=降りる)。梯子昇降の上下入力
 - `jumpPressed`: このフレームでジャンプが立ち上がったか
 - `jumpHeld`: ジャンプボタン押下中(可変ジャンプ高さ制御)
 - `shootPressed`: このフレームでショットが立ち上がったか(タップ/連射の起点)
@@ -463,19 +525,25 @@ isChargedShot(elapsedMs) = (elapsedMs >= SHOT.chargeThresholdMs)
 
 ### か行
 - [仮想ボタン](#仮想ボタン) - ドメイン用語
+- [関節リグ(CharacterRig)](#characterrig関節リグ) - アーキテクチャ用語
 - [environment(環境ストーリーテリング)](#環境ストーリーテリング) - ドメイン用語
 - [管理AI](#管理ai) - ドメイン用語
 
 ### さ行
 - [最後のロボット](#最後のロボット) - ドメイン用語
 - [守護機械(大型警備機)](#守護機械大型警備機) - ドメイン用語
+- [すり抜け床(ワンウェイ床)](#すり抜け床ワンウェイ床) - ドメイン用語
+- [ステージ進行(複数ステージ)](#ステージ進行複数ステージ) - ドメイン用語
 - [Scene(シーン)](#sceneシーン) - アーキテクチャ用語
+- [SoundManager](#soundmanager) - コンポーネント用語
 - [System(システム)](#systemシステム) - アーキテクチャ用語
 
 ### た行
 - [タイルマップ](#タイルマップ) - 技術用語
+- [梯子(ラダー)](#梯子ラダー) - ドメイン用語
 - [チャージゲージ](#チャージゲージ) - ドメイン用語
 - [チャージショット](#チャージショット) - ドメイン用語
+- [長押し連射(バースト)](#長押し連射バースト) - ドメイン用語
 
 ### は行
 - [ハイブリッド操作](#ハイブリッド操作) - ドメイン用語
@@ -485,13 +553,16 @@ isChargedShot(elapsedMs) = (elapsedMs >= SHOT.chargeThresholdMs)
 
 ### A-Z
 - [Arcade Physics](#arcade-physics) - 技術用語
+- [CharacterRig(関節リグ)](#characterrig関節リグ) - アーキテクチャ用語
 - [Entity(エンティティ)](#entityエンティティ) - アーキテクチャ用語
 - [GameSettings](#gamesettings) - データモデル
 - [HUD](#hud) - 略語
 - [InputState](#inputstate) - データモデル
 - [LAST SPARK](#last-sparkラストスパーク) - ドメイン用語
 - [localStorage](#localstorage) - 技術用語
+- [MotionState](#motionstateモーション状態) - アーキテクチャ用語
 - [MVP](#mvp) - 略語
+- [SoundManager](#soundmanager) - コンポーネント用語
 - [Phaser 3](#phaser-3) - 技術用語
 - [Playwright](#playwright) - 技術用語
 - [PWA](#pwa) - 略語

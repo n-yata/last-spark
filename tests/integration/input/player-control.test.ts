@@ -63,6 +63,7 @@ function newModel(): ControlModel {
 
 const idle: InputState = {
   moveDir: 0,
+  climbDir: 0,
   jumpPressed: false,
   jumpHeld: false,
   shootPressed: false,

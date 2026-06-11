@@ -69,6 +69,9 @@ export class PreloadScene extends Phaser.Scene {
     this.makeGround(TEX.ground, 64, 60, 0x10171d, 0x37f7d8);
     this.makeGround(TEX.platform, 64, 24, 0x16202a, 0x6cf0ff);
 
+    // 梯子(縦に桟が並ぶ発光ハシゴ)。タイル状に縦へ繰り返して敷く前提。
+    this.makeLadder(TEX.ladder, 32, 32, 0x142028, 0x6cf0ff);
+
     // ヒットエフェクト
     this.makeOrb(TEX.hit, 24, 0xffffff);
   }
@@ -297,6 +300,31 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(color, 1);
     g.fillCircle(r, r, Math.max(1, r - 2));
     g.generateTexture(key, size, size);
+    g.destroy();
+  }
+
+  /**
+   * 梯子の 1 タイル: 左右の支柱 + 中央の桟(横棒)。縦へタイル繰り返しで連続して見えるよう、
+   * 支柱は上下端まで描き、桟はタイル中央に 1 本置く。
+   */
+  private makeLadder(key: string, w: number, h: number, body: number, edge: number): void {
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    const railW = Math.max(3, w * 0.16);
+    // 左右の支柱(縦)
+    g.fillStyle(body, 1);
+    g.fillRect(w * 0.14, 0, railW, h);
+    g.fillRect(w - w * 0.14 - railW, 0, railW, h);
+    // 支柱の発光エッジ
+    g.fillStyle(edge, 0.7);
+    g.fillRect(w * 0.14, 0, railW, h);
+    g.fillStyle(body, 1);
+    g.fillRect(w * 0.14 + 1, 0, Math.max(1, railW - 2), h);
+    g.fillRect(w - w * 0.14 - railW + 1, 0, Math.max(1, railW - 2), h);
+    // 中央の桟(横棒・発光)
+    const rungH = Math.max(3, h * 0.18);
+    g.fillStyle(edge, 0.9);
+    g.fillRect(w * 0.14, h / 2 - rungH / 2, w - w * 0.28, rungH);
+    g.generateTexture(key, w, h);
     g.destroy();
   }
 

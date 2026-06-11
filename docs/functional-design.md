@@ -161,14 +161,15 @@ export const BOSS = {
 ### InputController(Systemレイヤー)
 
 **責務**:
-- 横向き・両手前提のタッチ入力を、抽象的な操作意図(move/jump/shoot)に変換する。
-- 画面左半分=追従パッド(左右の押し分け移動のみ)、右側=ジャンプ/ショットの仮想ボタンを管理する。
-- 左親指=移動、右親指=ジャンプ/ショットに役割を分離する。3 ポインタのマルチタッチで移動とジャンプ・ショットを同時に扱う。キーボード(開発時)もフォールバックで受ける。
+- 横向き・両手前提のタッチ入力を、抽象的な操作意図(move/climb/jump/shoot)に変換する。
+- 画面左半分=追従パッド(横変位=左右移動、縦変位=梯子昇降の `climbDir`)、右側=ジャンプ/ショットの仮想ボタンを管理する。縦は誤反応抑制のため横より大きい不感帯(`CLIMB_DEADZONE_PX`)を用い、`climbDir` は梯子に重なっている時のみ Player 側で使用する。
+- 左親指=移動/昇降、右親指=ジャンプ/ショットに役割を分離する。3 ポインタのマルチタッチで移動とジャンプ・ショットを同時に扱う。キーボード(開発時、矢印 上下=昇降)もフォールバックで受ける。
 
 **インターフェース**:
 ```typescript
 interface InputState {
   moveDir: -1 | 0 | 1;   // -1=左, 0=停止, 1=右
+  climbDir: -1 | 0 | 1;  // 梯子昇降の上下入力。-1=上(登る), 0=なし, 1=下(降りる)
   jumpPressed: boolean;  // このフレームでジャンプ入力が立ち上がったか
   jumpHeld: boolean;     // ジャンプボタン押下中(可変ジャンプ高さ制御)
   shootPressed: boolean; // このフレームでショット入力が立ち上がったか(タップ/連射の起点)
@@ -212,9 +213,36 @@ class SpawnSystem {
 }
 ```
 
+### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
+
+**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ボストリガー、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 と続ける(`nextStageId` 無し=最終ステージ)。
+
+**すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。ボスは地面のみと衝突する。
+
+**梯子(ladder)**: `StageData.ladders` の矩形を `GameScene.buildLadders` が見た目(タイル)として敷き、矩形配列を `Player.setLadders` へ渡す(物理衝突はさせない)。Player は純粋関数 `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity` で把持状態を判定し、把持中は重力を切って(`setAllowGravity(false)`)上下入力で鉛直移動する。離脱時に重力を必ず戻す。梯子昇降中はプレイヤーの足場 collider を抑制し、ワンウェイ床を貫通して登り降りできる(梯子上端=直上の足場上端に揃え、登り切ると足場に乗れる動線)。これらの純粋ロジックは `systems/playerMovement.ts` に集約しユニットテスト可能にする。
+
+### SoundManager(Systemレイヤー)
+
+**責務**:
+- 外部音源ファイルを使わず、`src/config/audio.ts` の合成仕様を Web Audio で手続き生成して再生する(知財・コンプライアンス方針に準拠)。
+- SE(効果音)13 種の単発再生と、BGM 3 トラック(`title` / `stage` / `boss`)のループ再生・切替を担う。
+- `GameSettings`(`muted` / `bgmVolume` / `seVolume`)に従って音量・ミュートを反映。iOS Safari 等の自動再生制約に備え、初回ポインタ操作までは無音とし、操作を起点にオーディオを解放する。
+
+```typescript
+class SoundManager {
+  unlock(): void;                 // 初回ユーザー操作でオーディオ解放
+  playSe(key: SeKey): void;       // 単発SE(jump/shootNormal/bossHit など13種)
+  playBgm(key: BgmKey): void;     // BGMループ再生・切替(title/stage/boss)
+  stopBgm(): void;
+  applySettings(s: GameSettings): void; // ミュート/音量の反映
+}
+```
+
+**依存関係**: Web Audio API、`config/audio.ts`(SE/BGM の合成仕様)、`GameSettings`。純粋な合成ロジックは `systems/soundSynth.ts` に分離する。
+
 ### Player / Enemy / Boss / Projectile(Entityレイヤー)
 
-各 Entity は Phaser の `Arcade.Sprite` を継承し、自身の状態(上記モデル)と振る舞い(`update`)を持つ。
+各 Entity は Phaser の `Arcade.Sprite` を継承し、自身の状態(上記モデル)と振る舞い(`update`)を持つ。なお、キャラの物理(`Arcade.Sprite`)と見た目は分離しており、頭・胴・腕・脚を関節化した `CharacterRig`(`entities/CharacterRig.ts`)へ表示を委譲する(詳細は `docs/architecture.md` の「見た目リグの分離」を参照)。
 
 ```typescript
 class Player extends Phaser.Physics.Arcade.Sprite {
@@ -255,7 +283,8 @@ stateDiagram-v2
     Game --> Clear: ボス撃破
     GameOver --> Game: リトライ
     GameOver --> Title: タイトルへ
-    Clear --> Title: タイトルへ(クリア状況を保存)
+    Clear --> Game: 次ステージへ継続(nextStageId あり)
+    Clear --> Title: 最終クリア→タイトル(クリア状況を保存)
 
     note right of Game
         UIScene を並行起動(HUD)
@@ -372,13 +401,14 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 （横向き / 両手持ち）
 ┌───────────────────────────┬───────────────────────────┐
 │  左ゾーン(左手親指)        │   右ゾーン(右手親指)        │
-│                            │           ◯ジャンプ        │
-│   ◀ 歩行 ▶ (追従パッド)   │  ◯ショット(タップ=溜め)    │
+│                            │              ◯ジャンプ     │
+│   ◀ 歩行 ▶ (追従パッド)   │       ◯ショット            │
+│                            │      (タップ=溜め/長押し連射)│
 └───────────────────────────┴───────────────────────────┘
 ```
 
 - 左の追従パッドは触れた箇所を原点とし、横変位で左右移動する(移動専用)。
-- 右側はジャンプボタン(右上)とショットボタン(左下)の 2 ボタン。半透明で親指で隠れにくい位置に配置し、サイズ/透明度は実機調整。
+- 右側にジャンプ/ショットの 2 ボタンを近接配置する。ジャンプが右上(右端寄り・やや上)、ショットがその左下(やや左・やや下)の対角配置(`src/config/touchLayout.ts`)。両ボタンとも画面右側に集約され、左手の移動操作と干渉しない。半透明で親指で隠れにくい位置に配置し、サイズ/透明度は実機調整。
 - ショット操作: 1 回目タップでチャージ開始(離してもゲージ蓄積)、2 回目タップで発射。長押しはチャージせず通常弾を連射(`SHOT.burstSize` 発ごとに `SHOT.burstPauseMs` の小休止)。
 - 移動(左親指)とジャンプ/ショット(右親指)を別ポインタで同時操作できる。
 - 縦持ち検知時は `OrientationScene` を重ね、横向きへの回転を促す。
@@ -394,12 +424,12 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 public/assets/
 ├── sprites/      # プレイヤー/敵/ボス/弾のスプライトシート
 ├── tilemaps/     # ステージ1(崩れた都市)のタイルマップ + タイルセット
-├── ui/           # 仮想ボタン/ロゴ/HUD 画像
-└── audio/        # BGM / SE(採用時)
+└── ui/           # 仮想ボタン/ロゴ/HUD 画像
 ```
 
 - スプライトはスプライトシート + アニメ定義で管理。
 - ステージは Tiled 形式のタイルマップ(JSON) + 敵配置レイヤーで定義し、`SpawnSystem` が読む。
+- **サウンドは外部音源ファイルを持たない**。SE/BGM は `src/config/audio.ts` の合成仕様から `SoundManager` が Web Audio で手続き生成するため、`audio/` アセットは不要(知財方針にも合致)。
 
 ## パフォーマンス最適化
 

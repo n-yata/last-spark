@@ -6,6 +6,7 @@
 export type MotionState =
   | 'idle'
   | 'walk'
+  | 'climb'
   | 'jump'
   | 'fall'
   | 'hit'
