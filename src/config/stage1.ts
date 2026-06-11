@@ -20,7 +20,11 @@ export interface EnemySpawn {
   y: number;
 }
 
-/** 梯子の矩形領域。x,y は左上、width/height は px。重なり判定にのみ使う(物理衝突なし)。 */
+/**
+ * 梯子の矩形領域。x,y は左上、width/height は px。重なり判定にのみ使う(物理衝突なし)。
+ * 制約: height は `LADDER.boardDownReach`(降り乗り込みの進入量)より十分大きくすること。
+ * 極端に低い梯子は、降り乗り込んだ瞬間に最下部離脱条件へ達して把持できない恐れがある。
+ */
 export interface LadderRect {
   x: number;
   y: number;

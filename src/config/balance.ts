@@ -89,4 +89,7 @@ export const STAGE = {
 export const LADDER = {
   // 梯子の昇降速度(px/s)。横移動より遅めにして「登る手応え」を出す。
   climbSpeed: 130,
+  // 足場の上から真下の梯子へ「降り乗り込み」する際の、足元下方向の検知距離 兼 進入量(px)。
+  // 足場上端と梯子上端が一致していても、これで真下の梯子をつかんで降り始められる。
+  boardDownReach: 10,
 } as const;

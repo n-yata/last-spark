@@ -61,6 +61,9 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.ended = false;
+    // シーンはステージ継続(stage1→stage2)で再利用される。前ステージのボス参照が残ると
+    // spawnBoss の早期 return で次ステージのボスが出ないため、必ずクリアする。
+    this.boss = undefined;
     this.stage = getStageData(this.stageId);
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 

@@ -137,26 +137,24 @@ describe('boxesOverlap / overlapsAnyLadder', () => {
 
 describe('resolveLadderState(梯子の把持/離脱)', () => {
   it('未把持: 梯子に重なり上下入力で把持開始', () => {
-    expect(resolveLadderState(false, true, -1, false, false)).toBe(true);
-    expect(resolveLadderState(false, true, 1, true, false)).toBe(true);
+    expect(resolveLadderState(false, true, -1, false)).toBe(true);
+    expect(resolveLadderState(false, true, 1, false)).toBe(true);
   });
   it('未把持: 重なっていても上下入力が無ければ把持しない', () => {
-    expect(resolveLadderState(false, true, 0, false, false)).toBe(false);
+    expect(resolveLadderState(false, true, 0, false)).toBe(false);
   });
   it('把持中: 梯子に重なっていれば入力ゼロでも把持継続(静止)', () => {
-    expect(resolveLadderState(true, true, 0, false, false)).toBe(true);
+    expect(resolveLadderState(true, true, 0, false)).toBe(true);
+  });
+  it('把持中: 上入力でも下入力でも、重なっている限り継続(最下部離脱は呼び出し側の幾何判定)', () => {
+    expect(resolveLadderState(true, true, -1, false)).toBe(true);
+    expect(resolveLadderState(true, true, 1, false)).toBe(true);
   });
   it('ジャンプ入力で離脱', () => {
-    expect(resolveLadderState(true, true, -1, false, true)).toBe(false);
+    expect(resolveLadderState(true, true, -1, true)).toBe(false);
   });
   it('梯子から外れたら離脱', () => {
-    expect(resolveLadderState(true, false, -1, false, false)).toBe(false);
-  });
-  it('把持中に地面へ着き下入力なら降り切ったとして離脱', () => {
-    expect(resolveLadderState(true, true, 1, true, false)).toBe(false);
-  });
-  it('把持中に地面へ着いても上入力なら把持継続(登り続ける)', () => {
-    expect(resolveLadderState(true, true, -1, true, false)).toBe(true);
+    expect(resolveLadderState(true, false, -1, false)).toBe(false);
   });
 });
 

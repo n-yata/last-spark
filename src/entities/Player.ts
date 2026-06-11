@@ -102,18 +102,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       bottom: body.y + body.height,
     };
     const overlapping = overlapsAnyLadder(playerBox, this.ladderBoxes);
+    // 足元の真下に梯子があるか(降り乗り込み・最下部離脱の幾何判定)。
+    const footProbe: Box = {
+      left: playerBox.left,
+      right: playerBox.right,
+      top: playerBox.bottom,
+      bottom: playerBox.bottom + LADDER.boardDownReach,
+    };
+    const ladderBelowFeet = overlapsAnyLadder(footProbe, this.ladderBoxes);
     const wasOnLadder = this.onLadder;
-    this.onLadder = resolveLadderState(
+    // 足場の上に立ち、真下に梯子があるとき下入力で「降り乗り込み」する
+    // (足場上端=梯子上端だと通常の重なりが生じないため、これで降り始められる)。
+    const boardingDown =
+      !wasOnLadder &&
+      input.climbDir > 0 &&
+      this.onGround &&
+      !overlapping &&
+      ladderBelowFeet;
+    let nextOnLadder = resolveLadderState(
       wasOnLadder,
-      overlapping,
+      overlapping || boardingDown,
       input.climbDir,
-      this.onGround,
       input.jumpPressed,
     );
+    // 梯子の最下部で地面に着いたら降りる(足元の下にもう梯子が無い)。
+    // 降り乗り込みの瞬間は足元下に梯子があるため誤離脱しない。
+    if (nextOnLadder && this.onGround && input.climbDir >= 0 && !ladderBelowFeet && !boardingDown) {
+      nextOnLadder = false;
+    }
+    this.onLadder = nextOnLadder;
 
     if (this.onLadder) {
       // 梯子モード: 重力を切り、上下入力で鉛直移動。横移動・ジャンプは無効。
-      if (!wasOnLadder) body.setAllowGravity(false);
+      if (!wasOnLadder) {
+        body.setAllowGravity(false);
+        if (boardingDown) {
+          // 足場上端から梯子内へ進入させ、即座に降下を開始できるようにする。
+          this.setPosition(this.x, this.y + LADDER.boardDownReach);
+        }
+      }
       this.setVelocityX(0);
       this.setVelocityY(climbVelocity(input.climbDir, LADDER.climbSpeed));
       this.facing = resolveFacing(this.facing, input.moveDir);

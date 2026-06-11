@@ -89,27 +89,25 @@ export function overlapsAnyLadder(player: Box, ladders: Box[]): boolean {
  * 梯子の把持状態を決定する(純粋)。
  * - ジャンプ入力があれば離脱(梯子から飛び降りる)。
  * - 梯子に重なっていなければ離脱。
- * - 把持中: 地面に着いて下入力なら降り切ったとみなし離脱。それ以外は把持継続。
+ * - 把持中は重なっている限り継続(静止含む)。
  * - 未把持: 上下入力(climbDir≠0)があれば把持開始。
+ *
+ * ※ 梯子最下部で地面に着いた時の離脱は、足元直下に梯子が残っているかという幾何判定が
+ *   必要なため、呼び出し側(Player)で行う(ここでは扱わない)。
  * @param prevOnLadder 直前フレームの把持状態
- * @param overlapping  梯子に重なっているか
+ * @param overlapping  梯子に重なっているか(降り乗り込み判定を含めた実効値)
  * @param climbDir     上下入力(-1=上, 0=なし, 1=下)
- * @param onGround     接地中か
  * @param jumpPressed  このフレームのジャンプ立ち上がり
  */
 export function resolveLadderState(
   prevOnLadder: boolean,
   overlapping: boolean,
   climbDir: -1 | 0 | 1,
-  onGround: boolean,
   jumpPressed: boolean,
 ): boolean {
   if (jumpPressed) return false;
   if (!overlapping) return false;
-  if (prevOnLadder) {
-    if (onGround && climbDir > 0) return false;
-    return true;
-  }
+  if (prevOnLadder) return true;
   return climbDir !== 0;
 }
 
