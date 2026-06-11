@@ -15,18 +15,18 @@ describe('controlBandHeight(下部コントロール帯の高さ算出)', () => 
   });
 
   it('タッチ時は画面高さ比(RATIO)を帯高さとする(中間値)', () => {
-    // 700 * 0.18 = 126 → [104,140] の範囲内なのでそのまま
+    // 700 * 0.14 = 98 → [96,112] の範囲内なのでそのまま
     expect(controlBandHeight(700, true)).toBe(Math.round(700 * CONTROL_BAND_RATIO));
-    expect(controlBandHeight(700, true)).toBe(126);
+    expect(controlBandHeight(700, true)).toBe(98);
   });
 
   it('背の高い画面では MAX にクランプ', () => {
-    // 1000 * 0.18 = 180 → MAX(140) に丸められる
+    // 1000 * 0.14 = 140 → MAX(112) に丸められる
     expect(controlBandHeight(1000, true)).toBe(CONTROL_BAND_MAX_PX);
   });
 
   it('背の低い画面では MIN にクランプ', () => {
-    // 400 * 0.18 = 72 → MIN(104) に持ち上げられる
+    // 400 * 0.14 = 56 → MIN(96) に持ち上げられる
     expect(controlBandHeight(400, true)).toBe(CONTROL_BAND_MIN_PX);
   });
 

@@ -196,14 +196,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyCameraLayout(): void {
-    // タッチ時は下部コントロール帯ぶん viewport を上側に縮め、ゲーム描画を帯の上へ収める。
-    // 非タッチ(band=0)では従来どおり viewport=フル画面・高さ基準ズームとなる。
+    // タッチ時は下部コントロール帯ぶん viewport を下側から削り、ゲーム描画を帯の上へ収める。
+    // 非タッチ(band=0)では viewport=フル画面となる。
     const band = resolveControlBand(this);
     const viewH = Math.max(1, this.scale.height - band);
     const cam = this.cameras.main;
     cam.setViewport(0, 0, this.scale.width, viewH);
-    // 高さ基準のズーム。viewport 高さ = ワールド高さ(GAME_HEIGHT)になるよう拡大率を合わせる。
-    const zoom = viewH / GAME_HEIGHT;
+    // ズーム倍率は常に「画面全体の高さ」基準を維持する。帯の有無で世界の見かけの大きさを
+    // 変えないことで、(1)帯ぶん世界が縮小して見える問題、(2)displayWidth 変化でボストリガーが
+    // ズレる問題を同時に防ぐ。帯はあくまで viewport を下から削るだけ(縦の可視範囲が帯ぶん減る)。
+    const zoom = this.scale.height / GAME_HEIGHT;
     cam.setZoom(zoom > 0 ? zoom : 1);
   }
 

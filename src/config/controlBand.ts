@@ -5,12 +5,12 @@ import Phaser from 'phaser';
 // その上側へ収める。これにより「指が乗る帯」と「ボス・弾幕が見えるプレイ領域」を
 // 物理的に分離する。非タッチ(デスクトップ)では帯高さ0=フル画面で従来挙動を保つ。
 
-/** 帯の最小高さ(px)。半径44の仮想ボタンが余白込みで収まる値。 */
-export const CONTROL_BAND_MIN_PX = 104;
+/** 帯の最小高さ(px)。半径44の仮想ボタン(直径88)が余白込みで収まる最小値。 */
+export const CONTROL_BAND_MIN_PX = 96;
 /** 帯の最大高さ(px)。背の高い画面で帯が過大にならないよう制限する。 */
-export const CONTROL_BAND_MAX_PX = 140;
-/** 画面高さに対する帯高さの基準比率。プレイ領域の縮小を抑えるため控えめにする。 */
-export const CONTROL_BAND_RATIO = 0.18;
+export const CONTROL_BAND_MAX_PX = 112;
+/** 画面高さに対する帯高さの基準比率。プレイ領域を広く保つため控えめにする。 */
+export const CONTROL_BAND_RATIO = 0.14;
 
 /**
  * 画面高さとタッチ有効フラグから下部帯の高さ(px)を算出する。
