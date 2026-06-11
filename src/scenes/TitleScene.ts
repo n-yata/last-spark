@@ -75,7 +75,10 @@ export class TitleScene extends Phaser.Scene {
 
   private startGame(): void {
     getSound().playSe('uiTap');
-    this.scene.start(SCENE_KEYS.game);
+    // タイトルからの開始は必ず stage1 から(最初から)。
+    // scene.start に data を渡さないと Phaser は前回の data(継続時の stageId)を
+    // 保持して init に渡すため、明示的に stage1 を指定してクリア後の引き継ぎを断つ。
+    this.scene.start(SCENE_KEYS.game, { stageId: 'stage1' });
   }
 
   private drawBackdrop(width: number, height: number): void {
