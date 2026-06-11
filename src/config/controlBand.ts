@@ -6,11 +6,11 @@ import Phaser from 'phaser';
 // 物理的に分離する。非タッチ(デスクトップ)では帯高さ0=フル画面で従来挙動を保つ。
 
 /** 帯の最小高さ(px)。半径44の仮想ボタンが余白込みで収まる値。 */
-export const CONTROL_BAND_MIN_PX = 112;
+export const CONTROL_BAND_MIN_PX = 104;
 /** 帯の最大高さ(px)。背の高い画面で帯が過大にならないよう制限する。 */
-export const CONTROL_BAND_MAX_PX = 168;
-/** 画面高さに対する帯高さの基準比率。 */
-export const CONTROL_BAND_RATIO = 0.22;
+export const CONTROL_BAND_MAX_PX = 140;
+/** 画面高さに対する帯高さの基準比率。プレイ領域の縮小を抑えるため控えめにする。 */
+export const CONTROL_BAND_RATIO = 0.18;
 
 /**
  * 画面高さとタッチ有効フラグから下部帯の高さ(px)を算出する。
@@ -23,8 +23,19 @@ export function controlBandHeight(screenHeight: number, enabled: boolean): numbe
   return Math.round(Math.min(CONTROL_BAND_MAX_PX, Math.max(CONTROL_BAND_MIN_PX, raw)));
 }
 
-/** タッチ操作環境か(物理画面を指で操作する端末か)を判定する。 */
+/**
+ * 下部コントロール帯を出すべき「純タッチ端末」かを判定する。
+ * スマホ/タブレットのように指操作が主(coarse ポインタ)で、かつマウス等の精密
+ * ポインタ(fine)を持たない端末でのみ true。タッチ対応PCやマウス併用端末では
+ * fine ポインタが存在するため false となり、帯を出さずフル画面を維持する。
+ * matchMedia が無い環境(テスト等)では Phaser のタッチ判定にフォールバックする。
+ */
 export function isTouchControlEnabled(game: Phaser.Game): boolean {
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const hasFinePointer = window.matchMedia('(any-pointer: fine)').matches;
+    return coarse && !hasFinePointer;
+  }
   return game.device.input.touch === true;
 }
 
