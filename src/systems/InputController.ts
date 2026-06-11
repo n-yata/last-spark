@@ -8,6 +8,7 @@ import {
   climbDirFromDelta,
   type TouchLayout,
 } from '../config/touchLayout';
+import { resolveControlBand } from '../config/controlBand';
 
 // タッチ/キーボード入力を抽象操作(InputState)に正規化する。
 // 左半分=追従式タッチパッド(触れた箇所を原点に左右移動)、右側=ジャンプ/ショットの仮想ボタン。
@@ -58,11 +59,19 @@ export class InputController {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.layout = createTouchLayout(scene.scale.width, scene.scale.height);
+    this.layout = createTouchLayout(
+      scene.scale.width,
+      scene.scale.height,
+      resolveControlBand(scene),
+    );
   }
 
   private refreshLayout(): void {
-    this.layout = createTouchLayout(this.scene.scale.width, this.scene.scale.height);
+    this.layout = createTouchLayout(
+      this.scene.scale.width,
+      this.scene.scale.height,
+      resolveControlBand(this.scene),
+    );
   }
 
   /** タッチゾーン/仮想ボタンとキーボードを登録する。 */

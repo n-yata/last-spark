@@ -26,13 +26,31 @@ export interface TouchLayout {
 
 const BUTTON_RADIUS = 44;
 
-/** 実画面サイズからタッチUIレイアウトを算出する。 */
-export function createTouchLayout(width: number, height: number): TouchLayout {
+/**
+ * 実画面サイズからタッチUIレイアウトを算出する。
+ * bandHeight>0(タッチ時の下部コントロール帯)の場合、仮想ボタンを帯の縦中央へ
+ * 水平に並べて配置し、プレイ領域(帯の上)とボタン(帯の中)を分離する。
+ * bandHeight<=0(デスクトップ等)は従来の対角配置を維持する。
+ */
+export function createTouchLayout(width: number, height: number, bandHeight = 0): TouchLayout {
+  if (bandHeight <= 0) {
+    return {
+      moveZone: { x: 0, y: 0, width: width / 2, height },
+      // ジャンプ=右上、ショット=左下(対角配置)。
+      jumpButton: { x: width - 84, y: height - 112, radius: BUTTON_RADIUS },
+      shootButton: { x: width - 188, y: height - 72, radius: BUTTON_RADIUS },
+    };
+  }
+  // 下部帯の縦中央にボタンを揃え、帯内へ収める。水平に並べて指が重ならないようにする。
+  const bandCenterY = height - bandHeight / 2;
+  // 移動ゾーンの高さは帯を除いたプレイ領域に合わせる(ガイド枠が帯へ食い込まない)。
+  // 追従パッドの当たり判定は横座標(isInMoveZone)のみで行うため、左側の操作性は不変。
+  // 極小画面(height < bandHeight)でも負値にならないよう下限を 0 でガードする。
+  const playHeight = Math.max(0, height - bandHeight);
   return {
-    moveZone: { x: 0, y: 0, width: width / 2, height },
-    // ジャンプ=右上、ショット=左下(対角配置)。
-    jumpButton: { x: width - 84, y: height - 112, radius: BUTTON_RADIUS },
-    shootButton: { x: width - 188, y: height - 72, radius: BUTTON_RADIUS },
+    moveZone: { x: 0, y: 0, width: width / 2, height: playHeight },
+    jumpButton: { x: width - 84, y: bandCenterY, radius: BUTTON_RADIUS },
+    shootButton: { x: width - 200, y: bandCenterY, radius: BUTTON_RADIUS },
   };
 }
 

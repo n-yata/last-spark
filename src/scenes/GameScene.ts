@@ -4,6 +4,7 @@ import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
 import { STAGE, BOSS } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
+import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
@@ -186,18 +187,24 @@ export class GameScene extends Phaser.Scene {
     cam.setBounds(0, 0, this.stage.width, STAGE.height);
     cam.startFollow(this.player, true, 0.12, 0.12);
     cam.setBackgroundColor('#0a0e14');
-    this.applyCameraZoom();
+    this.applyCameraLayout();
     // RESIZE でキャンバスが伸縮しても、ワールドの縦の見え方(高さ540相当)を一定に保つ
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
     });
   }
 
-  private applyCameraZoom(): void {
-    // 高さ基準のズーム。画面高さ = ワールド高さ(GAME_HEIGHT)になるよう拡大率を合わせる。
-    const zoom = this.scale.height / GAME_HEIGHT;
-    this.cameras.main.setZoom(zoom > 0 ? zoom : 1);
+  private applyCameraLayout(): void {
+    // タッチ時は下部コントロール帯ぶん viewport を上側に縮め、ゲーム描画を帯の上へ収める。
+    // 非タッチ(band=0)では従来どおり viewport=フル画面・高さ基準ズームとなる。
+    const band = resolveControlBand(this);
+    const viewH = Math.max(1, this.scale.height - band);
+    const cam = this.cameras.main;
+    cam.setViewport(0, 0, this.scale.width, viewH);
+    // 高さ基準のズーム。viewport 高さ = ワールド高さ(GAME_HEIGHT)になるよう拡大率を合わせる。
+    const zoom = viewH / GAME_HEIGHT;
+    cam.setZoom(zoom > 0 ? zoom : 1);
   }
 
   private spawnBoss(): void {

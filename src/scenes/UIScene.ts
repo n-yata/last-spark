@@ -7,6 +7,7 @@ import { ChargeGauge } from '../ui/ChargeGauge';
 import { TouchControls } from '../ui/TouchControls';
 import { MovePad } from '../ui/MovePad';
 import { createTouchLayout } from '../config/touchLayout';
+import { resolveControlBand } from '../config/controlBand';
 
 // HUD(ライフ/ボスHP/チャージゲージ)+ タッチ操作ガイド。GameScene と並行起動。
 // 状態は registry 経由で受け取り、GameScene を直接参照しない。
@@ -42,8 +43,9 @@ export class UIScene extends Phaser.Scene {
 
   override update(): void {
     const reg = this.registry;
-    const layout = createTouchLayout(this.scale.width, this.scale.height);
-    this.touchControls.render(layout, this.scale.height);
+    const band = resolveControlBand(this);
+    const layout = createTouchLayout(this.scale.width, this.scale.height, band);
+    this.touchControls.render(layout, this.scale.width, this.scale.height, band);
 
     const hp = (reg.get(HUD.playerHp) as number) ?? 0;
     const maxHp = (reg.get(HUD.playerMaxHp) as number) ?? 0;

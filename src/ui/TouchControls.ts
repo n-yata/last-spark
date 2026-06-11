@@ -7,6 +7,7 @@ import type { TouchLayout } from '../config/touchLayout';
 const ZONE_COLOR = 0x37f7d8;
 const SHOOT_COLOR = 0xfff27a;
 const JUMP_COLOR = 0x6cf0ff;
+const BAND_COLOR = 0x05080c;
 
 export class TouchControls {
   private readonly gfx: Phaser.GameObjects.Graphics;
@@ -39,10 +40,22 @@ export class TouchControls {
       .setAlpha(0.5);
   }
 
-  /** 現在のレイアウト(実画面サイズ基準)に合わせてガイドを再描画する。 */
-  render(layout: TouchLayout, height: number): void {
+  /**
+   * 現在のレイアウト(実画面サイズ基準)に合わせてガイドを再描画する。
+   * bandHeight>0(タッチ時の下部コントロール帯)の場合、画面下部に帯背景を描画し、
+   * 仮想ボタンが帯の上に乗るようにする(プレイ領域=帯の上、ボタン=帯の中)。
+   */
+  render(layout: TouchLayout, width: number, height: number, bandHeight = 0): void {
     const { moveZone, shootButton, jumpButton } = layout;
     this.gfx.clear();
+    // 下部コントロール帯の背景(タッチ時のみ)。プレイ領域との境界に上端線を引く。
+    if (bandHeight > 0) {
+      const bandTop = height - bandHeight;
+      this.gfx.fillStyle(BAND_COLOR, 0.92);
+      this.gfx.fillRect(0, bandTop, width, bandHeight);
+      this.gfx.lineStyle(2, ZONE_COLOR, 0.25);
+      this.gfx.lineBetween(0, bandTop, width, bandTop);
+    }
     // 左: 移動ゾーンの境界
     this.gfx.lineStyle(2, ZONE_COLOR, 0.12);
     this.gfx.strokeRect(moveZone.x + 4, moveZone.y + 4, moveZone.width - 8, moveZone.height - 8);
@@ -54,7 +67,9 @@ export class TouchControls {
 
     this.shootLabel.setPosition(shootButton.x, shootButton.y);
     this.jumpLabel.setPosition(jumpButton.x, jumpButton.y);
-    this.moveHint.setPosition(moveZone.x + moveZone.width / 2, height - 26);
+    // 帯ありはプレイ領域の下端付近(帯の上)に、帯なしは従来どおり画面下端付近に置く。
+    const hintY = bandHeight > 0 ? height - bandHeight - 16 : height - 26;
+    this.moveHint.setPosition(moveZone.x + moveZone.width / 2, hintY);
   }
 
   private drawButton(x: number, y: number, radius: number, color: number): void {
