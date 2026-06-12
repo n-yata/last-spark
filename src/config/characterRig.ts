@@ -6,7 +6,7 @@
 // 寸法は balance.ts の width/height から比率で導出している(はみ出しすぎない範囲)。
 
 import { PART } from './assetKeys';
-import { PLAYER, ENEMY, BOSS } from './balance';
+import { PLAYER, ENEMY, BOSS, FLYING_BOSS } from './balance';
 
 /** パーツの描画形状。PreloadScene がこの種別に応じて Graphics で描き分ける。 */
 export type PartShape =
@@ -61,7 +61,7 @@ export interface RigPartSpec {
 
 /** 1 系統のリグ仕様。parts は背面→前面(描画順 = z 順)で並べる。 */
 export interface RigSpec {
-  family: 'player' | 'walker' | 'turret' | 'boss';
+  family: 'player' | 'walker' | 'turret' | 'boss' | 'bossFlying';
   /** 歩行スイングの基準振幅(rad)。系統ごとの脚の振り幅。 */
   swingRad: number;
   /** 歩行周期(ms)。小さいほど速く脚を動かす。 */
@@ -82,6 +82,8 @@ const PALETTE = {
   turret: { metal: 0x1c1727, base: 0x382c50, light: 0x564178, accent: 0xc77dff, accent2: 0x5de2c0 },
   // ボス: レッド主 × アンバー副(威圧感)。
   boss: { metal: 0x1a0b0f, base: 0x44181f, light: 0x6e2630, accent: 0xff2d55, accent2: 0xffb13b },
+  // 飛行ボス: シアン主 × バイオレット副(冷たい空中機。赤い接地ボスと対比)。
+  bossFlying: { metal: 0x0e1a24, base: 0x1d3a52, light: 0x2f5f82, accent: 0x37c8ff, accent2: 0xb78cff },
 } as const;
 
 // プレイヤー(28x40): ヘルメット頭 + 胴 + 片腕アームキャノン + 二脚。
@@ -143,12 +145,29 @@ const bossRig: RigSpec = {
   ],
 };
 
+// 飛行ボス(76x64): 脚なしの空中機。中央コア + 単眼センサー頭 + 左右ウィング + 下部キャノン。
+// swingRad/walkCycleMs=0 で歩行スイングを止め、shoot 時のみキャノンがリコイルする。
+const BF = PALETTE.bossFlying;
+const bossFlyingRig: RigSpec = {
+  family: 'bossFlying',
+  swingRad: 0, // 脚なし(歩行スイングなし)
+  walkCycleMs: 0,
+  parts: [
+    { key: PART.bossFlying.wingBack, shape: 'roundedBox', w: 34, h: 14, fill: BF.metal, accent: BF.accent, x: -30, y: -2, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossFlying.wingFront, shape: 'roundedBox', w: 34, h: 14, fill: BF.metal, accent: BF.accent2, x: 30, y: -2, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossFlying.core, shape: 'roundedBox', w: 46, h: 38, fill: BF.base, accent: BF.accent, accent2: BF.accent2, x: 0, y: 0, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossFlying.cannon, shape: 'cannon', w: 28, h: 16, fill: BF.light, accent: BF.accent, x: 14, y: 10, originX: 0.2, originY: 0.5, role: 'armFront' },
+    { key: PART.bossFlying.head, shape: 'sensor', w: 24, h: 14, fill: BF.light, accent: BF.accent2, x: 0, y: -22, originX: 0.5, originY: 0.5, role: 'head' },
+  ],
+};
+
 /** 系統名 → リグ仕様。CharacterRig / PreloadScene が参照する。 */
 export const RIGS = {
   player: playerRig,
   walker: walkerRig,
   turret: turretRig,
   boss: bossRig,
+  bossFlying: bossFlyingRig,
 } as const;
 
 export type RigFamily = keyof typeof RIGS;
@@ -164,4 +183,5 @@ export const RIG_BODY_SIZE = {
   walker: { width: ENEMY.walker.width, height: ENEMY.walker.height },
   turret: { width: ENEMY.turret.width, height: ENEMY.turret.height },
   boss: { width: BOSS.width, height: BOSS.height },
+  bossFlying: { width: FLYING_BOSS.width, height: FLYING_BOSS.height },
 } as const;

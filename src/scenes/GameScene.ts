@@ -8,6 +8,7 @@ import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
+import { FlyingBoss } from '../entities/FlyingBoss';
 import { Projectile } from '../entities/Projectile';
 import { InputController } from '../systems/InputController';
 import { CombatSystem } from '../systems/CombatSystem';
@@ -218,10 +219,17 @@ export class GameScene extends Phaser.Scene {
     const arenaLeft = Math.floor(cam.scrollX);
     const arenaRight = this.stage.width;
 
-    this.boss = new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+    // ステージ系統に応じてボスを出し分ける。飛行型は重力なしで空中に滞空するため
+    // 地面コライダーを付けない(接地型のみ地面に乗りジャンプ着地する)。
+    const flying = this.stage.bossKind === 'flying';
+    this.boss = flying
+      ? new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
+      : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
-    this.physics.add.collider(this.boss, this.groundGroup); // 重力で接地・ジャンプ着地(地面のみ)
+    if (!flying) {
+      this.physics.add.collider(this.boss, this.groundGroup); // 重力で接地・ジャンプ着地(地面のみ)
+    }
     this.combat.registerBoss(this.boss);
 
     // アリーナ両端の壁(プレイヤーの後退・行き過ぎを防ぐ)
@@ -232,7 +240,8 @@ export class GameScene extends Phaser.Scene {
     cam.setBounds(arenaLeft, 0, arenaRight - arenaLeft, STAGE.height);
 
     this.registry.set(HUD.bossActive, true);
-    this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
+    // 設定値ではなく実際のボスの maxHp を使う(系統で硬さが異なっても HUD が一致する)。
+    this.registry.set(HUD.bossMaxHp, this.boss.maxHp);
     getSound().playBgm('boss');
   }
 

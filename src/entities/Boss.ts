@@ -1,54 +1,82 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { BOSS } from '../config/balance';
+import { BOSS, SHOT, STAGE, type BossConfig } from '../config/balance';
+import type { RigFamily } from '../config/characterRig';
 import type { BossPhase, BossAction } from '../types/boss';
 import type { Damageable } from '../types/combat';
 import { applyDamageToHp, isDead, bossPhaseForHp } from '../systems/combatRules';
-import { pickNextBossAction } from '../systems/bossAi';
+import { pickNextBossAction, bossActionDuration } from '../systems/bossAi';
 import { CharacterRig } from './CharacterRig';
 import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
 
 // ボス(大型警備機)。HP に応じた 2 フェーズ + 重み付き行動抽選で動く。
+// 設定(BossConfig)・リグ系統・重力有無をコンストラクタで差し替え可能にし、
+// 接地型(stage1)と飛行型(stage2, FlyingBoss サブクラス)で共通ロジックを再利用する。
+// 既定引数は接地ボスそのものなので、stage1 の挙動はリファクタ前と同一に保たれる。
+
+/** Boss 生成オプション。未指定時は接地ボス(stage1)として振る舞う。 */
+export interface BossOptions {
+  /** チューニング設定。既定は接地ボスの BOSS。 */
+  config?: BossConfig;
+  /** 描画リグ系統。既定は 'boss'。 */
+  rigFamily?: RigFamily;
+  /** 重力の影響を受けるか。既定は true(接地型)。飛行型は false。 */
+  gravity?: boolean;
+}
+
+/** actionDurationMs に該当キーがないときの継続時間フォールバック(ms)。 */
+export const DEFAULT_ACTION_DURATION_MS = 700;
 
 export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
-  hp: number = BOSS.maxHp;
-  maxHp: number = BOSS.maxHp;
-  readonly contactDamage: number = BOSS.contactDamage;
+  hp: number;
+  maxHp: number;
+  readonly contactDamage: number;
 
-  private phase: BossPhase = 'phase1';
-  private currentAction: BossAction = 'idle';
-  private lastAction: BossAction = 'idle';
-  private actionEndsAt = 0;
-  private staggerAccumulated = 0;
-  private projectiles?: Phaser.Physics.Arcade.Group;
-  private isAlive = true; // Phaser の active と区別する撃破フラグ
+  /** 系統別チューニング設定。サブクラスからも参照する。 */
+  protected readonly cfg: BossConfig;
+
+  protected phase: BossPhase = 'phase1';
+  protected currentAction: BossAction = 'idle';
+  protected lastAction: BossAction = 'idle';
+  protected actionEndsAt = 0;
+  protected staggerAccumulated = 0;
+  protected projectiles?: Phaser.Physics.Arcade.Group;
+  protected isAlive = true; // Phaser の active と区別する撃破フラグ
   // アリーナ内に閉じ込める中心 X の可動域。未設定時は無制限。
-  private arenaMinX = -Infinity;
-  private arenaMaxX = Infinity;
+  protected arenaMinX = -Infinity;
+  protected arenaMaxX = Infinity;
   // 前後移動の現在向き(move/jump 開始時に決め直す)。
-  private paceDir: -1 | 1 = -1;
+  protected paceDir: -1 | 1 = -1;
   // 射撃の狙い高さ(プレイヤーの Y)。update 毎に更新し、fireVolley が参照する。
-  private targetY: number;
-  private readonly rig: CharacterRig;
+  protected targetY: number;
+  protected readonly rig: CharacterRig;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, options?: BossOptions) {
     super(scene, x, y, TEX.boss);
+    const cfg = options?.config ?? BOSS;
+    const rigFamily = options?.rigFamily ?? 'boss';
+    const gravity = options?.gravity ?? true;
+    this.cfg = cfg;
+    this.hp = cfg.maxHp;
+    this.maxHp = cfg.maxHp;
+    this.contactDamage = cfg.contactDamage;
     this.targetY = y;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(BOSS.width, BOSS.height);
-    // 重力ありの接地エンティティ(ジャンプ可能)。地面コライダーは GameScene 側で登録する。
-    body.setAllowGravity(true);
+    body.setSize(cfg.width, cfg.height);
+    // 接地型は重力あり(ジャンプ可能、地面コライダーは GameScene 側で登録)。
+    // 飛行型は重力なしで空中に滞空する。
+    body.setAllowGravity(gravity);
     body.setImmovable(false);
     this.setDepth(9);
     // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
     this.setVisible(false);
-    this.rig = new CharacterRig(scene, 'boss', 9);
+    this.rig = new CharacterRig(scene, rigFamily, 9);
   }
 
-  private get onGround(): boolean {
+  protected get onGround(): boolean {
     const body = this.body as Phaser.Physics.Arcade.Body;
     return body.blocked.down || body.touching.down;
   }
@@ -59,7 +87,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   /** アリーナの左右端(ワールド座標)を与え、ボスがその外へ出ないようにする。 */
   setArenaBounds(left: number, right: number): void {
-    const halfW = BOSS.width / 2;
+    const halfW = this.cfg.width / 2;
     this.arenaMinX = left + halfW;
     this.arenaMaxX = right - halfW;
   }
@@ -88,7 +116,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   }
 
   /** 現在のアクション・物理状態から MotionState を導出し、リグへ同期する。 */
-  private updateRig(time: number, playerX: number): void {
+  protected updateRig(time: number, playerX: number): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const vy = body.velocity.y;
     const faceDir: 1 | -1 = playerX < this.x ? -1 : 1;
@@ -114,7 +142,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   }
 
   /** アリーナ範囲外へ出ようとしたら押し戻し、その方向の速度を止める。 */
-  private clampToArena(): void {
+  protected clampToArena(): void {
     if (this.x < this.arenaMinX) {
       this.x = this.arenaMinX;
       this.setVelocityX(0);
@@ -124,13 +152,17 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     }
   }
 
-  private beginNextAction(now: number, playerX: number): void {
+  protected beginNextAction(now: number, playerX: number): void {
     const next = pickNextBossAction(this.phase, this.lastAction);
     this.lastAction = next;
     this.currentAction = next;
 
-    const baseDuration = BOSS.actionDurationMs[next];
-    const factor = this.phase === 'phase2' ? BOSS.phase2SpeedFactor : 1;
+    const baseDuration = bossActionDuration(
+      this.cfg.actionDurationMs,
+      next,
+      DEFAULT_ACTION_DURATION_MS,
+    );
+    const factor = this.phase === 'phase2' ? this.cfg.phase2SpeedFactor : 1;
     this.actionEndsAt = now + baseDuration * factor;
 
     // アクション開始時の単発処理
@@ -144,7 +176,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   }
 
   /** 前後移動の向きを決める。アリーナ端付近では内側へ向ける。 */
-  private chooseMoveDir(): -1 | 1 {
+  protected chooseMoveDir(): -1 | 1 {
     const margin = 120;
     if (this.x <= this.arenaMinX + margin) return 1;
     if (this.x >= this.arenaMaxX - margin) return -1;
@@ -152,21 +184,21 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   }
 
   /** 接地中ならジャンプし、着地までの水平ドリフト向きを決める。 */
-  private startJump(): void {
-    if (this.onGround) {
-      this.setVelocityY(BOSS.jumpVelocity);
+  protected startJump(): void {
+    if (this.onGround && this.cfg.jumpVelocity !== undefined) {
+      this.setVelocityY(this.cfg.jumpVelocity);
     }
     this.paceDir = this.chooseMoveDir();
   }
 
-  private executeAction(_playerX: number): void {
+  protected executeAction(_playerX: number): void {
     // 移動は前後ペース(paceDir)で行う。向き・ティントはリグ側(updateRig)で扱う。
     switch (this.currentAction) {
       case 'move':
-        this.setVelocityX(this.paceDir * BOSS.moveSpeed);
+        this.setVelocityX(this.paceDir * this.cfg.moveSpeed);
         break;
       case 'jump':
-        this.setVelocityX(this.paceDir * BOSS.moveSpeed * 0.6); // 空中の水平ドリフト
+        this.setVelocityX(this.paceDir * this.cfg.moveSpeed * 0.6); // 空中の水平ドリフト
         break;
       case 'idle':
       case 'shoot':
@@ -177,19 +209,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     }
   }
 
-  private fireVolley(playerX: number): void {
+  protected fireVolley(playerX: number): void {
     if (!this.projectiles) return;
     const dir = playerX < this.x ? -1 : 1;
-    const muzzleX = this.x + dir * (BOSS.width / 2 + 4);
+    const muzzleX = this.x + dir * (this.cfg.width / 2 + 4);
     // 弾はプレイヤーの高さ(targetY)を中心に発射する。ボス中心はプレイヤーより
     // 高いため、ボス中心から水平発射すると頭上を越えて当たらない不具合になる。
     const baseY = this.targetY;
     // phase2 は弾数を増やして攻勢を強める
     const offsets = this.phase === 'phase2' ? [-24, 0, 24] : [0];
+    // 弾は地面の上に収める(最下弾が地面をすり抜けて見えるのを防ぐ)。
+    // 下端が地面上端に接する高さを上限とする。
+    const maxY = STAGE.groundY - SHOT.normalSize / 2;
     for (const oy of offsets) {
-      const projectile = this.projectiles.get(muzzleX, baseY + oy) as Projectile | null;
+      const y = Math.min(baseY + oy, maxY);
+      const projectile = this.projectiles.get(muzzleX, y) as Projectile | null;
       if (!projectile) continue;
-      projectile.fire(muzzleX, baseY + oy, dir * BOSS.bulletSpeed, 'normal', 'enemy');
+      projectile.fire(muzzleX, y, dir * this.cfg.bulletSpeed, 'normal', 'enemy');
     }
     this.rig.triggerAttack(this.scene.time.now);
   }
@@ -199,11 +235,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.staggerAccumulated += amount;
 
     // 一定ダメージ蓄積で短時間のけぞる(反撃チャンス)
-    if (this.staggerAccumulated >= BOSS.staggerDamageThreshold && !this.isDead()) {
+    if (this.staggerAccumulated >= this.cfg.staggerDamageThreshold && !this.isDead()) {
       this.staggerAccumulated = 0;
       this.currentAction = 'stagger';
       this.lastAction = 'stagger';
-      this.actionEndsAt = this.scene.time.now + BOSS.actionDurationMs.stagger;
+      this.actionEndsAt =
+        this.scene.time.now +
+        bossActionDuration(this.cfg.actionDurationMs, 'stagger', DEFAULT_ACTION_DURATION_MS);
       this.setVelocityX(0);
     }
 

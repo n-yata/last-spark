@@ -1,6 +1,6 @@
 # 機能設計書 (Functional Design Document)
 
-> 本書は `docs/product-requirements.md`(PRD)で定義した MVP 要件(P0)を、Phaser 3 ベースの PWA としてどう実現するかを定義する。MVP のスコープは「タイトル画面 + 1 ステージ + ボス 1 体」「両手・横向き専用のタッチ操作」「完全オフライン(localStorage)」。
+> 本書は `docs/product-requirements.md`(PRD)で定義した MVP 要件(P0)を、Phaser 3 ベースの PWA としてどう実現するかを定義する。MVP のスコープは「タイトル画面 + 複数ステージ(stage1 接地ボス / stage2 梯子攻略 + 飛行ボス)」「両手・横向き専用のタッチ操作」「完全オフライン(localStorage)」。
 
 ## システム構成図
 
@@ -114,7 +114,7 @@ interface EnemyState {
   pattern: EnemyPattern;    // 移動/攻撃パターン識別子
 }
 
-// ボス(大型警備機)
+// ボス(系統で接地/飛行を出し分ける)
 interface BossState {
   hp: number;
   maxHp: number;
@@ -125,7 +125,9 @@ interface BossState {
 
 type EnemyPattern = 'walker' | 'turret';      // MVP の雑魚2種(案)
 type BossPhase = 'phase1' | 'phase2';          // HP 50% で移行
-type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger';
+// 系統共通の行動。接地は idle/move/shoot/jump/stagger、飛行は hover/move/shoot/dive/stagger を使う
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover';
+type BossKind = 'ground' | 'flying';           // 接地型(stage1) / 飛行・浮遊型(stage2)
 ```
 
 ### パラメータ定義(チューニング値の集中管理)
@@ -215,9 +217,9 @@ class SpawnSystem {
 
 ### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
 
-**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ボストリガー、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 と続ける(`nextStageId` 無し=最終ステージ)。
+**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ボストリガー、ボス系統 `bossKind?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 と続ける(`nextStageId` 無し=最終ステージ)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。
 
-**すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。ボスは地面のみと衝突する。
+**すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
 **梯子(ladder)**: `StageData.ladders` の矩形を `GameScene.buildLadders` が見た目(タイル)として敷き、矩形配列を `Player.setLadders` へ渡す(物理衝突はさせない)。Player は純粋関数 `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity` で把持状態を判定し、把持中は重力を切って(`setAllowGravity(false)`)上下入力で鉛直移動する。離脱時に重力を必ず戻す。梯子昇降中はプレイヤーの足場 collider を抑制し、ワンウェイ床を貫通して登り降りできる(梯子上端=直上の足場上端に揃え、登り切ると足場に乗れる動線)。これらの純粋ロジックは `systems/playerMovement.ts` に集約しユニットテスト可能にする。
 
@@ -256,7 +258,12 @@ class Boss extends Phaser.Physics.Arcade.Sprite {
   update(time: number, playerX: number): void; // フェーズ/アクション遷移
   takeDamage(amount: number): void;
 }
+
+// 飛行/浮遊型ボス(stage2)。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束を再利用する
+class FlyingBoss extends Boss {}
 ```
+
+**ボス系統(接地 / 飛行)**: `Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。飛行ボス `FlyingBoss`(stage2)は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックをそのまま再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` のみを上書きする。飛行ボスは重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)に分離する。
 
 ### SaveManager(Persistence)
 

@@ -1,5 +1,6 @@
-import { STAGE, BOSS } from './balance';
+import { STAGE, BOSS, FLYING_BOSS } from './balance';
 import type { EnemyPattern } from '../types/enemy';
+import type { BossKind } from '../types/boss';
 
 // ステージ1「崩れた都市」のコード定義データ。
 // MVP は 1 ステージのため Tiled JSON ではなくここで地形/敵配置を定義する。
@@ -44,6 +45,8 @@ export interface StageData {
   bossTriggerX: number;
   /** ボスの出現位置(中心) */
   bossSpawn: { x: number; y: number };
+  /** ボス系統。未定義なら接地型('ground')。stage2 は飛行型('flying')。 */
+  bossKind?: BossKind;
   /** ボスアリーナ左端(カメラがここで止まる) */
   bossArenaMinX: number;
   /** ステージ全幅 */
@@ -141,7 +144,9 @@ const STAGE2: StageData = {
     { pattern: 'turret', x: 3700, y: GROUND_TOP - 120 },
   ],
   bossTriggerX: 3700,
-  bossSpawn: { x: 3950, y: GROUND_TOP - BOSS.height / 2 },
+  // 飛行ボスは空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
+  bossSpawn: { x: 3950, y: GROUND_TOP - FLYING_BOSS.hoverAltitude },
+  bossKind: 'flying',
   bossArenaMinX: 4000,
   width: STAGE2_WIDTH,
   // stage2 は最終ステージ(nextStageId なし)。

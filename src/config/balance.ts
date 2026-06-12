@@ -1,6 +1,8 @@
 // ゲームのチューニング値(難易度・手触り)の集中管理。
 // マジックナンバーをコードに散らさず、ここに集約する。
 
+import type { BossAction } from '../types/boss';
+
 export const PLAYER = {
   maxHp: 16,
   moveSpeed: 160, // px/s
@@ -55,6 +57,51 @@ export const ENEMY = {
   },
 } as const;
 
+/**
+ * ボス共通のチューニング設定。接地(BOSS)・飛行(FLYING_BOSS)が共有する型。
+ * Boss エンティティはこの型を介して設定値を参照し、系統ごとに差し替え可能にする。
+ * actionDurationMs は系統で使うアクションのみ持つため Partial とする。
+ */
+export interface BossConfig {
+  maxHp: number;
+  /** この HP 比率以下で phase2 へ移行 */
+  phase2HpRatio: number;
+  contactDamage: number;
+  bulletDamage: number;
+  bulletSpeed: number;
+  /** 移動速度(接地=前後ペース / 飛行=高度を保った左右移動) */
+  moveSpeed: number;
+  /** 連続被ダメ蓄積でのけぞる量 */
+  staggerDamageThreshold: number;
+  width: number;
+  height: number;
+  /** アクション継続時間(ms)。系統で使うアクションのみ定義する。 */
+  actionDurationMs: Partial<Record<BossAction, number>>;
+  /** phase2 でアクション間隔を短縮する係数 */
+  phase2SpeedFactor: number;
+  /** ジャンプ初速(接地ボスのみ。上向き負)。飛行ボスは持たない。 */
+  jumpVelocity?: number;
+}
+
+/**
+ * 飛行/浮遊型ボス固有の設定。BossConfig を継承し、滞空高度・上下バブ・急降下の
+ * パラメータを追加する。FlyingBoss はこの型を介して飛行固有値を参照する。
+ */
+export interface FlyingBossConfig extends BossConfig {
+  /** 基準滞空高度(地面上端から本体中心までの px)。center_y = STAGE.groundY - hoverAltitude。 */
+  hoverAltitude: number;
+  /** 上下バブの振幅(px、+下方向)。 */
+  hoverAmplitude: number;
+  /** 上下バブの周期(ms)。 */
+  hoverPeriodMs: number;
+  /** 急降下の鉛直速度(px/s、下向き)。 */
+  diveSpeed: number;
+  /** 高度復帰・追従の最大鉛直速度(px/s)。 */
+  climbSpeed: number;
+  /** 急降下の最下点(地面上端から本体下端までの余白 px)。小さいほど地面近くまで降りる。 */
+  diveBottomMargin: number;
+}
+
 export const BOSS = {
   maxHp: 24,
   phase2HpRatio: 0.5, // この比率以下で phase2 へ移行
@@ -76,7 +123,39 @@ export const BOSS = {
   },
   // phase2 ではアクション間隔を短縮する係数
   phase2SpeedFactor: 0.7,
-} as const;
+} as const satisfies BossConfig;
+
+/**
+ * stage2 専用・飛行/浮遊型ボスの設定。難易度は接地ボスと「同等〜やや強い」に収める
+ * (maxHp は同じ、弾速・移動をやや強化)。飛行固有の高度・急降下パラメータを持つ。
+ */
+export const FLYING_BOSS = {
+  maxHp: 24, // 接地ボスと同等の硬さ
+  phase2HpRatio: 0.5,
+  contactDamage: 2,
+  bulletDamage: 1,
+  bulletSpeed: 280, // やや速い弾
+  moveSpeed: 90, // 空中で高度を保ったまま左右へ展開する速度
+  staggerDamageThreshold: 8,
+  width: 76,
+  height: 64, // 接地ボスより平たい空中機体
+  // アクション継続時間(ms)。飛行は hover/move/shoot/dive/stagger を使う。
+  actionDurationMs: {
+    hover: 900,
+    move: 800,
+    shoot: 600,
+    dive: 700,
+    stagger: 700,
+  },
+  phase2SpeedFactor: 0.7,
+  // --- 飛行固有 ---
+  hoverAltitude: 150,
+  hoverAmplitude: 24,
+  hoverPeriodMs: 1800,
+  diveSpeed: 360,
+  climbSpeed: 240,
+  diveBottomMargin: 16,
+} as const satisfies FlyingBossConfig;
 
 export const STAGE = {
   width: 5200, // ステージ全長(px)

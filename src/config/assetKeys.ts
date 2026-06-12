@@ -51,4 +51,11 @@ export const PART = {
     legBack: 'part-boss-legback',
     legFront: 'part-boss-legfront',
   },
+  bossFlying: {
+    head: 'part-bossflying-head',
+    core: 'part-bossflying-core',
+    wingBack: 'part-bossflying-wingback',
+    wingFront: 'part-bossflying-wingfront',
+    cannon: 'part-bossflying-cannon',
+  },
 } as const;
