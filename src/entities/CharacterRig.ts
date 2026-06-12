@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { RIGS, type RigFamily, type RigPartSpec } from '../config/characterRig';
+import { EFFECTS } from '../config/effects';
 import {
   walkPhase,
   legSwing,
@@ -22,11 +23,6 @@ interface RigPart {
   baseY: number;
 }
 
-/** 発射リコイルの継続時間(ms)。 */
-const ATTACK_DURATION_MS = 220;
-/** 被弾のけぞりの継続時間(ms)。 */
-const HIT_DURATION_MS = 200;
-
 export class CharacterRig {
   private readonly container: Phaser.GameObjects.Container;
   private readonly parts: RigPart[];
@@ -39,6 +35,8 @@ export class CharacterRig {
   private attackStartMs = -1;
   /** hit(被弾)トリガ時刻。負なら未発火。 */
   private hitStartMs = -1;
+  /** 被弾白フラッシュ(setTintFill)を適用中か。立ち下がりで clearTint するために持つ。 */
+  private flashApplied = false;
   /** 歩行位相を進める内部時計(walk 中のみ進行)。 */
   private walkClockMs = 0;
   private lastUpdateMs = -1;
@@ -110,14 +108,14 @@ export class CharacterRig {
 
     // 被弾/けぞり: hit は時限、stagger は状態継続中ずっと有効。
     const hitActive =
-      this.hitStartMs >= 0 && timeMs - this.hitStartMs < HIT_DURATION_MS;
+      this.hitStartMs >= 0 && timeMs - this.hitStartMs < EFFECTS.rig.hitLeanMs;
     const staggerActive = this.motion === 'stagger';
     const lean = hitLean(hitActive || staggerActive) * this.facingSign;
 
     // 発射リコイル(0..1)。
     const recoil =
       this.attackStartMs >= 0
-        ? armRecoil(timeMs - this.attackStartMs, ATTACK_DURATION_MS)
+        ? armRecoil(timeMs - this.attackStartMs, EFFECTS.rig.attackRecoilMs)
         : 0;
 
     // Container 全体の向き・姿勢。facing は scaleX 符号で反転。
@@ -126,6 +124,29 @@ export class CharacterRig {
 
     for (const part of this.parts) {
       this.applyPart(part, swing, phase, recoil);
+    }
+
+    this.updateHitFlash(timeMs);
+  }
+
+  /**
+   * 被弾直後の白フラッシュ。setTint は乗算で白では変化しないため、
+   * 塗り潰しの setTintFill を使う。立ち下がりで解除する(所有者が毎フレーム
+   * setTint/clearTint を再適用する場合も、update が後勝ちでフラッシュを優先できる)。
+   */
+  private updateHitFlash(timeMs: number): void {
+    const flashActive =
+      this.hitStartMs >= 0 && timeMs - this.hitStartMs < EFFECTS.hitFlash.durationMs;
+    if (flashActive) {
+      for (const part of this.parts) {
+        part.image.setTintFill(EFFECTS.hitFlash.color);
+      }
+      this.flashApplied = true;
+    } else if (this.flashApplied) {
+      this.flashApplied = false;
+      for (const part of this.parts) {
+        part.image.clearTint();
+      }
     }
   }
 

@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
+import { EFFECTS } from '../config/effects';
+import { entranceFillRatio } from '../systems/hudFx';
 
 // ボス HP ゲージ(ボス戦中のみ画面下部に表示)。実画面サイズに追従する。
+// 出現時はゲージが 0→満タンへ満ちるフィル演出で「ボス戦開始」を演出する。
 
 const BAR_HEIGHT = 16;
 const BOTTOM_MARGIN = 40;
@@ -13,6 +16,8 @@ export class BossHpBar {
   private readonly gfx: Phaser.GameObjects.Graphics;
   private readonly label: Phaser.GameObjects.Text;
   private visible = false;
+  /** show() を呼んだ時刻(ms)。出現フィル演出の起点。負なら未表示。 */
+  private shownAtMs = -1;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -32,6 +37,7 @@ export class BossHpBar {
 
   show(): void {
     this.visible = true;
+    this.shownAtMs = this.scene.time.now;
     this.gfx.setVisible(true);
     this.label.setVisible(true);
   }
@@ -42,14 +48,20 @@ export class BossHpBar {
     this.label.setVisible(false);
   }
 
-  render(hp: number, maxHp: number): void {
+  render(hp: number, maxHp: number, nowMs: number): void {
     if (!this.visible) return;
     const screenW = this.scene.scale.width;
     const screenH = this.scene.scale.height;
     const barWidth = Math.min(520, screenW - 80);
     const barY = screenH - BOTTOM_MARGIN;
     const x = (screenW - barWidth) / 2;
-    const ratio = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
+    const actualRatio = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
+    // 出現直後は 0→満タンへ満ちるフィル演出。満ちた後は実際の HP 比率に従う。
+    const fillProgress =
+      this.shownAtMs >= 0
+        ? entranceFillRatio(nowMs - this.shownAtMs, EFFECTS.hud.bossBarFillMs)
+        : 1;
+    const ratio = Math.min(actualRatio, fillProgress);
 
     this.label.setPosition(screenW / 2, barY - 6);
     this.gfx.clear();

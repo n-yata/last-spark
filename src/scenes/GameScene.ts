@@ -13,6 +13,8 @@ import { Projectile } from '../entities/Projectile';
 import { InputController } from '../systems/InputController';
 import { CombatSystem } from '../systems/CombatSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
+import { EffectsManager } from '../systems/EffectsManager';
+import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
@@ -48,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   private inputController!: InputController;
   private combat!: CombatSystem;
   private spawn!: SpawnSystem;
+  private effects!: EffectsManager;
   private boss?: Boss;
   private startTime = 0;
   private ended = false;
@@ -80,6 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch(SCENE_KEYS.ui);
     this.initHud();
     this.setupOrientationHandling();
+    fadeIn(this);
     getSound().playBgm('stage');
   }
 
@@ -161,14 +165,23 @@ export class GameScene extends Phaser.Scene {
     this.inputController = new InputController(this);
     this.inputController.attachTouchZones();
 
+    this.effects = new EffectsManager(this);
     this.combat = new CombatSystem(this, {
-      onHit: (x, y, target) => {
+      onHit: (x, y, target, shotKind) => {
         this.spawnHitEffect(x, y);
         getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
+        // チャージ弾のみヒットストップ(通常弾は連射なので止めるとテンポを削ぐ)
+        if (shotKind === 'charged') this.effects.chargedHitStop();
       },
-      onEnemyDefeated: () => getSound().playSe('enemyDefeated'),
-      onPlayerDamaged: () => getSound().playSe('playerDamaged'),
-      onBossDefeated: () => this.handleClear(),
+      onEnemyDefeated: (enemy) => {
+        this.effects.explodeSmall(enemy.x, enemy.y);
+        getSound().playSe('enemyDefeated');
+      },
+      onPlayerDamaged: () => {
+        this.effects.playerDamaged();
+        getSound().playSe('playerDamaged');
+      },
+      onBossDefeated: (boss) => this.handleClear(boss),
       onPlayerDeath: () => this.handleGameOver(),
     });
     this.combat.registerColliders({
@@ -276,6 +289,9 @@ export class GameScene extends Phaser.Scene {
 
     const inputState = this.inputController.update();
     this.player.applyInput(inputState, time);
+    // 仮想ボタンの押下フィードバック用に押下状態を HUD へ共有する
+    this.registry.set(HUD.shootHeld, inputState.shootHeld);
+    this.registry.set(HUD.jumpHeld, inputState.jumpHeld);
 
     const cam = this.cameras.main;
     // カメラ右端はワールド座標。ズーム適用時 cam.width(ビューポートpx)と実可視幅は
@@ -320,18 +336,23 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.chargeRatio, ratio);
   }
 
-  private handleClear(): void {
+  private handleClear(boss: Boss): void {
     if (this.ended) return;
     this.ended = true;
     getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
     getSound().playSe('bossDefeated');
+    // クリアタイムは撃破の瞬間で確定する(撃破演出の時間を含めない)。
     const clearTimeMs = this.time.now - this.startTime;
-    this.inputController.destroy();
-    this.scene.stop(SCENE_KEYS.ui);
-    // 次ステージがあれば中継して継続、なければ最終クリアとしてタイトルへ。
-    this.scene.start(SCENE_KEYS.clear, {
-      clearTimeMs,
-      nextStageId: this.stage.nextStageId,
+    this.registry.set(HUD.bossHp, 0);
+    // 撃破シーケンス(多段爆発+大シェイク)を見せてからクリアへ遷移する。
+    this.effects.bossDeathSequence(boss.x, boss.y, () => {
+      this.inputController.destroy();
+      this.scene.stop(SCENE_KEYS.ui);
+      // 次ステージがあれば中継して継続、なければ最終クリアとしてタイトルへ。
+      transitionTo(this, SCENE_KEYS.clear, {
+        clearTimeMs,
+        nextStageId: this.stage.nextStageId,
+      });
     });
   }
 
@@ -340,7 +361,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = true;
     this.inputController.destroy();
     this.scene.stop(SCENE_KEYS.ui);
-    this.scene.start(SCENE_KEYS.gameOver);
+    transitionTo(this, SCENE_KEYS.gameOver);
   }
 
   private setupOrientationHandling(): void {
@@ -359,6 +380,10 @@ export class GameScene extends Phaser.Scene {
       }
     };
     this.scale.on(Phaser.Scale.Events.RESIZE, check);
+    // シーン再利用(リトライ/周回)でリスナーが蓄積しないよう、終了時に必ず外す。
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, check);
+    });
     check();
   }
 }

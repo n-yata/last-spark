@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
 import { getSound } from '../systems/SoundManager';
+import { transitionTo, fadeIn } from '../systems/sceneTransition';
 
 // タイトル画面。ロゴ + スタート導線。クリア済みフラグと最速タイムを表示する。
 
@@ -13,6 +14,7 @@ export class TitleScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#0a0e14');
+    fadeIn(this);
 
     // 背景: 暗め基調 + 発光アクセント(廃墟のシルエット風グラデーション)
     this.drawBackdrop(width, height);
@@ -78,7 +80,7 @@ export class TitleScene extends Phaser.Scene {
     // タイトルからの開始は必ず stage1 から(最初から)。
     // scene.start に data を渡さないと Phaser は前回の data(継続時の stageId)を
     // 保持して init に渡すため、明示的に stage1 を指定してクリア後の引き継ぎを断つ。
-    this.scene.start(SCENE_KEYS.game, { stageId: 'stage1' });
+    transitionTo(this, SCENE_KEYS.game, { stageId: 'stage1' });
   }
 
   private drawBackdrop(width: number, height: number): void {

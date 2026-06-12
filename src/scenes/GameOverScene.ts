@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { getSound } from '../systems/SoundManager';
+import { transitionTo, fadeIn } from '../systems/sceneTransition';
 
 // ゲームオーバー表示とリトライ/タイトル導線。
 
@@ -11,6 +12,7 @@ export class GameOverScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+    fadeIn(this);
 
     // BGM を止めてゲームオーバー音を鳴らす
     getSound().stopBgm();
@@ -29,10 +31,10 @@ export class GameOverScene extends Phaser.Scene {
       .setShadow(0, 0, '#ff2d55', 16, true, true);
 
     this.makeButton(width / 2, height * 0.58, 'RETRY', '#fff27a', () =>
-      this.scene.start(SCENE_KEYS.game),
+      transitionTo(this, SCENE_KEYS.game),
     );
     this.makeButton(width / 2, height * 0.74, 'TITLE', '#7fe9dd', () =>
-      this.scene.start(SCENE_KEYS.title),
+      transitionTo(this, SCENE_KEYS.title),
     );
   }
 

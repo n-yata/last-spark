@@ -139,8 +139,8 @@ last-spark/
 - `LifeBar.ts`, `BossHpBar.ts`, `ChargeGauge.ts`, `TouchControls.ts` 等
 
 **依存関係**:
-- 依存可能: `config/`, `types/`
-- 依存禁止: `systems/`, `persistence/`(`UIScene` から状態を受け取って描画するのみ)
+- 依存可能: `config/`, `types/`、および `systems/` 内の **Phaser 非依存の純粋関数モジュール**(camelCase ファイル: `hudFx.ts` 等。entities と同じく最下位ロジック扱い)
+- 依存禁止: `systems/` の System クラス、`persistence/`(`UIScene` から状態を受け取って描画するのみ)
 
 #### src/types/ (共通型定義)
 

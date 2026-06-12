@@ -8,6 +8,9 @@ export const HUD = {
   bossActive: 'hud.boss.active',
   bossHp: 'hud.boss.hp',
   bossMaxHp: 'hud.boss.maxHp',
+  // 仮想ボタンの押下状態(押下フィードバック描画用)
+  shootHeld: 'hud.touch.shootHeld',
+  jumpHeld: 'hud.touch.jumpHeld',
   // 追従式タッチパッド(描画用)
   movePadActive: 'hud.movepad.active',
   movePadBaseX: 'hud.movepad.baseX',

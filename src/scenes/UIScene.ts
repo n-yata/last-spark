@@ -45,11 +45,13 @@ export class UIScene extends Phaser.Scene {
     const reg = this.registry;
     const band = resolveControlBand(this);
     const layout = createTouchLayout(this.scale.width, this.scale.height, band);
-    this.touchControls.render(layout, this.scale.width, this.scale.height, band);
+    const shootHeld = (reg.get(HUD.shootHeld) as boolean) ?? false;
+    const jumpHeld = (reg.get(HUD.jumpHeld) as boolean) ?? false;
+    this.touchControls.render(layout, this.scale.width, this.scale.height, band, shootHeld, jumpHeld);
 
     const hp = (reg.get(HUD.playerHp) as number) ?? 0;
     const maxHp = (reg.get(HUD.playerMaxHp) as number) ?? 0;
-    this.lifeBar.render(hp, maxHp);
+    this.lifeBar.render(hp, maxHp, this.time.now);
 
     const ratio = (reg.get(HUD.chargeRatio) as number) ?? 0;
     this.chargeGauge.render(ratio, layout.shootButton);
@@ -71,7 +73,7 @@ export class UIScene extends Phaser.Scene {
     if (bossActive) {
       const bossHp = (reg.get(HUD.bossHp) as number) ?? 0;
       const bossMaxHp = (reg.get(HUD.bossMaxHp) as number) ?? 1;
-      this.bossHpBar.render(bossHp, bossMaxHp);
+      this.bossHpBar.render(bossHp, bossMaxHp, this.time.now);
     }
   }
 }

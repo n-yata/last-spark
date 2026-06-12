@@ -72,7 +72,7 @@
 
 > **依存方向**: Scene → System → Entity / Scene → Persistence。逆方向(Entity → Scene 等)は禁止。System から Scene への通知はイベント/コールバックで行い、直接参照しない。
 >
-> **補足(純粋関数モジュールの扱い)**: `systems/` 内の Phaser 非依存の純粋関数モジュール(camelCase ファイル: `bossAi.ts` / `shot.ts` / `combatRules.ts` / `playerMovement.ts` 等)は、状態を持たない最下位ロジックとして `config/` / `types/` と同等に扱い、Entity からの参照を許可する。Entity が依存してはならないのは状態・副作用を持つ **System クラス**(`InputController` / `CombatSystem` / `SpawnSystem` 等の `*System`/`*Controller`)のみである。これにより、戦闘・抽選・移動などのコアロジックを Entity と純粋関数で共有しつつ、テスト容易性(Phaser 非依存)を保つ。
+> **補足(純粋関数モジュールの扱い)**: `systems/` 内の Phaser 非依存の純粋関数モジュール(camelCase ファイル: `bossAi.ts` / `shot.ts` / `combatRules.ts` / `playerMovement.ts` / `hudFx.ts` 等)は、状態を持たない最下位ロジックとして `config/` / `types/` と同等に扱い、Entity および UI コンポーネントからの参照を許可する。Entity/UI が依存してはならないのは状態・副作用を持つ **System クラス**(`InputController` / `CombatSystem` / `SpawnSystem` 等の `*System`/`*Controller`)のみである。これにより、戦闘・抽選・移動・HUD 演出などのコアロジックを純粋関数で共有しつつ、テスト容易性(Phaser 非依存)を保つ。
 
 ### チューニング値の集中管理
 難易度・手触りに関わる数値(速度・ジャンプ力・ダメージ・チャージしきい値・ボスHP 等)は `src/config/` の定数モジュールに集約する。本番コードへのマジックナンバー埋め込み・`if (testMode)` 等のテスト用分岐は禁止。

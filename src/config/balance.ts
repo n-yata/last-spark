@@ -157,6 +157,37 @@ export const FLYING_BOSS = {
   diveBottomMargin: 16,
 } as const satisfies FlyingBossConfig;
 
+/**
+ * ステージ別の雑魚敵難易度係数。後半ステージほど敵を強め、難易度カーブを作る。
+ * 値は ENEMY の基準値に乗算され、ロジック側へのマジックナンバー埋め込みを避ける。
+ */
+export interface StageTuning {
+  /** walker の移動速度係数(>1 で速い) */
+  walkerSpeedFactor: number;
+  /** turret の発射間隔係数(<1 で発射が頻繁) */
+  turretIntervalFactor: number;
+}
+
+/** 中立(stage1 基準)の難易度係数。未知ステージのフォールバックにも使う。 */
+export const NEUTRAL_STAGE_TUNING: StageTuning = {
+  walkerSpeedFactor: 1,
+  turretIntervalFactor: 1,
+} as const;
+
+export const STAGE_TUNING: Record<string, StageTuning> = {
+  stage1: NEUTRAL_STAGE_TUNING,
+  // stage2 は walker をやや速く、turret の発射を頻繁にして stage1 からの上昇を体感させる。
+  stage2: {
+    walkerSpeedFactor: 1.3,
+    turretIntervalFactor: 0.75,
+  },
+} as const;
+
+/** stageId に対応する難易度係数を返す。未知 ID は中立値にフォールバック。 */
+export function getStageTuning(stageId: string): StageTuning {
+  return STAGE_TUNING[stageId] ?? NEUTRAL_STAGE_TUNING;
+}
+
 export const STAGE = {
   width: 5200, // ステージ全長(px)
   height: 540,

@@ -14,6 +14,7 @@ export const TEX = {
   platform: 'tex-platform',
   ladder: 'tex-ladder',
   hit: 'tex-hit',
+  spark: 'tex-spark',
   logo: 'tex-logo-spark',
   pixel: 'tex-pixel',
 } as const;

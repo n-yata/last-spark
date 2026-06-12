@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { ENEMY } from '../config/balance';
+import { ENEMY, NEUTRAL_STAGE_TUNING, type StageTuning } from '../config/balance';
 import type { EnemyPattern } from '../types/enemy';
 import type { Damageable } from '../types/combat';
 import { applyDamageToHp, isDead } from '../systems/combatRules';
@@ -20,14 +20,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private turretDir: -1 | 1 = 1;
   private projectiles?: Phaser.Physics.Arcade.Group;
   private readonly rig: CharacterRig;
+  /** ステージ別係数を適用済みの実効値(walker 速度 / turret 発射間隔)。 */
+  private readonly effectiveMoveSpeed: number;
+  private readonly effectiveShootIntervalMs: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, pattern: EnemyPattern) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    pattern: EnemyPattern,
+    tuning: StageTuning = NEUTRAL_STAGE_TUNING,
+  ) {
     super(scene, x, y, pattern === 'turret' ? TEX.enemyTurret : TEX.enemyWalker);
     this.pattern = pattern;
     const conf = pattern === 'turret' ? ENEMY.turret : ENEMY.walker;
     this.hp = conf.hp;
     this.maxHp = conf.hp;
     this.contactDamage = conf.contactDamage;
+    this.effectiveMoveSpeed = ENEMY.walker.moveSpeed * tuning.walkerSpeedFactor;
+    this.effectiveShootIntervalMs = ENEMY.turret.shootIntervalMs * tuning.turretIntervalFactor;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -42,7 +53,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
       body.setAllowGravity(false);
       body.setImmovable(true);
     } else {
-      this.setVelocityX(this.moveDir * ENEMY.walker.moveSpeed);
+      this.setVelocityX(this.moveDir * this.effectiveMoveSpeed);
     }
   }
 
@@ -84,14 +95,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
     } else if (body.blocked.right) {
       this.moveDir = -1;
     }
-    this.setVelocityX(this.moveDir * ENEMY.walker.moveSpeed);
+    this.setVelocityX(this.moveDir * this.effectiveMoveSpeed);
   }
 
   private updateTurret(now: number, playerX: number): void {
     // 砲身は常にプレイヤー方向を向く(発射していなくても照準する)。
     this.turretDir = playerX < this.x ? -1 : 1;
     if (now < this.nextShotAt) return;
-    this.nextShotAt = now + ENEMY.turret.shootIntervalMs;
+    this.nextShotAt = now + this.effectiveShootIntervalMs;
     if (!this.projectiles) return;
     const dir = this.turretDir;
     const muzzleX = this.x + dir * (ENEMY.turret.width / 2 + 4);

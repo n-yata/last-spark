@@ -74,6 +74,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // ヒットエフェクト
     this.makeOrb(TEX.hit, 24, 0xffffff);
+
+    // 撃破爆発のパーティクル粒(小さな発光オーブ)
+    this.makeOrb(TEX.spark, 8, 0xfff27a);
   }
 
   private makeRect(key: string, w: number, h: number, color: number): void {

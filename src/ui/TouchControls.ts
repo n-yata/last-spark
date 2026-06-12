@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { TouchLayout } from '../config/touchLayout';
+import { EFFECTS } from '../config/effects';
 
 // 仮想ボタン/移動ゾーンの半透明ガイドを描画する(操作はしない=表示のみ)。
 // 実画面サイズに追従するため、毎フレーム render(layout) で再描画する。
@@ -44,8 +45,16 @@ export class TouchControls {
    * 現在のレイアウト(実画面サイズ基準)に合わせてガイドを再描画する。
    * bandHeight>0(タッチ時の下部コントロール帯)の場合、画面下部に帯背景を描画し、
    * 仮想ボタンが帯の上に乗るようにする(プレイ領域=帯の上、ボタン=帯の中)。
+   * shootHeld/jumpHeld が true のボタンは強調表示し、指で隠れても押下中と分かるようにする。
    */
-  render(layout: TouchLayout, width: number, height: number, bandHeight = 0): void {
+  render(
+    layout: TouchLayout,
+    width: number,
+    height: number,
+    bandHeight = 0,
+    shootHeld = false,
+    jumpHeld = false,
+  ): void {
     const { moveZone, shootButton, jumpButton } = layout;
     this.gfx.clear();
     // 下部コントロール帯の背景(タッチ時のみ)。プレイ領域との境界に上端線を引く。
@@ -62,8 +71,8 @@ export class TouchControls {
     this.gfx.fillStyle(ZONE_COLOR, 0.06);
     this.gfx.fillRect(moveZone.x, moveZone.y, moveZone.width, moveZone.height);
     // 右: ジャンプ(左上) + ショット(右下)の仮想ボタン
-    this.drawButton(jumpButton.x, jumpButton.y, jumpButton.radius, JUMP_COLOR);
-    this.drawButton(shootButton.x, shootButton.y, shootButton.radius, SHOOT_COLOR);
+    this.drawButton(jumpButton.x, jumpButton.y, jumpButton.radius, JUMP_COLOR, jumpHeld);
+    this.drawButton(shootButton.x, shootButton.y, shootButton.radius, SHOOT_COLOR, shootHeld);
 
     this.shootLabel.setPosition(shootButton.x, shootButton.y);
     this.jumpLabel.setPosition(jumpButton.x, jumpButton.y);
@@ -72,11 +81,13 @@ export class TouchControls {
     this.moveHint.setPosition(moveZone.x + moveZone.width / 2, hintY);
   }
 
-  private drawButton(x: number, y: number, radius: number, color: number): void {
-    this.gfx.fillStyle(color, 0.12);
-    this.gfx.fillCircle(x, y, radius);
-    this.gfx.lineStyle(2, color, 0.5);
-    this.gfx.strokeCircle(x, y, radius);
+  private drawButton(x: number, y: number, radius: number, color: number, held = false): void {
+    // 押下中は塗りを濃く・輪郭を太く・半径を広げる(指の外周からも押下中と分かる)。
+    const r = held ? radius * EFFECTS.touch.pressedRadiusScale : radius;
+    this.gfx.fillStyle(color, held ? EFFECTS.touch.pressedFillAlpha : 0.12);
+    this.gfx.fillCircle(x, y, r);
+    this.gfx.lineStyle(held ? 3 : 2, color, held ? 0.9 : 0.5);
+    this.gfx.strokeCircle(x, y, r);
   }
 
   destroy(): void {

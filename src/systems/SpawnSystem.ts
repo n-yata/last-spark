@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import { getStageData, type StageData, type EnemySpawn } from '../config/stage1';
+import { getStageTuning, NEUTRAL_STAGE_TUNING, type StageTuning } from '../config/balance';
 
 // ステージ進行(カメラ位置)に応じた雑魚敵の出現と、ボス戦突入の検知。
 
@@ -13,6 +14,8 @@ export class SpawnSystem {
   private pending: EnemySpawn[] = [];
   private bossTriggered = false;
   private bossCallback?: () => void;
+  /** 現在ステージの難易度係数。spawn する敵へ伝搬する。 */
+  private tuning: StageTuning = NEUTRAL_STAGE_TUNING;
 
   /** 画面右端からこの距離手前で先行出現させる(出現の唐突さを抑える)。 */
   private static readonly SPAWN_MARGIN_PX = 80;
@@ -30,6 +33,7 @@ export class SpawnSystem {
   /** ステージデータを読み込み、出現待ち敵を準備する。 */
   loadStage(stageId: string): StageData {
     this.stage = getStageData(stageId);
+    this.tuning = getStageTuning(stageId);
     // x 昇順にして左から順に出現判定する
     this.pending = [...this.stage.enemies].sort((a, b) => a.x - b.x);
     this.bossTriggered = false;
@@ -55,7 +59,7 @@ export class SpawnSystem {
   }
 
   private spawnEnemy(spawn: EnemySpawn): void {
-    const enemy = new Enemy(this.scene, spawn.x, spawn.y, spawn.pattern);
+    const enemy = new Enemy(this.scene, spawn.x, spawn.y, spawn.pattern, this.tuning);
     enemy.setProjectiles(this.enemyShots);
     this.enemies.add(enemy);
   }

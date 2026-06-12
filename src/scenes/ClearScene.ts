@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
 import { getSound } from '../systems/SoundManager';
+import { transitionTo, fadeIn } from '../systems/sceneTransition';
 
 interface ClearData {
   clearTimeMs: number;
@@ -19,6 +20,7 @@ export class ClearScene extends Phaser.Scene {
 
   create(data: ClearData): void {
     const { width, height } = this.scale;
+    fadeIn(this);
     const clearTimeMs = data?.clearTimeMs ?? 0;
     const nextStageId = data?.nextStageId;
     const isFinal = !nextStageId;
@@ -79,9 +81,9 @@ export class ClearScene extends Phaser.Scene {
       const proceed = (): void => {
         getSound().playSe('uiTap');
         if (nextStageId) {
-          this.scene.start(SCENE_KEYS.game, { stageId: nextStageId });
+          transitionTo(this, SCENE_KEYS.game, { stageId: nextStageId });
         } else {
-          this.scene.start(SCENE_KEYS.title);
+          transitionTo(this, SCENE_KEYS.title);
         }
       };
       this.input.once(Phaser.Input.Events.POINTER_DOWN, proceed);

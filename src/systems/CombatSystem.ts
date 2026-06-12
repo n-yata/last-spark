@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Damageable } from '../types/combat';
+import type { Damageable, ProjectileKind } from '../types/combat';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
@@ -8,7 +8,8 @@ import { Projectile } from '../entities/Projectile';
 // 衝突登録・ダメージ適用・撃破処理。Scene へはコールバックで通知し、逆依存しない。
 
 export interface CombatCallbacks {
-  onHit?: (x: number, y: number, target: 'enemy' | 'boss') => void;
+  /** shotKind は命中した弾の種別(チャージ弾のみヒットストップ等の出し分けに使う)。 */
+  onHit?: (x: number, y: number, target: 'enemy' | 'boss', shotKind: ProjectileKind) => void;
   onEnemyDefeated?: (enemy: Enemy) => void;
   onBossDefeated?: (boss: Boss) => void;
   onPlayerDamaged?: (player: Player) => void;
@@ -42,7 +43,7 @@ export class CombatSystem {
       const projectile = this.asProjectile(a, b);
       const enemy = this.asInstance(a, b, Enemy);
       if (!projectile || !enemy || !projectile.active || !enemy.active) return;
-      this.hitDamageable(enemy, projectile.damage, projectile.x, projectile.y, 'enemy');
+      this.hitDamageable(enemy, projectile.damage, projectile.x, projectile.y, 'enemy', projectile.kind);
       projectile.deactivate();
       if (enemy.isDead()) this.callbacks.onEnemyDefeated?.(enemy);
     });
@@ -72,7 +73,7 @@ export class CombatSystem {
     physics.add.overlap(this.refs.playerShots, boss, (a, b) => {
       const projectile = this.asProjectile(a, b);
       if (!projectile || !projectile.active || boss.isDead()) return;
-      this.hitDamageable(boss, projectile.damage, projectile.x, projectile.y, 'boss');
+      this.hitDamageable(boss, projectile.damage, projectile.x, projectile.y, 'boss', projectile.kind);
       projectile.deactivate();
       if (boss.isDead()) this.callbacks.onBossDefeated?.(boss);
     });
@@ -95,9 +96,10 @@ export class CombatSystem {
     x: number,
     y: number,
     kind: 'enemy' | 'boss',
+    shotKind: ProjectileKind,
   ): void {
     this.applyDamage(target, amount);
-    this.callbacks.onHit?.(x, y, kind);
+    this.callbacks.onHit?.(x, y, kind, shotKind);
   }
 
   private damagePlayer(player: Player, amount: number): void {
