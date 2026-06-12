@@ -10,7 +10,8 @@ import {
   CLIMB_DEADZONE_PX,
   MOVE_PAD_MAX_RADIUS,
 } from '../../../src/config/touchLayout';
-import { CONTROL_BAND_MIN_PX } from '../../../src/config/controlBand';
+import { CONTROL_BAND_MIN_PX, CONTROL_BAND_MAX_PX } from '../../../src/config/controlBand';
+import { EFFECTS } from '../../../src/config/effects';
 
 describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => {
   it('移動ゾーンは画面左半分を占め、左端は x=0(物理画面端まで届く)', () => {
@@ -104,6 +105,29 @@ describe('createTouchLayout(下部コントロール帯ありの配置)', () => 
       expect(btn.y - btn.radius).toBeGreaterThanOrEqual(bandTop);
       expect(btn.y + btn.radius).toBeLessThanOrEqual(H);
     }
+  });
+
+  it('押下拡大(pressedRadiusScale)込みでも最小帯でボタンが画面下端から切れない', () => {
+    const layout = createTouchLayout(W, H, CONTROL_BAND_MIN_PX);
+    const bandTop = H - CONTROL_BAND_MIN_PX;
+    for (const btn of [layout.jumpButton, layout.shootButton]) {
+      const pressedRadius = btn.radius * EFFECTS.touch.pressedRadiusScale;
+      expect(btn.y - pressedRadius).toBeGreaterThanOrEqual(bandTop);
+      expect(btn.y + pressedRadius).toBeLessThanOrEqual(H);
+    }
+  });
+
+  it('帯が十分高い(最大帯)場合は通常半径44を維持する(不必要に縮めない)', () => {
+    const layout = createTouchLayout(W, H, CONTROL_BAND_MAX_PX);
+    expect(layout.jumpButton.radius).toBe(44);
+    expect(layout.shootButton.radius).toBe(44);
+  });
+
+  it('最小帯では半径が44より小さく切り詰められる(切れの原因だった44のままでない)', () => {
+    const layout = createTouchLayout(W, H, CONTROL_BAND_MIN_PX);
+    expect(layout.jumpButton.radius).toBeLessThan(44);
+    expect(layout.jumpButton.radius).toBeGreaterThan(0);
+    expect(layout.shootButton.radius).toBe(layout.jumpButton.radius);
   });
 });
 

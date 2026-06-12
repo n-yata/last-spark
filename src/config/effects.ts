@@ -29,10 +29,11 @@ export const EFFECTS = {
     bossDefeat: { durationMs: 700, intensity: 0.012 },
   },
 
-  /** ヒットストップ(物理一時停止)。短く留めて爽快感のみ残す。 */
+  /**
+   * ヒットストップ(物理一時停止)。ワールド全体が止まりプレイヤーの操作感にも
+   * 影響するため、戦闘が終わるボス撃破の瞬間のみに限定する。
+   */
   hitStop: {
-    /** チャージ弾が命中した時 */
-    chargedHitMs: 70,
     /** ボス撃破の瞬間 */
     bossDefeatMs: 140,
   },
@@ -49,14 +50,6 @@ export const EFFECTS = {
     attackRecoilMs: 220,
     /** 被弾のけぞりの継続時間 */
     hitLeanMs: 200,
-  },
-
-  /** プレイヤー被弾時の画面赤フラッシュ(camera.flash)。 */
-  damageFlash: {
-    durationMs: 180,
-    red: 255,
-    green: 45,
-    blue: 85,
   },
 
   /** シーン遷移フェード。 */

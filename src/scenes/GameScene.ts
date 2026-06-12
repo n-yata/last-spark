@@ -167,11 +167,9 @@ export class GameScene extends Phaser.Scene {
 
     this.effects = new EffectsManager(this);
     this.combat = new CombatSystem(this, {
-      onHit: (x, y, target, shotKind) => {
+      onHit: (x, y, target) => {
         this.spawnHitEffect(x, y);
         getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
-        // チャージ弾のみヒットストップ(通常弾は連射なので止めるとテンポを削ぐ)
-        if (shotKind === 'charged') this.effects.chargedHitStop();
       },
       onEnemyDefeated: (enemy) => {
         this.effects.explodeSmall(enemy.x, enemy.y);
@@ -339,6 +337,9 @@ export class GameScene extends Phaser.Scene {
   private handleClear(boss: Boss): void {
     if (this.ended) return;
     this.ended = true;
+    // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に
+    // プレイヤーを静止させる(滑走をカメラが追従して画面が流れるのを防ぐ)。
+    this.player.setVelocityX(0);
     getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
     getSound().playSe('bossDefeated');
     // クリアタイムは撃破の瞬間で確定する(撃破演出の時間を含めない)。

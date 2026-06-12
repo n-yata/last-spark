@@ -2,6 +2,8 @@
 // InputController(入力判定)と UI(描画)で共有する。
 // RESIZE スケールに対応するため、レイアウトは実画面サイズから動的に算出する。
 
+import { EFFECTS } from './effects';
+
 export interface CircleButton {
   x: number;
   y: number;
@@ -26,6 +28,21 @@ export interface TouchLayout {
 
 const BUTTON_RADIUS = 44;
 
+/** 帯内ボタンの上下余白(px)。押下時の輪郭線も画面下端から切れないための余白。 */
+const BAND_BUTTON_MARGIN_PX = 2;
+
+/**
+ * 下部帯(スマホ)内に置くボタン半径。押下フィードバックで半径が
+ * pressedRadiusScale 倍に広がっても帯(=画面下端)から切れない大きさへ切り詰める。
+ * 帯が十分高い場合は通常半径(BUTTON_RADIUS)のまま。
+ */
+function bandButtonRadius(bandHeight: number): number {
+  const fitRadius = Math.floor(
+    (bandHeight / 2 - BAND_BUTTON_MARGIN_PX) / EFFECTS.touch.pressedRadiusScale,
+  );
+  return Math.min(BUTTON_RADIUS, Math.max(0, fitRadius));
+}
+
 /**
  * 実画面サイズからタッチUIレイアウトを算出する。
  * bandHeight>0(タッチ時の下部コントロール帯)の場合、仮想ボタンを帯の縦中央へ
@@ -47,10 +64,11 @@ export function createTouchLayout(width: number, height: number, bandHeight = 0)
   // 追従パッドの当たり判定は横座標(isInMoveZone)のみで行うため、左側の操作性は不変。
   // 極小画面(height < bandHeight)でも負値にならないよう下限を 0 でガードする。
   const playHeight = Math.max(0, height - bandHeight);
+  const radius = bandButtonRadius(bandHeight);
   return {
     moveZone: { x: 0, y: 0, width: width / 2, height: playHeight },
-    jumpButton: { x: width - 84, y: bandCenterY, radius: BUTTON_RADIUS },
-    shootButton: { x: width - 200, y: bandCenterY, radius: BUTTON_RADIUS },
+    jumpButton: { x: width - 84, y: bandCenterY, radius },
+    shootButton: { x: width - 200, y: bandCenterY, radius },
   };
 }
 

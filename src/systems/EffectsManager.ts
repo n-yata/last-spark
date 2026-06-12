@@ -43,18 +43,14 @@ export class EffectsManager {
     this.explode(x, y, EFFECTS.explosion.boss);
   }
 
-  /** プレイヤー被弾の手応え(カメラシェイク+画面赤フラッシュ)。 */
+  /**
+   * プレイヤー被弾の手応え(カメラシェイク)。
+   * 画面全体の赤フラッシュは酔いを誘発するため使わない(被弾の視覚情報は
+   * リグの白フラッシュ+LifeBar の点滅で伝える)。
+   */
   playerDamaged(): void {
-    const cam = this.scene.cameras.main;
     const { durationMs, intensity } = EFFECTS.shake.playerDamage;
-    cam.shake(durationMs, intensity);
-    const flash = EFFECTS.damageFlash;
-    cam.flash(flash.durationMs, flash.red, flash.green, flash.blue);
-  }
-
-  /** チャージ弾命中のヒットストップ。 */
-  chargedHitStop(): void {
-    this.hitStop(EFFECTS.hitStop.chargedHitMs);
+    this.scene.cameras.main.shake(durationMs, intensity);
   }
 
   /**

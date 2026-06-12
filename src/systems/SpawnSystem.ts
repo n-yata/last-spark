@@ -1,7 +1,13 @@
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import { getStageData, type StageData, type EnemySpawn } from '../config/stage1';
-import { getStageTuning, NEUTRAL_STAGE_TUNING, type StageTuning } from '../config/balance';
+import {
+  BOSS,
+  FLYING_BOSS,
+  getStageTuning,
+  NEUTRAL_STAGE_TUNING,
+  type StageTuning,
+} from '../config/balance';
 
 // ステージ進行(カメラ位置)に応じた雑魚敵の出現と、ボス戦突入の検知。
 
@@ -14,11 +20,16 @@ export class SpawnSystem {
   private pending: EnemySpawn[] = [];
   private bossTriggered = false;
   private bossCallback?: () => void;
+  /** ボス戦突入を発火するカメラ右端 X(loadStage で確定)。 */
+  private bossTriggerX = Infinity;
   /** 現在ステージの難易度係数。spawn する敵へ伝搬する。 */
   private tuning: StageTuning = NEUTRAL_STAGE_TUNING;
 
   /** 画面右端からこの距離手前で先行出現させる(出現の唐突さを抑える)。 */
   private static readonly SPAWN_MARGIN_PX = 80;
+
+  /** ボス全身が画面内に収まったうえで、さらにこの余白だけ内側に見えてから戦闘開始する。 */
+  private static readonly BOSS_VISIBLE_MARGIN_PX = 24;
 
   constructor(
     scene: Phaser.Scene,
@@ -37,6 +48,15 @@ export class SpawnSystem {
     // x 昇順にして左から順に出現判定する
     this.pending = [...this.stage.enemies].sort((a, b) => a.x - b.x);
     this.bossTriggered = false;
+    // ボスが画面外のまま戦闘(BGM 切替・HP バー・アリーナ固定)が始まらないよう、
+    // 「ボスの全身が画面内に見える位置」までトリガーを遅らせる。bossTriggerX は
+    // 設計上の最短地点として尊重しつつ、可視位置との遅い方を採用する。
+    const bossHalfWidth =
+      (this.stage.bossKind === 'flying' ? FLYING_BOSS.width : BOSS.width) / 2;
+    this.bossTriggerX = Math.max(
+      this.stage.bossTriggerX,
+      this.stage.bossSpawn.x + bossHalfWidth + SpawnSystem.BOSS_VISIBLE_MARGIN_PX,
+    );
     return this.stage;
   }
 
@@ -52,7 +72,7 @@ export class SpawnSystem {
       this.spawnEnemy(spawn);
     }
 
-    if (!this.bossTriggered && cameraRightX >= this.stage.bossTriggerX) {
+    if (!this.bossTriggered && cameraRightX >= this.bossTriggerX) {
       this.bossTriggered = true;
       this.bossCallback?.();
     }

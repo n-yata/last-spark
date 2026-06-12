@@ -41,7 +41,11 @@ export interface StageData {
   /** 梯子(任意)。未定義なら梯子なしステージ。 */
   ladders?: LadderRect[];
   enemies: EnemySpawn[];
-  /** このカメラ右端 X を超えるとボス戦に突入する */
+  /**
+   * このカメラ右端 X を超えるとボス戦に突入する(最短地点)。
+   * 実際の発火は SpawnSystem が「ボス全身が画面内に見える位置」まで遅らせるため、
+   * bossSpawn が画面外ならこの値より後ろで発火する。
+   */
   bossTriggerX: number;
   /** ボスの出現位置(中心) */
   bossSpawn: { x: number; y: number };
