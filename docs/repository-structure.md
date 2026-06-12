@@ -90,10 +90,13 @@ last-spark/
 **配置ファイル**:
 - `InputController.ts`: タッチ/キーボード入力を抽象操作(`InputState`)に変換
 - `CombatSystem.ts`: 衝突登録・ダメージ適用・撃破処理
-- `SpawnSystem.ts`: 敵出現・ボストリガ
+- `SpawnSystem.ts`: 敵出現・ボストリガ(ボス全身が画面内に見える位置まで発火を遅らせる)
 - `SoundManager.ts`: サウンド出力サービス(Web Audio で BGM/SE を合成。`getSound()` シングルトンで全シーン横断。外部音源ファイルは使わない)
+- `EffectsManager.ts`: 戦闘演出(パーティクル爆発・カメラシェイク・ボス撃破シーケンス)の統括。チューニング値は `config/effects.ts` に集約
+- `sceneTransition.ts`: フェード付きシーン遷移(`transitionTo` / `fadeIn`、多重発火ガード)
 - `bossAi.ts`: ボス行動抽選(`pickNextAction` 等の純粋関数。Phaser 非依存でテスト可能に)
 - `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュールの純粋関数(Phaser/Web Audio 非依存)
+- `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(Phaser 非依存。ui からも参照可)
 
 **命名規則**: System クラスは PascalCase + `System`/`Controller`/`Manager`。純粋ロジック関数群は camelCase(例: `bossAi.ts` / `soundSynth.ts`)。
 
@@ -120,6 +123,7 @@ last-spark/
 
 **配置ファイル**:
 - `balance.ts`: プレイヤー/ショット/ボスのパラメータ(`PLAYER`, `SHOT`, `BOSS` 等)
+- `effects.ts`: 演出のチューニング値(爆発・シェイク・ヒットストップ・フェード・HUD・タッチ押下フィードバック)
 - `audio.ts`: サウンド定義(`SE` 13種の合成仕様 + `BGM` 3トラックのノート列。Phaser/Web Audio 非依存のデータ)
 - `gameConfig.ts`: `Phaser.Types.Core.GameConfig`(解像度/スケール/物理設定)
 - `sceneKeys.ts`: シーンキー定数(文字列の重複防止)
