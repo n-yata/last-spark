@@ -16,18 +16,22 @@
 
 ## フェーズ1: SaveData 全6ステージ対応
 
-- [ ] `SaveData` を `clearedStages: string[]` 化（型・既定値）
-- [ ] 旧 `cleared: boolean` からのマイグレーション実装（version 更新）
-- [ ] `markStageCleared(stageId)` を追加
+- [ ] `src/types/save.ts`: `cleared:boolean`→`clearedStages:string[]`、`bestTimeMs?:number`→`bestTimeMs?:Record<string,number>`（型・既定値）
+- [ ] `SaveManager`: 旧 `cleared` → `clearedStages`（true なら `['stage1']`）のマイグレーション（version 更新）
+- [ ] `SaveManager`: 旧 `bestTimeMs:number` → `{ stage1: value }` のマイグレーション
+- [ ] `markStageCleared(stageId, timeMs?)` を追加。既存 `markCleared` は委譲で互換維持
 - [ ] SaveManager のユニットテストを追加・更新
-  - [ ] マイグレーション
+  - [ ] cleared マイグレーション
+  - [ ] bestTimeMs マイグレーション
   - [ ] markStageCleared
-  - [ ] 不正値フォールバック
+  - [ ] 不正値・version不一致フォールバック
 
 ## フェーズ2: 演出シーン基盤（CutsceneScene）
 
+- [ ] `src/types/story.ts` に `CutsceneSceneData`（scriptKey / onComplete）型を追加
 - [ ] `src/config/story/cutscenes.ts` を作成（型 + Stage 3 救出スクリプト）
 - [ ] `src/scenes/CutsceneScene.ts` を作成
+  - [ ] `init(data: CutsceneSceneData)`
   - [ ] スクリプトの順次表示（terraLine / rayInner / direction）
   - [ ] ブロック1のスタイルマップ再利用
   - [ ] タップ送り
@@ -38,10 +42,10 @@
 ## フェーズ3: Stage 3 ステージデータ
 
 - [ ] `src/config/story/stage3.ts`（開始テキスト・ログ3本・語りかけ・内心）
-- [ ] Stage 3 のステージ定義（地形・敵・logTriggers・ボストリガー・nextStageId）
-- [ ] stage2 → stage3 の連結
-- [ ] 収容番人ボスのパラメータ（`balance.ts`）
-- [ ] 収容番人の行動（重装型・遅い単発、必要なら bossAi 調整）
+- [ ] `src/config/stage1.ts` の `STAGES` に `STAGE3` を追加（地形・敵・logTriggers・ボストリガー・`nextStageId:'stage4'`・`bossKind:'ground'`）
+- [ ] `src/config/stage1.ts` の `STAGE2` に `nextStageId: 'stage3'` を追加（stage2→stage3 連結）
+- [ ] 収容番人ボスのパラメータ（`balance.ts` に `CONTAINMENT_WARDEN`：行動間隔長め・威力高め）
+- [ ] 収容番人は既存 `GROUND_WEIGHTS` を流用（bossAi 変更なし。パラメータのみで差別化）
 - [ ] 収容ケージのギミック（撃破で解錠アニメ）
 
 ## フェーズ4: ボス撃破後フロー拡張

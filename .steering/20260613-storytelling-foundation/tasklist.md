@@ -45,7 +45,7 @@
 ## フェーズ4: ログトリガーとステージデータ拡張
 
 - [ ] `src/entities/LogTrigger.ts` を作成（オーバーラップ判定・一度だけ発火）
-- [ ] `StageData` 型に `logTriggers?`（位置＋ログキー）を追加
+- [ ] `src/config/stage1.ts` の `StageData` interface に `logTriggers?`（位置＋ログキー）を追加
 - [ ] `GameScene` でログトリガーを生成・オーバーラップ検知
 
 ## フェーズ5: 発火点の組み込み
