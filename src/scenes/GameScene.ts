@@ -24,6 +24,7 @@ import { resolveStoryEvent, readingDurationMs } from '../systems/storyDirector';
 import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
+import { selectExplorationBgm } from '../systems/soundSynth';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -115,7 +116,8 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch(SCENE_KEYS.ui);
     this.initHud();
     this.setupOrientationHandling();
-    getSound().playBgm('stage');
+    // 探索 BGM。TERRA 同行後(Stage 3 クリア以降)は温もりのある stageWarm へ切り替える。
+    getSound().playBgm(selectExplorationBgm(new SaveManager().getData().clearedStages));
     this.startIntro();
   }
 
