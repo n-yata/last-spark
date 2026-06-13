@@ -215,6 +215,8 @@ class SpawnSystem {
 }
 ```
 
+**ボス戦突入の条件**: ボス戦(出現・BGM切替・HPバー表示・アリーナ固定)は、**ボスの全身が画面内に見える位置までカメラが進んでから**開始する。`StageData.bossTriggerX` は設計上の最短地点として尊重しつつ、`bossSpawn.x + ボス半幅 + 余白` との遅い方を採用する(ボスが画面外のまま戦闘が始まる体験を防ぐ。ボス系統ごとの幅は `BOSS` / `FLYING_BOSS` から引くため、ステージ追加時も自動で成立する)。
+
 ### ストーリーテリング基盤(テキスト表示 / ログトリガー)
 
 > ストーリー本文は `docs/story.md`(北極星)を正本とし、ゲーム内表示はその確定テキストを反映する。設計の責務分割は「ジオメトリ(`config/stage1.ts`)とテキスト(`config/story/`)を混ぜない」。
@@ -234,6 +236,25 @@ class SpawnSystem {
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
 **梯子(ladder)**: `StageData.ladders` の矩形を `GameScene.buildLadders` が見た目(タイル)として敷き、矩形配列を `Player.setLadders` へ渡す(物理衝突はさせない)。Player は純粋関数 `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity` で把持状態を判定し、把持中は重力を切って(`setAllowGravity(false)`)上下入力で鉛直移動する。離脱時に重力を必ず戻す。梯子昇降中はプレイヤーの足場 collider を抑制し、ワンウェイ床を貫通して登り降りできる(梯子上端=直上の足場上端に揃え、登り切ると足場に乗れる動線)。これらの純粋ロジックは `systems/playerMovement.ts` に集約しユニットテスト可能にする。
+
+### EffectsManager(Systemレイヤー)
+
+**責務**: 戦闘演出(撃破パーティクル爆発・カメラシェイク・ヒットストップ・ボス撃破シーケンス)を統括する。`GameScene` が所有し、`CombatSystem` のコールバックから呼ばれる。チューニング値は `src/config/effects.ts` に集約する。
+
+```typescript
+class EffectsManager {
+  explodeSmall(x, y): void;   // 雑魚撃破の小爆発
+  explodeBoss(x, y): void;    // ボス撃破バーストの大爆発
+  playerDamaged(): void;      // 被弾の手応え(カメラシェイク)
+  bossDeathSequence(x, y, onComplete): void; // 多段爆発→余韻→クリア遷移
+}
+```
+
+**演出ポリシー(プレイテストで確定した制約)**:
+- **画面全体のフラッシュ(`camera.flash`)は使わない**。点滅が酔い・不快感を誘発するため。被弾の視覚フィードバックはカメラシェイク+リグの白フラッシュ(`setTintFill`)+ライフバーの点滅で伝える。
+- **ヒットストップ(`physics.world.pause`)は戦闘中に使わない**。ワールド全体が止まるため、ダメージを受けていないプレイヤーの操作まで固まり操作感を損なう。許容するのはボス撃破の瞬間(戦闘終了後の演出)のみ。
+- ボス撃破時はプレイヤーを静止(`setVelocityX(0)`)させる。撃破後は入力反映が止まるため、残速度の滑走をカメラが追従して画面が流れるのを防ぐ。
+- クリアタイムは撃破の瞬間に確定する(約1.4秒の撃破シーケンスをベストタイムに含めない)。
 
 ### SoundManager(Systemレイヤー)
 
@@ -357,6 +378,7 @@ sequenceDiagram
     participant Save as SaveManager
 
     Game->>Spawn: update(cameraX)
+    Note over Spawn: ボス全身が画面内に<br/>見える位置で発火
     Spawn-->>Game: onBossTrigger 発火
     Game->>Boss: 出現 / ボスHUD表示
     loop ボス戦
@@ -365,9 +387,12 @@ sequenceDiagram
         Boss->>Game: HP 0?
     end
     Boss-->>Game: 撃破
+    Game->>Game: クリアタイム確定 + 撃破シーケンス再生
     Game->>Save: markCleared(timeMs)
-    Game->>Game: ClearScene へ遷移
+    Game->>Game: ClearScene へ遷移(フェード)
 ```
+
+**撃破時の流れ**: 撃破の瞬間にクリアタイムを確定し、プレイヤーを静止させたうえで `EffectsManager.bossDeathSequence`(多段爆発+大シェイク)を再生、完了後にフェードで `ClearScene` へ遷移する(演出ポリシーは EffectsManager の節を参照)。
 
 ## ボス行動設計(アルゴリズム)
 
@@ -431,6 +456,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
   - **ズーム倍率は帯の有無に関わらず「画面全体の高さ」基準を維持**する(`zoom = scale.height / GAME_HEIGHT`)。帯はあくまで viewport を下から削るだけとし、世界の見かけの大きさを変えない。これにより「帯ぶん世界が縮小して見える」問題と「`displayWidth` 変化でボストリガーがズレる」問題を同時に防ぐ(帯ぶん縦の可視範囲が減るが、隠れるのは地面より下=落下域中心)。
   - 帯の縦割合は控えめ(`CONTROL_BAND_RATIO`)にし、ボタンが収まる最小高さ(`CONTROL_BAND_MIN_PX`)まで狭めてプレイ領域を広く保つ。
 - ジャンプ/ショットの 2 ボタンは帯の縦中央に水平に並べ、画面右側に集約する(`src/config/touchLayout.ts`)。両ボタンとも左手の移動操作と干渉せず、サイズ/透明度は実機調整。
+  - **帯内のボタン半径は「押下フィードバックの拡大(`pressedRadiusScale`)込みで帯に収まる大きさ」へ自動で切り詰める**。帯の高さが十分なら通常半径のまま。固定半径だと押下拡大時に画面下端から切れるため、レイアウト算出時に保証する。
 - ショット操作: 1 回目タップでチャージ開始(離してもゲージ蓄積)、2 回目タップで発射。長押しはチャージせず通常弾を連射(`SHOT.burstSize` 発ごとに `SHOT.burstPauseMs` の小休止)。
 - 移動(左親指)とジャンプ/ショット(右親指)を別ポインタで同時操作できる。
 - 縦持ち検知時は `OrientationScene` を重ね、横向きへの回転を促す。
