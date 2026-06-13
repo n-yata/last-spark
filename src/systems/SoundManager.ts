@@ -3,7 +3,9 @@ import { SaveManager } from '../persistence/SaveManager';
 import type { GameSettings } from '../types/save';
 import {
   clamp01,
+  centsToRatio,
   effectiveVolume,
+  noteToFrequency,
   scheduleNotes,
   trackDurationSec,
   type ScheduledNote,
@@ -48,6 +50,8 @@ export class SoundManager {
   private bgmNoteIndex = 0;
   private bgmScheduler?: ReturnType<typeof setInterval>;
   private bgmNodes = new Set<OscillatorNode>();
+  /** 持続ドローン(低音パッド)のノード。トラックに drone がある間だけ存在する。 */
+  private bgmDrone?: { osc: OscillatorNode; gain: GainNode };
   private unlockBound = false;
 
   /**
@@ -187,6 +191,7 @@ export class SoundManager {
     this.bgmNoteIndex = 0;
     this.bgmLoopBaseTime = this.ctx.currentTime + 0.05;
     this.applyChannelGains();
+    this.startDrone(track);
     this.resume();
 
     this.bgmScheduler = setInterval(() => {
@@ -213,8 +218,45 @@ export class SoundManager {
       }
     }
     this.bgmNodes.clear();
+    this.stopDrone();
     this.currentBgmKey = undefined;
     this.currentBgmBase = 0;
+  }
+
+  /**
+   * 持続ドローン(低音パッド)を開始する。トラックに drone がなければ何もしない。
+   * 正弦波の柔らかなパッドを bgmGain 経由で鳴らし、チャンネル音量(mute/bgmVolume)に追従させる。
+   */
+  private startDrone(track: BgmTrack): void {
+    if (!this.ctx || !this.bgmGain || !track.drone) return;
+    const t0 = this.bgmLoopBaseTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine'; // 角のない低音パッド
+    osc.frequency.setValueAtTime(Math.max(1, noteToFrequency(track.drone.semitone)), t0);
+
+    const gain = this.ctx.createGain();
+    const vol = clamp01(track.drone.volume);
+    // ゆるやかにフェードインして、唐突な低音の立ち上がりを避ける。
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.8);
+    gain.connect(this.bgmGain);
+
+    osc.connect(gain);
+    osc.start(t0);
+    this.bgmDrone = { osc, gain };
+  }
+
+  /** 持続ドローンを停止して片付ける。 */
+  private stopDrone(): void {
+    if (!this.bgmDrone) return;
+    try {
+      this.bgmDrone.osc.stop();
+      this.bgmDrone.osc.disconnect();
+      this.bgmDrone.gain.disconnect();
+    } catch {
+      /* 既に停止済みなら無視 */
+    }
+    this.bgmDrone = undefined;
   }
 
   /** 先読み窓に入ったノートを順次予約する(ルックアヘッド・スケジューラ)。 */
@@ -238,26 +280,36 @@ export class SoundManager {
 
   private scheduleBgmNote(track: BgmTrack, freq: number, when: number, durSec: number): void {
     if (!this.ctx || !this.bgmGain) return;
-    const osc = this.ctx.createOscillator();
-    osc.type = track.wave;
-    osc.frequency.setValueAtTime(Math.max(1, freq), when);
 
     const envelope = this.ctx.createGain();
     envelope.connect(this.bgmGain);
     // 軽いアタック/リリースで音の繋ぎを滑らかにする(ノート長の範囲内)
     const attack = Math.min(0.01, durSec * 0.2);
     const release = Math.min(0.06, durSec * 0.4);
-    this.applyEnvelope(envelope.gain, when, durSec, attack, release, 0.8);
+    // デチューン 2 声は合算で音圧が上がるため、ピークを下げてクリップを防ぐ。
+    const detune = track.detuneCents ?? 0;
+    const peak = detune > 0 ? 0.5 : 0.8;
+    this.applyEnvelope(envelope.gain, when, durSec, attack, release, peak);
 
-    osc.connect(envelope);
-    osc.start(when);
-    osc.stop(when + durSec);
-    this.bgmNodes.add(osc);
-    osc.onended = () => {
-      this.bgmNodes.delete(osc);
-      osc.disconnect();
-      envelope.disconnect();
-    };
+    // 単声(0)か、±detune/2 セントの 2 声(温もり・弦の揺らぎ)。
+    const voiceRatios = detune > 0 ? [centsToRatio(detune / 2), centsToRatio(-detune / 2)] : [1];
+    let pending = voiceRatios.length;
+    for (const ratio of voiceRatios) {
+      const osc = this.ctx.createOscillator();
+      osc.type = track.wave;
+      osc.frequency.setValueAtTime(Math.max(1, freq * ratio), when);
+      osc.connect(envelope);
+      osc.start(when);
+      osc.stop(when + durSec);
+      this.bgmNodes.add(osc);
+      osc.onended = () => {
+        this.bgmNodes.delete(osc);
+        osc.disconnect();
+        // 全声が鳴り終わってからエンベロープを切る(共有のため最後の声で片付ける)。
+        pending -= 1;
+        if (pending <= 0) envelope.disconnect();
+      };
+    }
   }
 
   /** 線形 ADSR(簡易): 0→peak(attack)→…→0(release で着地)。 */

@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   clamp01,
   noteToFrequency,
+  centsToRatio,
+  selectExplorationBgm,
   effectiveVolume,
   scheduleNotes,
   trackDurationSec,
@@ -108,5 +110,41 @@ describe('trackDurationSec', () => {
     };
     // (1 + 0.5 + 0.5) 拍 × 0.5秒 = 1.0秒
     expect(trackDurationSec(track)).toBeCloseTo(1.0, 5);
+  });
+});
+
+describe('centsToRatio', () => {
+  it('0 セントは等倍(1)', () => {
+    expect(centsToRatio(0)).toBeCloseTo(1, 5);
+  });
+
+  it('+1200 セント(1オクターブ上)は 2 倍、-1200 は 0.5 倍', () => {
+    expect(centsToRatio(1200)).toBeCloseTo(2, 5);
+    expect(centsToRatio(-1200)).toBeCloseTo(0.5, 5);
+  });
+
+  it('小さなデチューン(±数セント)は 1 にごく近い(温もりの揺らぎ)', () => {
+    expect(centsToRatio(5)).toBeGreaterThan(1);
+    expect(centsToRatio(5)).toBeLessThan(1.01);
+    expect(centsToRatio(-5)).toBeLessThan(1);
+    expect(centsToRatio(-5)).toBeGreaterThan(0.99);
+  });
+
+  it('非有限値は等倍(1)へフォールバック(無音化・破綻を防ぐ)', () => {
+    expect(centsToRatio(Number.NaN)).toBe(1);
+    expect(centsToRatio(Number.POSITIVE_INFINITY)).toBe(1);
+  });
+});
+
+describe('selectExplorationBgm', () => {
+  it('Stage 3 未クリア(TERRA同行前)は通常の探索 stage', () => {
+    expect(selectExplorationBgm([])).toBe('stage');
+    expect(selectExplorationBgm(['stage1', 'stage2'])).toBe('stage');
+  });
+
+  it('Stage 3 クリア済み(TERRA同行後)は温もりの stageWarm', () => {
+    expect(selectExplorationBgm(['stage1', 'stage2', 'stage3'])).toBe('stageWarm');
+    // 順不同でも stage3 が含まれていれば温もりへ切り替わる。
+    expect(selectExplorationBgm(['stage3'])).toBe('stageWarm');
   });
 });

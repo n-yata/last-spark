@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { startGame } from '../_helpers';
 
 // 実際のキー入力でタイトル→スタート→ステージ走破→ボス撃破→クリアまでを
 // 通しで自動操作する「テストプレイ」。座標固定などのごまかしはしない。
@@ -52,18 +53,8 @@ async function readState(page: Page): Promise<GameState> {
 test('通しプレイ: タイトルからボス撃破クリアまでを実操作で走破する', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/');
-  await expect
-    .poll(async () => (await readState(page)) !== null, { timeout: 10_000 })
-    .toBeTruthy();
-  await page.locator('#game-root canvas').click(); // スタート
-  await expect
-    .poll(async () => {
-      const sc = await page.evaluate(() =>
-        window.lastSpark!.scene.getScenes(true).map((s) => s.scene.key),
-      );
-      return sc.includes('GameScene');
-    }, { timeout: 10_000 })
-    .toBe(true);
+  // スタート + 開始演出(stage1)を送り切り、GameScene が実行中になるまで進める。
+  await startGame(page);
 
   await page.keyboard.down('ArrowRight'); // 前進し続ける
 

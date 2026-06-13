@@ -272,20 +272,23 @@ class EffectsManager {
 
 **責務**:
 - 外部音源ファイルを使わず、`src/config/audio.ts` の合成仕様を Web Audio で手続き生成して再生する(知財・コンプライアンス方針に準拠)。
-- SE(効果音)13 種の単発再生と、BGM 3 トラック(`title` / `stage` / `boss`)のループ再生・切替を担う。
-- `GameSettings`(`muted` / `bgmVolume` / `seVolume`)に従って音量・ミュートを反映。iOS Safari 等の自動再生制約に備え、初回ポインタ操作までは無音とし、操作を起点にオーディオを解放する。
+- SE(効果音)13 種の単発再生と、BGM 5 トラックのループ再生・切替を担う。BGM は docs/story.md「BGM方針」の4シーンに対応:
+  - `title`(導入の浮遊感) / `stage`(探索=アンビエント・ドローン) / `stageWarm`(TERRA同行後の温もり) / `boss`(無機質な機械音) / `ending`(弦・パッド系の余韻)
+  - 探索 BGM は `selectExplorationBgm(clearedStages)` で、Stage 3 クリア(TERRA同行)以降は `stage`→`stageWarm` へ切り替わる。エンディングは `CutsceneScene` の起動データ `bgm` で `ending` を指定。
+  - 各トラックは任意で **持続ドローン**(`drone`: 低音パッド)と **デチューン**(`detuneCents`: 2声のコーラス感)を持ち、アンビエントな土台や弦の厚みを表現する。
+- `GameSettings`(`muted` / `bgmVolume` / `seVolume`)に従って音量・ミュートを反映(ドローン・デチューン声も bgm チャンネル経由で追従)。iOS Safari 等の自動再生制約に備え、初回ポインタ操作までは無音とし、操作を起点にオーディオを解放する。
 
 ```typescript
 class SoundManager {
   unlock(): void;                 // 初回ユーザー操作でオーディオ解放
   playSe(key: SeKey): void;       // 単発SE(jump/shootNormal/bossHit など13種)
-  playBgm(key: BgmKey): void;     // BGMループ再生・切替(title/stage/boss)
+  playBgm(key: BgmKey): void;     // BGMループ再生・切替(title/stage/stageWarm/boss/ending)
   stopBgm(): void;
   applySettings(s: GameSettings): void; // ミュート/音量の反映
 }
 ```
 
-**依存関係**: Web Audio API、`config/audio.ts`(SE/BGM の合成仕様)、`GameSettings`。純粋な合成ロジックは `systems/soundSynth.ts` に分離する。
+**依存関係**: Web Audio API、`config/audio.ts`(SE/BGM の合成仕様)、`GameSettings`。純粋な合成ロジック(音量計算・周波数・スケジューリング・デチューン倍率 `centsToRatio`・探索 BGM 選択 `selectExplorationBgm`)は `systems/soundSynth.ts` に分離する。
 
 ### Player / Enemy / Boss / Projectile(Entityレイヤー)
 
