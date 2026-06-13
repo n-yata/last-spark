@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getCutscene } from '../../../src/config/story/cutscenes';
-import { CUTSCENE_BACKGROUND } from '../../../src/config/assetKeys';
+import { CUTSCENE_BACKGROUND, CUTSCENE_TEX } from '../../../src/config/assetKeys';
 
 // 演出スクリプト(docs/story.md 確定版)の取りこぼし・誤編集を検出するデータ整合テスト。
 
@@ -28,11 +28,26 @@ describe('getCutscene', () => {
     expect(texts).toContain('俺は——なぜ、ここにいる。');
   });
 
-  it('登録済み演出すべてに背景テクスチャが対応づけられている', () => {
-    for (const key of ['stage1-intro', 'stage3-rescue']) {
+  it('全カットシーンが専用背景テクスチャを持つ(動的描画フォールバックに依存しない)', () => {
+    // stage4-intro/stage5-intro/stage6-ending も SVG 背景に統一済み。
+    // ここに列挙したスクリプトは CutsceneScene で画像方式の分岐(textures.exists)を通る。
+    const imageBackedKeys = [
+      'stage1-intro',
+      'stage3-rescue',
+      'stage4-intro',
+      'stage5-intro',
+      'stage6-ending',
+    ];
+    for (const key of imageBackedKeys) {
       expect(getCutscene(key)).toBeDefined();
       expect(CUTSCENE_BACKGROUND[key]).toBeTruthy();
     }
+  });
+
+  it('追加3カットシーンの背景キーが CUTSCENE_TEX と一致する', () => {
+    expect(CUTSCENE_BACKGROUND['stage4-intro']).toBe(CUTSCENE_TEX.stage4Intro);
+    expect(CUTSCENE_BACKGROUND['stage5-intro']).toBe(CUTSCENE_TEX.stage5Intro);
+    expect(CUTSCENE_BACKGROUND['stage6-ending']).toBe(CUTSCENE_TEX.stage6Ending);
   });
 
   it('stage3-rescue は TERRA と RAY の交互セリフを含む', () => {

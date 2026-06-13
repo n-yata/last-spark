@@ -28,12 +28,18 @@ export type TextureKey = (typeof TEX)[keyof typeof TEX];
 export const CUTSCENE_TEX = {
   stage1Intro: 'tex-cutscene-stage1-intro',
   stage3Rescue: 'tex-cutscene-stage3-rescue',
+  stage4Intro: 'tex-cutscene-stage4-intro',
+  stage5Intro: 'tex-cutscene-stage5-intro',
+  stage6Ending: 'tex-cutscene-stage6-ending',
 } as const;
 
 // scriptKey(cutscenes.ts の key) と背景テクスチャの対応。CutsceneScene が参照する。
 export const CUTSCENE_BACKGROUND: Record<string, string> = {
   'stage1-intro': CUTSCENE_TEX.stage1Intro,
   'stage3-rescue': CUTSCENE_TEX.stage3Rescue,
+  'stage4-intro': CUTSCENE_TEX.stage4Intro,
+  'stage5-intro': CUTSCENE_TEX.stage5Intro,
+  'stage6-ending': CUTSCENE_TEX.stage6Ending,
 };
 
 // キャラのパーツ(関節)テクスチャキー。CharacterRig が組み立て、PreloadScene が
