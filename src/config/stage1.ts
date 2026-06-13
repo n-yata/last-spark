@@ -1,4 +1,4 @@
-import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, ENVOY, type BossConfig } from './balance';
+import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, ENVOY, ECLIPSE_CORE, type BossConfig } from './balance';
 import type { EnemyPattern } from '../types/enemy';
 import type { BossKind } from '../types/boss';
 import type { RigFamily } from './characterRig';
@@ -119,6 +119,12 @@ export interface StageData {
   backgroundColor?: string;
   /** クリア後に続けて開始する次ステージ ID(任意)。未定義なら最終ステージ。 */
   nextStageId?: string;
+  /**
+   * ボス撃破後に再生するエンディング演出スクリプトキー(任意。config/story/cutscenes.ts)。
+   * 定義があるステージ(stage6=最終)は撃破→撃破内心→エンディング演出→全クリア保存→タイトルへ進む
+   * (ClearScene を経由しない)。未定義なら従来どおり撃破→(救出/ボス後ログ)→ClearScene。
+   */
+  endingCutsceneKey?: string;
 }
 
 const GROUND_TOP = STAGE.groundY;
@@ -429,8 +435,65 @@ const STAGE5: StageData = {
   backgroundColor: '#0c1119',
   // ステージ開始演出(TERRA同行)。ECLIPSE が近づく緊張に TERRA が怯える。
   introCutsceneKey: 'stage5-intro',
-  // stage6(ECLIPSE支配中枢)は後続ブロックで実体追加する。実体ができ次第 nextStageId='stage6' を付ける。
-  // 現状は未定義=最終ステージ扱い(未実装の stage6 へ遷移して stage1 にフォールバックするのを防ぐ)。
+  // stage5 クリア後は stage6(ECLIPSE支配中枢=最終ステージ)へ続く。
+  nextStageId: 'stage6',
+};
+
+// ステージ6「ECLIPSE支配中枢」: 最終決戦。ラスボス「ECLIPSE本体」(非人型の巨大コア)と複数フェーズで
+// 戦う。phase1 は配下召喚の支援型、phase2 はコア直接攻撃型(CoreBoss/ECLIPSE_CORE)。ログは序盤の1本のみ
+// (story.md 準拠: ボス前後ログなし)。最終ステージ(nextStageId なし)で、撃破後は ClearScene ではなく
+// エンディング演出(endingCutsceneKey)→全クリア保存→タイトルへ進む。
+const STAGE6_WIDTH = 5000;
+const STAGE6: StageData = {
+  id: 'stage6',
+  playerStart: { x: 120, y: GROUND_TOP - 20 },
+  platforms: [
+    // 地面セグメント 1(スタート〜中枢の裂け目手前)
+    { x: 0, y: GROUND_TOP, width: 1600, height: GROUND_THICK },
+    // 裂け目 1: 1600–1672(幅 72px。ジャンプで越える)
+    // 地面セグメント 2
+    { x: 1672, y: GROUND_TOP, width: 1400, height: GROUND_THICK },
+    // 裂け目 2: 3072–3144
+    // 地面セグメント 3(ボスアリーナ手前まで)
+    { x: 3144, y: GROUND_TOP, width: 856, height: GROUND_THICK },
+    // 地面セグメント 4(ボスアリーナ。浮遊コアの真下で配下をさばく広い足場)
+    { x: 4000, y: GROUND_TOP, width: STAGE6_WIDTH - 4000, height: GROUND_THICK },
+
+    // 支配中枢の構造物(任意の足場)
+    { x: 580, y: GROUND_TOP - 140, width: 180, height: 24 },
+    { x: 1200, y: GROUND_TOP - 190, width: 180, height: 24 },
+    { x: 2200, y: GROUND_TOP - 150, width: 200, height: 24 },
+    { x: 2640, y: GROUND_TOP - 230, width: 180, height: 24 },
+    { x: 3380, y: GROUND_TOP - 160, width: 200, height: 24 },
+  ],
+  enemies: [
+    { pattern: 'walker', x: 820, y: GROUND_TOP - 60 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 1160, y: GROUND_TOP - 16 },
+    { pattern: 'walker', x: 2060, y: GROUND_TOP - 60 },
+    // 高台(top=GROUND_TOP-150)の上に接地。
+    { pattern: 'turret', x: 2260, y: GROUND_TOP - 166 },
+    { pattern: 'walker', x: 2720, y: GROUND_TOP - 270 },
+    { pattern: 'walker', x: 3420, y: GROUND_TOP - 200 },
+    // 末尾の雑魚はボス出現位置(x=4350)と十分離す(ボスまで約600px)。
+    { pattern: 'walker', x: 3660, y: GROUND_TOP - 60 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 3820, y: GROUND_TOP - 16 },
+  ],
+  // story.md 準拠で Stage 6 は序盤ログのみ(ボス前・ボス後ログなし)。走行序盤で拾える位置に置く。
+  logTriggers: [{ slot: 'early', x: 360, y: GROUND_TOP - 40 }],
+  bossTriggerX: 4200,
+  // ECLIPSE本体は浮遊する巨大コア。空中(地面より高い位置)に静止して出現する。
+  // center_y はコア下端が地面付近に来る高さ(groundY - height/2 より少し上)に置く。
+  bossSpawn: { x: 4400, y: GROUND_TOP - ECLIPSE_CORE.height / 2 - 8 },
+  bossKind: 'core',
+  bossArenaMinX: 4250,
+  width: STAGE6_WIDTH,
+  // 支配中枢の冷たい闇(ほぼ黒に近い藍。太陽を遮る「影」の核を背景で表現。プレースホルダ)。
+  backgroundColor: '#06080f',
+  // ステージ開始演出は持たない(開始テキスト stageIntro と内心で導入する)。
+  // 最終ステージ: nextStageId なし。撃破後はエンディング演出へ分岐する。
+  endingCutsceneKey: 'stage6-ending',
 };
 
 const STAGES: Record<string, StageData> = {
@@ -439,6 +502,7 @@ const STAGES: Record<string, StageData> = {
   stage3: STAGE3,
   stage4: STAGE4,
   stage5: STAGE5,
+  stage6: STAGE6,
 };
 
 /** stageId に対応するステージデータを返す。未知の ID は stage1 にフォールバック。 */

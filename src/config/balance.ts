@@ -291,6 +291,46 @@ export const ENVOY = {
 } as const satisfies FlyingBossConfig;
 
 /**
+ * stage6 専用・ECLIPSE本体(ラスボス)固有の設定。BossConfig を継承し、固有アクション
+ * 「summon」(配下 Enemy の動的召喚)のパラメータを追加する。CoreBoss がこの型を介して参照する。
+ */
+export interface CoreBossConfig extends BossConfig {
+  /** phase1 で 1 回の summon につき生成する配下の本数。 */
+  summonCount: number;
+  /** 場に同時存在できる配下の上限(これを超えると summon しても生成しない=画面が溢れない)。 */
+  summonMaxActive: number;
+}
+
+/**
+ * stage6 専用・ECLIPSE本体(ラスボス)の設定。人型でない巨大コア。浮遊して静止し(moveSpeed=0)、
+ * phase1 は配下召喚(summon)で支援型に、phase2 は召喚を止めコアが直接攻撃する2フェーズ構成。
+ * 全6ステージ中で最も硬く・最も重い攻撃を持つ最終戦として、既存ボスより上の値に設定する。
+ * jump は持たない(浮遊体)。重み付けは bossAi の CORE_WEIGHTS が担う。
+ */
+export const ECLIPSE_CORE = {
+  maxHp: 40, // ラスボス。全ボス中最も硬い(使者26 < 浄化28 < 番人30 < コア40)
+  phase2HpRatio: 0.5,
+  contactDamage: 3, // コア本体への接触は重い
+  bulletDamage: 2,
+  bulletSpeed: 300,
+  moveSpeed: 0, // コアは浮遊して静止する(移動しない)
+  staggerDamageThreshold: 14, // 巨大コアはのけぞりにくい(最終戦の重量感)
+  width: 124, // 巨大
+  height: 148,
+  // アクション継続時間(ms)。summon は溜めを感じさせ長め、shoot はテンポよく。
+  actionDurationMs: {
+    idle: 650,
+    shoot: 700,
+    summon: 1100,
+    stagger: 800,
+  },
+  phase2SpeedFactor: 0.6, // phase2(コア直接攻撃)で行動間隔を大きく詰め、攻勢を最大化する
+  // --- 召喚固有 ---
+  summonCount: 2, // 1 回の召喚で配下 2 体
+  summonMaxActive: 4, // 場の配下上限(超過時は召喚をスキップして溢れを防ぐ)
+} as const satisfies CoreBossConfig;
+
+/**
  * ステージ別の雑魚敵難易度係数。後半ステージほど敵を強め、難易度カーブを作る。
  * 値は ENEMY の基準値に乗算され、ロジック側へのマジックナンバー埋め込みを避ける。
  */
@@ -328,6 +368,11 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   stage5: {
     walkerSpeedFactor: 1.55,
     turretIntervalFactor: 0.55,
+  },
+  // stage6 は ECLIPSE 支配中枢。最終決戦として難易度カーブを最大にする。
+  stage6: {
+    walkerSpeedFactor: 1.6,
+    turretIntervalFactor: 0.5,
   },
 } as const;
 

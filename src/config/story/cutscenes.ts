@@ -6,7 +6,8 @@
 export type CutsceneLine =
   | { kind: 'terraLine'; text: string } // TERRA のセリフ(暖色・標準)
   | { kind: 'rayInner'; text: string } // RAY の内心(白・イタリック)
-  | { kind: 'direction'; text: string }; // ト書き(中央・小さめ・状況説明)
+  | { kind: 'direction'; text: string } // ト書き(中央・小さめ・状況説明。括弧で囲む)
+  | { kind: 'narration'; text: string }; // ナレーション/システム文(中央・括弧なし。管理解除・エンディング本文)
 
 export interface Cutscene {
   key: string;
@@ -72,11 +73,38 @@ const STAGE5_INTRO: Cutscene = {
   ],
 };
 
+// Stage 6「ECLIPSE支配中枢」結末演出シーン(エンディング)。ラスボス撃破後に再生する。
+// docs/story.md「Stage 6 結末演出の詳細構成」+「TERRAのセリフ > Stage 6 — 結末演出シーン」確定版を
+// そのまま転記する。(1)管理解除 →(2)人間を初めて直接描写・争いの痕跡 →(3)TERRAとのセリフ交換 →
+// (4)エンディング本文、の4ステップを 1 スクリプトに連結する。苦い勝利(楽園ではない・再生の始まり)。
+const STAGE6_ENDING: Cutscene = {
+  key: 'stage6-ending',
+  lines: [
+    // ステップ1: 管理解除。
+    { kind: 'narration', text: 'ECLIPSEの管理が、解除された' },
+    // ステップ2: 人間を初めて直接描写。施設から人間たちが姿を見せる。
+    { kind: 'direction', text: '支配の解けた廃墟の外。施設から、人間たちが姿を見せる' },
+    // ステップ3: TERRAとのセリフ交換。
+    { kind: 'terraLine', text: 'RAY、空が——' },
+    { kind: 'rayInner', text: '管理されていない、空' },
+    { kind: 'terraLine', text: 'きれい' },
+    { kind: 'rayInner', text: '……ああ' },
+    // 苦い勝利: 楽園ではない。壁に残る争いの痕跡。
+    { kind: 'direction', text: '廃墟の壁に——落書き、崩れたバリケード、人間どうしが争った痕跡' },
+    { kind: 'rayInner', text: 'これが、俺が守ろうとした世界だ' },
+    { kind: 'terraLine', text: 'ねえ、RAY。次は何する？' },
+    { kind: 'rayInner', text: '次は——俺たちが、決める' },
+    // ステップ4: エンディング本文。
+    { kind: 'narration', text: '終わりではなく、始まり。\n人類はここから、また歩き直す。' },
+  ],
+};
+
 const CUTSCENES: Record<string, Cutscene> = {
   'stage1-intro': STAGE1_INTRO,
   'stage3-rescue': STAGE3_RESCUE,
   'stage4-intro': STAGE4_INTRO,
   'stage5-intro': STAGE5_INTRO,
+  'stage6-ending': STAGE6_ENDING,
 };
 
 /** scriptKey に対応する演出スクリプトを返す。未登録なら undefined。 */

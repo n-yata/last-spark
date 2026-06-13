@@ -89,4 +89,26 @@ describe('getCutscene', () => {
     // 勝てる保証はないが止まれない——決意の入口を RAY の内心で締める。
     expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('止まれない'))).toBe(true);
   });
+
+  it('stage6-ending が登録され、管理解除→人間描写→TERRAセリフ→エンディング本文の順を持つ', () => {
+    const cs = getCutscene('stage6-ending');
+    expect(cs).toBeDefined();
+    const lines = cs!.lines;
+    // ステップ1: 管理解除(ナレーション)で始まる。
+    expect(lines[0]).toEqual({ kind: 'narration', text: 'ECLIPSEの管理が、解除された' });
+    // ステップ2: 人間を初めて直接描写するト書きを含む。
+    expect(lines.some((l) => l.kind === 'direction' && l.text.includes('人間たちが姿を見せる'))).toBe(true);
+    // ステップ3: TERRA とのセリフ交換(確定版)を含む。
+    expect(lines.some((l) => l.kind === 'terraLine' && l.text.includes('次は何する'))).toBe(true);
+    expect(lines.some((l) => l.kind === 'rayInner' && l.text.includes('俺たちが、決める'))).toBe(true);
+    // ステップ4: エンディング本文(ナレーション)で締める。
+    const last = lines[lines.length - 1];
+    expect(last.kind).toBe('narration');
+    expect(last.text).toContain('終わりではなく、始まり。');
+  });
+
+  it('stage6-ending は苦い勝利(争いの痕跡)のト書きを含む', () => {
+    const cs = getCutscene('stage6-ending')!;
+    expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('争った痕跡'))).toBe(true);
+  });
 });

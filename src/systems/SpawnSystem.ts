@@ -6,6 +6,7 @@ import {
   FLYING_BOSS,
   ENVOY,
   CONTAINMENT_WARDEN,
+  ECLIPSE_CORE,
   getStageTuning,
   NEUTRAL_STAGE_TUNING,
   type StageTuning,
@@ -60,7 +61,9 @@ export class SpawnSystem {
           : FLYING_BOSS.width
         : this.stage.bossKind === 'warden'
           ? CONTAINMENT_WARDEN.width
-          : BOSS.width;
+          : this.stage.bossKind === 'core'
+            ? ECLIPSE_CORE.width
+            : BOSS.width;
     const bossHalfWidth = bossWidth / 2;
     this.bossTriggerX = Math.max(
       this.stage.bossTriggerX,
