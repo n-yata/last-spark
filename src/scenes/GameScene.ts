@@ -10,6 +10,7 @@ import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
+import { WardenBoss } from '../entities/WardenBoss';
 import { PurifierBoss } from '../entities/PurifierBoss';
 import { Projectile } from '../entities/Projectile';
 import { LogTrigger } from '../entities/LogTrigger';
@@ -427,10 +428,13 @@ export class GameScene extends Phaser.Scene {
     const arenaRight = this.stage.width;
 
     // ステージ系統に応じてボスを出し分ける。飛行型は重力なしで空中に滞空するため
-    // 地面コライダーを付けない(接地型のみ地面に乗りジャンプ着地する)。
+    // 地面コライダーを付けない(接地型・warden は地面に乗りジャンプ着地する)。
     const flying = this.stage.bossKind === 'flying';
     if (flying) {
       this.boss = new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+    } else if (this.stage.bossKind === 'warden') {
+      // stage3: 収容番人(重装ミサイル型)。接地型なので地面コライダーを付ける。
+      this.boss = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
     } else if (this.stage.bossVariant === 'purifier') {
       // stage4: 環境管理機(浄化型・扇状の範囲攻撃)。接地型なので地面コライダーを付ける。
       this.boss = new PurifierBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);

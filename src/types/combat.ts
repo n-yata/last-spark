@@ -1,6 +1,6 @@
 // 戦闘に関わる共有型。
 
-export type ProjectileKind = 'normal' | 'charged';
+export type ProjectileKind = 'normal' | 'charged' | 'missile';
 export type ProjectileOwner = 'player' | 'enemy';
 
 /** ダメージを受けられる対象の最小インターフェース。 */

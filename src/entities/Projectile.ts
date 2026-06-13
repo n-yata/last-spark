@@ -1,8 +1,16 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { SHOT } from '../config/balance';
+import { SHOT, STAGE } from '../config/balance';
 import type { ProjectileKind, ProjectileOwner } from '../types/combat';
 import { createProjectileSpec } from '../systems/shot';
+
+/** 放物線弾(ミサイル)用の発射オプション。未指定なら直進弾(従来挙動)。 */
+export interface ProjectileFireOptions {
+  /** 鉛直初速(px/s, 上向き負)。 */
+  velocityY?: number;
+  /** 重力の影響を受けるか(放物線にする)。既定は false。 */
+  gravity?: boolean;
+}
 
 // 弾(通常/チャージ/敵弾の共通)。オブジェクトプールで再利用する。
 
@@ -19,6 +27,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   /**
    * 弾を発射(プールから再活性化)する。
    * @param velocityX 進行方向 × 速度(符号付き)
+   * @param options 放物線弾(ミサイル)用の鉛直初速・重力。未指定なら直進弾。
    */
   fire(
     x: number,
@@ -26,6 +35,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     velocityX: number,
     kind: ProjectileKind,
     owner: ProjectileOwner,
+    options?: ProjectileFireOptions,
   ): void {
     const spec = createProjectileSpec(kind);
     this.kind = kind;
@@ -33,18 +43,21 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.damage = spec.damage;
 
     const texture =
-      owner === 'enemy'
-        ? TEX.projectileEnemy
-        : kind === 'charged'
-          ? TEX.projectileCharged
-          : TEX.projectileNormal;
+      kind === 'missile'
+        ? TEX.projectileMissile
+        : owner === 'enemy'
+          ? TEX.projectileEnemy
+          : kind === 'charged'
+            ? TEX.projectileCharged
+            : TEX.projectileNormal;
     this.setTexture(texture);
 
     this.enableBody(true, x, y, true, true);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setAllowGravity(false);
+    // プールから再利用するため、重力フラグは毎回明示的に設定する(放物線弾→直進弾の戻りに対応)。
+    body.setAllowGravity(options?.gravity ?? false);
     this.setVelocityX(velocityX);
-    this.setVelocityY(0);
+    this.setVelocityY(options?.velocityY ?? 0);
     this.expiresAt = this.scene.time.now + SHOT.lifespanMs;
   }
 
@@ -56,6 +69,15 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   override preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
     if (!this.active) return;
+    // ミサイルは敵弾グループ(地面コライダーなし)で放物線を描くため、地面をすり抜けて
+    // 落ち続ける。下端が地面上端に達したら着弾とみなして回収する。
+    if (this.kind === 'missile') {
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      if (body.bottom >= STAGE.groundY) {
+        this.deactivate();
+        return;
+      }
+    }
     if (time >= this.expiresAt) {
       this.deactivate();
     }

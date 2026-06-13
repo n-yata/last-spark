@@ -81,7 +81,9 @@ describe('ボス後演出フローのステージ条件', () => {
     const s = getStageData('stage3');
     expect(s.postBossCutsceneKey).toBe('stage3-rescue');
     expect(s.cage).toBeDefined();
-    expect(s.bossConfig).toBeDefined();
+    // stage3 は重装ミサイル型(warden)。固有設定・リグは WardenBoss が内包するため、
+    // bossConfig ではなく系統(bossKind)で識別する。
+    expect(s.bossKind).toBe('warden');
   });
 
   it('stage1 / stage2 / stage4 はボス後演出を持たない(撃破→(ボス後ログ)→クリア)', () => {
