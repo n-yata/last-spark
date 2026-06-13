@@ -3,6 +3,7 @@ import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
+import { scaled, scaledFontPx } from '../config/uiScale';
 
 interface ClearData {
   clearTimeMs: number;
@@ -41,17 +42,17 @@ export class ClearScene extends Phaser.Scene {
     this.add
       .text(width / 2, height * 0.3, isFinal ? 'ALL CLEAR' : 'STAGE CLEAR', {
         fontFamily: 'monospace',
-        fontSize: '56px',
+        fontSize: scaledFontPx(56),
         color: '#37f7d8',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
-      .setShadow(0, 0, '#37f7d8', 18, true, true);
+      .setShadow(0, 0, '#37f7d8', scaled(18), true, true);
 
     this.add
       .text(width / 2, height * 0.46, `TIME  ${this.formatTime(clearTimeMs)}`, {
         fontFamily: 'monospace',
-        fontSize: '24px',
+        fontSize: scaledFontPx(24),
         color: '#9fffe8',
       })
       .setOrigin(0.5);
@@ -63,7 +64,7 @@ export class ClearScene extends Phaser.Scene {
         isFinal ? '最後のあかりは、まだ消えていない。' : '次のたて穴へ——まだ先がある。',
         {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: scaledFontPx(16),
           color: '#7fe9dd',
         },
       )
@@ -72,7 +73,7 @@ export class ClearScene extends Phaser.Scene {
     const back = this.add
       .text(width / 2, height * 0.78, isFinal ? 'TAP TO TITLE' : 'TAP TO CONTINUE', {
         fontFamily: 'monospace',
-        fontSize: '22px',
+        fontSize: scaledFontPx(22),
         color: '#fff27a',
       })
       .setOrigin(0.5);

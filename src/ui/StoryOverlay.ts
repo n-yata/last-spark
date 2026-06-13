@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { resolveControlBand } from '../config/controlBand';
+import { scaled, scaledFontPx } from '../config/uiScale';
 import { TEXT_STYLES, readingDurationMs } from '../systems/storyDirector';
 import type { StoryTextKind, TextRequest } from '../types/story';
 
@@ -54,11 +55,11 @@ export class StoryOverlay {
     this.scene = scene;
     this.backdrop = scene.add.rectangle(0, 0, 10, 10, 0x05080d, 0.72).setOrigin(0.5).setVisible(false);
     this.text = scene.add
-      .text(0, 0, '', { fontSize: '20px', color: '#ffffff', align: 'center' })
+      .text(0, 0, '', { fontSize: scaledFontPx(20), color: '#ffffff', align: 'center' })
       .setOrigin(0.5)
       .setVisible(false);
     this.hint = scene.add
-      .text(0, 0, 'タップで進む', { fontSize: '13px', color: '#9aa3b2', align: 'center' })
+      .text(0, 0, 'タップで進む', { fontSize: scaledFontPx(13), color: '#9aa3b2', align: 'center' })
       .setOrigin(0.5)
       .setVisible(false);
     this.container = scene.add
@@ -144,12 +145,12 @@ export class StoryOverlay {
     const screenH = this.scene.scale.height;
     const band = resolveControlBand(this.scene);
     const playH = screenH - band;
-    const maxWidth = Math.min(760, screenW - 80);
+    const maxWidth = Math.min(scaled(760), screenW - scaled(80));
 
     this.text.setStyle({
       fontFamily: visual.fontFamily,
       fontStyle: visual.fontStyle,
-      fontSize: req.kind === 'stageIntro' ? '24px' : '20px',
+      fontSize: req.kind === 'stageIntro' ? scaledFontPx(24) : scaledFontPx(20),
       color: visual.color,
       align: 'center',
     });
@@ -163,16 +164,16 @@ export class StoryOverlay {
     const style = TEXT_STYLES[req.kind];
     const pos = style.position;
     let y: number;
-    if (pos === 'top') y = Math.min(110, playH * 0.18);
+    if (pos === 'top') y = Math.min(scaled(110), playH * 0.18);
     else if (pos === 'center') y = playH * 0.42;
-    else y = playH - 70; // bottom: 帯の上に収める
+    else y = playH - scaled(70); // bottom: 帯の上に収める
 
     this.container.setPosition(screenW / 2, y);
     this.text.setPosition(0, 0);
 
     if (visual.backdrop) {
-      const padX = 28;
-      const padY = 18;
+      const padX = scaled(28);
+      const padY = scaled(18);
       this.backdrop
         .setSize(this.text.width + padX * 2, this.text.height + padY * 2)
         .setVisible(true);
@@ -182,7 +183,7 @@ export class StoryOverlay {
 
     // タップで進む系(開始テキスト)だけ案内を本文の下に出す。
     if (style.pauseGame) {
-      this.hint.setPosition(0, this.text.height / 2 + 30).setVisible(true);
+      this.hint.setPosition(0, this.text.height / 2 + scaled(30)).setVisible(true);
     } else {
       this.hint.setVisible(false);
     }

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import {
   controlBandHeight,
   isTouchControlEnabled,
@@ -6,7 +6,14 @@ import {
   CONTROL_BAND_MAX_PX,
   CONTROL_BAND_RATIO,
 } from '../../../src/config/controlBand';
+import { setUiScale } from '../../../src/config/uiScale';
 import type Phaser from 'phaser';
+
+// 帯高さの MIN/MAX(CSS px ベース値)は scaled()=uiScale 倍される。uiScale は
+// モジュール変数で状態を持つため、各テストの前後で必ず 1 に戻し、既存(uiScale=1)
+// ケースへの状態リークを防ぐ。uiScale=2 は専用 describe 内だけで使う。
+beforeEach(() => setUiScale(1));
+afterEach(() => setUiScale(1));
 
 describe('controlBandHeight(下部コントロール帯の高さ算出)', () => {
   it('非タッチ(enabled=false)なら帯なし(0)=フル画面', () => {
@@ -41,6 +48,36 @@ describe('controlBandHeight(下部コントロール帯の高さ算出)', () => 
 
   it('MIN は半径44ボタン(直径88)が収まる余裕がある', () => {
     expect(CONTROL_BAND_MIN_PX).toBeGreaterThan(88);
+  });
+});
+
+// 高DPI(uiScale=2)時: クランプ境界 MIN/MAX が scaled()=2倍され [192, 224] になる。
+// RATIO 部(screenHeight*0.14)は screenHeight が物理pxなので自動的にスケールする。
+describe('controlBandHeight(uiScale=2 でのクランプ境界)', () => {
+  it('RATIO 値が境界内(196)ならそのまま(1400*0.14=196 ∈ [192,224])', () => {
+    setUiScale(2);
+    expect(controlBandHeight(1400, true)).toBe(196);
+  });
+
+  it('RATIO 値が下限未満なら MIN(192) に持ち上げる(800*0.14=112 → 192)', () => {
+    setUiScale(2);
+    expect(controlBandHeight(800, true)).toBe(192); // scaled(96)=192
+  });
+
+  it('RATIO 値が上限超過なら MAX(224) に丸める(2000*0.14=280 → 224)', () => {
+    setUiScale(2);
+    expect(controlBandHeight(2000, true)).toBe(224); // scaled(112)=224
+  });
+
+  it('境界は uiScale 倍される(MIN=scaled(96), MAX=scaled(112))', () => {
+    setUiScale(2);
+    expect(controlBandHeight(800, true)).toBe(CONTROL_BAND_MIN_PX * 2);
+    expect(controlBandHeight(2000, true)).toBe(CONTROL_BAND_MAX_PX * 2);
+  });
+
+  it('非タッチ(enabled=false)は uiScale に関わらず帯なし(0)', () => {
+    setUiScale(2);
+    expect(controlBandHeight(1400, false)).toBe(0);
   });
 });
 

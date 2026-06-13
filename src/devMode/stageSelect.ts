@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getSound } from '../systems/SoundManager';
+import { scaled, scaledFontPx } from '../config/uiScale';
 import { PLAYABLE_STAGES } from './stages';
 
 // 開発モード(タイトル画面のステージ選択)の UI。
@@ -40,7 +41,7 @@ export function createDevMode(
     onClick: () => void,
   ): Phaser.GameObjects.Text => {
     const btn = scene.add
-      .text(x, y, label, { fontFamily: 'monospace', fontSize: '20px', color: '#cfe9e2' })
+      .text(x, y, label, { fontFamily: 'monospace', fontSize: scaledFontPx(20), color: '#cfe9e2' })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     btn.on(Phaser.Input.Events.POINTER_OVER, () => btn.setColor('#fff27a'));
@@ -63,7 +64,7 @@ export function createDevMode(
       scene.add
         .text(width / 2, height * 0.14, 'STAGE SELECT (DEV)', {
           fontFamily: 'monospace',
-          fontSize: '28px',
+          fontSize: scaledFontPx(28),
           color: '#37f7d8',
           fontStyle: 'bold',
         })
@@ -76,7 +77,7 @@ export function createDevMode(
     const top = height * 0.26;
     const bottom = height * 0.93;
     const rows = PLAYABLE_STAGES.length + 1; // ステージ + BACK
-    const gap = Math.min(56, (bottom - top) / (rows - 1));
+    const gap = Math.min(scaled(56), (bottom - top) / (rows - 1));
     PLAYABLE_STAGES.forEach((stage, index) => {
       o.add(
         makeMenuButton(width / 2, top + gap * index, stage.label, () => {
@@ -100,9 +101,9 @@ export function createDevMode(
 
   // DEV MODE 導線。右下に控えめに配置する。
   const button = scene.add
-    .text(width - 16, height - 16, 'DEV MODE ▸', {
+    .text(width - scaled(16), height - scaled(16), 'DEV MODE ▸', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: scaledFontPx(16),
       color: '#8aa0b8',
     })
     .setOrigin(1, 1)

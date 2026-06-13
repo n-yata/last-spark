@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { scaled } from './uiScale';
 
 // 下部コントロール帯(レターボックス)の高さ算出とタッチ環境判定。
 // タッチ環境でのみ画面下部に仮想ボタン専用の帯を設け、ゲーム描画(プレイ領域)を
@@ -20,7 +21,11 @@ export const CONTROL_BAND_RATIO = 0.14;
 export function controlBandHeight(screenHeight: number, enabled: boolean): number {
   if (!enabled || screenHeight <= 0) return 0;
   const raw = screenHeight * CONTROL_BAND_RATIO;
-  return Math.round(Math.min(CONTROL_BAND_MAX_PX, Math.max(CONTROL_BAND_MIN_PX, raw)));
+  // MIN/MAX は CSS px 基準のベース値。論理サイズの物理px化に合わせ scaled() で揃える
+  // (RATIO 部は screenHeight が物理pxなので自動スケールする)。
+  return Math.round(
+    Math.min(scaled(CONTROL_BAND_MAX_PX), Math.max(scaled(CONTROL_BAND_MIN_PX), raw)),
+  );
 }
 
 /**
