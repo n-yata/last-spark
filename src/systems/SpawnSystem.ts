@@ -4,6 +4,7 @@ import { getStageData, type StageData, type EnemySpawn } from '../config/stage1'
 import {
   BOSS,
   FLYING_BOSS,
+  ENVOY,
   CONTAINMENT_WARDEN,
   getStageTuning,
   NEUTRAL_STAGE_TUNING,
@@ -54,7 +55,9 @@ export class SpawnSystem {
     // 設計上の最短地点として尊重しつつ、可視位置との遅い方を採用する。
     const bossWidth =
       this.stage.bossKind === 'flying'
-        ? FLYING_BOSS.width
+        ? this.stage.bossVariant === 'envoy'
+          ? ENVOY.width
+          : FLYING_BOSS.width
         : this.stage.bossKind === 'warden'
           ? CONTAINMENT_WARDEN.width
           : BOSS.width;

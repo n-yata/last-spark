@@ -45,9 +45,23 @@ const STAGE4_INTRO: Cutscene = {
   ],
 };
 
+// Stage 5「ECLIPSE外縁部」ステージ開始演出シーン。ECLIPSE に近づく緊張に TERRA が怯え、
+// RAY が「もうすぐ終わりに向かう」と内心で受け止める。勝てる保証はないが止まれない——決意の入口。
+// docs/story.md「TERRAのセリフ > Stage 5 — ステージ開始演出シーン」の確定スクリプトをそのまま転記する。
+const STAGE5_INTRO: Cutscene = {
+  key: 'stage5-intro',
+  lines: [
+    { kind: 'terraLine', text: 'ここ、怖い。ECLIPSEが近い' },
+    { kind: 'rayInner', text: 'もうすぐ——終わりに向かう' },
+    { kind: 'terraLine', text: 'RAY、絶対に勝てる？' },
+    { kind: 'rayInner', text: '……分からない。でも、止まれない' },
+  ],
+};
+
 const CUTSCENES: Record<string, Cutscene> = {
   'stage3-rescue': STAGE3_RESCUE,
   'stage4-intro': STAGE4_INTRO,
+  'stage5-intro': STAGE5_INTRO,
 };
 
 /** scriptKey に対応する演出スクリプトを返す。未登録なら undefined。 */

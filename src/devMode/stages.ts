@@ -9,6 +9,7 @@ const STAGE_LABELS: Record<string, string> = {
   stage2: '立坑の街',
   stage3: '収容施設',
   stage4: '汚染地帯',
+  stage5: 'ECLIPSE外縁部',
 };
 
 /** プレイ可能なステージ一覧(STAGES 登録順)。STAGE_IDS から導出し定義の二重管理を避ける。 */
