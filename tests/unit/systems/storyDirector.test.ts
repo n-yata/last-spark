@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveStoryEvent, TEXT_STYLES } from '../../../src/systems/storyDirector';
+import { resolveStoryEvent, TEXT_STYLES, readingDurationMs } from '../../../src/systems/storyDirector';
 import type { StageStory } from '../../../src/types/story';
 
 const STORY: StageStory = {
@@ -76,5 +76,23 @@ describe('resolveStoryEvent', () => {
     expect(TEXT_STYLES.eclipseVoice.pauseGame).toBe(true);
     expect(TEXT_STYLES.rayInner.pauseGame).toBe(false);
     expect(TEXT_STYLES.terraLine.pauseGame).toBe(false);
+  });
+});
+
+describe('readingDurationMs', () => {
+  it('短い本文は下限(2400ms)を返す', () => {
+    expect(readingDurationMs('短い')).toBe(2400);
+  });
+
+  it('長い本文ほど長く、上限(7000ms)で頭打ち', () => {
+    expect(readingDurationMs('あ'.repeat(80))).toBe(7000);
+  });
+
+  it('文字数が多いほど表示時間が長い', () => {
+    expect(readingDurationMs('あ'.repeat(30))).toBeGreaterThan(readingDurationMs('あ'.repeat(10)));
+  });
+
+  it('空白・改行は読字数に数えない', () => {
+    expect(readingDurationMs('あ\n\nい  う')).toBe(readingDurationMs('あいう'));
   });
 });

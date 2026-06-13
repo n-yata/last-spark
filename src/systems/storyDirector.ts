@@ -17,6 +17,18 @@ function request(kind: StoryTextKind, text: string): TextRequest {
 }
 
 /**
+ * テキストの表示時間(ms)を本文の長さから算出する。読み終える前に消えないようにするため、
+ * すべてのテキストはタップではなくこの時間で自動的に次へ進む(プレイ中のタップ＝移動/
+ * ジャンプ/ショットで誤って閉じてしまうのを防ぐ)。空白・改行は読字数に数えない。
+ */
+export function readingDurationMs(text: string): number {
+  const base = 1500;
+  const perChar = 120;
+  const chars = text.replace(/\s/g, '').length;
+  return Math.min(7000, Math.max(2400, base + chars * perChar));
+}
+
+/**
  * ストーリーイベントを、表示すべきテキスト要求の並びに変換する。
  * 同一イベントで複数テキストが発生する場合は表示順に並べて返す。
  * 該当テキストが無いイベントは空配列を返す(GameScene 側は何も表示しない)。
