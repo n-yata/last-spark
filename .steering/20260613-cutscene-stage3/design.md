@@ -24,7 +24,15 @@ ClearScene（クリア処理・SaveManager.markStageCleared）
 - タップ送り、最後に指定の遷移（GameScene 再開 or 次シーン）を行う
 
 **実装の要点**:
-- `init(data: { scriptKey, onComplete })` でスクリプトと完了後の遷移先を受ける
+- 起動データの型を明示する（ブロック3-5が再利用するため）:
+  ```typescript
+  // src/types/story.ts に追加
+  interface CutsceneSceneData {
+    scriptKey: string;        // cutscenes.ts のキー
+    onComplete: () => void;   // 完了後の遷移（GameScene resume / 次シーン起動）
+  }
+  ```
+- `init(data: CutsceneSceneData)` でスクリプトと完了後の遷移先を受ける
 - 背景は静止画的な簡易演出（単色＋キャラのシルエット/簡易グラフィック）。アセット未調達でも成立するようプレースホルダ可
 - ブロック1の `StoryTextKind` のスタイルマップを共有する
 
@@ -45,33 +53,37 @@ interface Cutscene { key: string; lines: CutsceneLine[] }
 - Stage 3 救出シーン（刻印で名前判明を含む）を転記
 - Stage 4-6 の演出もこのファイル形式で後から追加できる（後続ブロックの前提）
 
-### 3. Stage 3 ステージデータ（`src/config/story/stage3.ts` + ステージ定義）
+### 3. Stage 3 ステージデータ（ジオメトリ=`config/stage1.ts`、テキスト=`config/story/stage3.ts`）
 
 **責務**: 収容施設の地形・敵・ログトリガー・ボス・ケージギミックを定義
 
 **実装の要点**:
-- ボス「収容番人」は接地型（`bossKind='ground'`）。`balance.ts` に `CONTAINMENT_WARDEN` 等のチューニングを追加
-- 遅いが重い単発攻撃 → `bossAi.ts` の重みテーブルを系統追加 or パラメータ調整で表現
+- ジオメトリ（地形・敵・logTriggers・ボストリガー・nextStageId・bossKind）は **`src/config/stage1.ts` の `STAGES` テーブルに `STAGE3` を追加**する（ブロック1で確定したファイル配置方針に従う）。確定テキストは `config/story/stage3.ts`
+- **stage2 → stage3 の連結**: `src/config/stage1.ts` の `STAGE2` 定義に `nextStageId: 'stage3'` を追加（現在 STAGE2 は最終ステージで未設定）。`STAGE3` は最終ではないので `nextStageId: 'stage4'`（stage4 は後続ブロックで実体追加。連結だけ先行設定可）
+- ボス「収容番人」は接地型（`bossKind='ground'`）。`balance.ts` に `CONTAINMENT_WARDEN` チューニングを追加
+- 遅いが重い単発攻撃の表現方針: **既存 `GROUND_WEIGHTS` の枠組みを流用し、`balance.ts` のパラメータ（行動間隔を長く・攻撃の威力を高く）で差別化する**。`BossAction` 型に新アクションは追加しない（収容番人は既存の move/shoot/idle/jump で成立）
 - 収容ケージは見た目オブジェクト。ボス撃破イベントで解錠アニメ
-- `nextStageId`: stage2 → stage3 の連結を設定
 
 ### 4. SaveData 拡張（`src/systems/SaveManager` 周辺）
 
 **責務**: ステージ単位のクリア状況を保存する
 
+現行（`src/types/save.ts`）は `cleared: boolean` と `bestTimeMs?: number`（単一値）。これを多ステージ対応へ拡張する:
+
 ```typescript
 interface SaveData {
   version: number;              // 上げる（マイグレーション）
   clearedStages: string[];      // クリア済みステージID（旧 cleared:boolean から移行）
-  bestTimeMs?: Record<string, number>; // ステージ別ベストタイム（任意）
+  bestTimeMs?: Record<string, number>; // ステージ別ベストタイム（旧 number から移行）
   settings: GameSettings;
 }
 ```
 
 **実装の要点**:
-- 旧 `cleared: boolean` を読んだら `clearedStages: ['stage1']` 相当へマイグレート
-- `markStageCleared(stageId)` を追加。`markCleared` は互換のため残すか置換
-- version 不一致時は既定値フォールバック（既存方針踏襲）
+- 旧 `cleared: boolean === true` を読んだら `clearedStages: ['stage1']` へマイグレート（false なら `[]`）
+- 旧 `bestTimeMs?: number` を読んだら `{ stage1: oldValue }` へマイグレート（undefined ならキーなし）
+- `markStageCleared(stageId, timeMs?)` を追加。既存 `markCleared(timeMs)` は `markStageCleared('stage1', timeMs)` に委譲する形で互換維持
+- version 不一致・不正値時は既定値フォールバック（既存方針踏襲。進行不能にしない）
 
 ### 5. ボス撃破後フロー拡張（`GameScene` / `ClearScene`）
 
@@ -108,16 +120,19 @@ interface SaveData {
 ```
 src/
 ├── scenes/CutsceneScene.ts        # 新規: 演出シーン
+├── types/story.ts                 # 変更: CutsceneSceneData 型を追加
 ├── config/story/
 │   ├── cutscenes.ts               # 新規: 演出スクリプト（Stage 3〜）
 │   └── stage3.ts                  # 新規: Stage 3 確定テキスト
-├── (ステージ定義に stage3 追加)    # 変更: 地形/敵/ボス/ケージ/logTriggers
+├── config/stage1.ts               # 変更: STAGE3 を STAGES に追加 + STAGE2.nextStageId='stage3'
 ├── config/balance.ts              # 変更: 収容番人パラメータ
-├── systems/bossAi.ts              # 変更: 重装型の行動（必要なら）
-├── systems/SaveManager(該当)       # 変更: clearedStages 化 + マイグレーション
+├── types/save.ts                  # 変更: clearedStages / bestTimeMs を Record 化
+├── persistence/SaveManager.ts     # 変更: マイグレーション + markStageCleared
 ├── scenes/GameScene.ts            # 変更: ボス後演出フロー
-└── scenes/ClearScene.ts           # 変更: markStageCleared
+└── scenes/ClearScene.ts           # 変更: markStageCleared 呼び出し
 ```
+
+> 収容番人は既存 `GROUND_WEIGHTS` を流用するため `bossAi.ts` の変更は不要（差別化は balance.ts のパラメータのみ）。
 
 ## 実装の順序
 

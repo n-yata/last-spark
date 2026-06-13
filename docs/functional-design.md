@@ -217,9 +217,21 @@ class SpawnSystem {
 
 **ボス戦突入の条件**: ボス戦(出現・BGM切替・HPバー表示・アリーナ固定)は、**ボスの全身が画面内に見える位置までカメラが進んでから**開始する。`StageData.bossTriggerX` は設計上の最短地点として尊重しつつ、`bossSpawn.x + ボス半幅 + 余白` との遅い方を採用する(ボスが画面外のまま戦闘が始まる体験を防ぐ。ボス系統ごとの幅は `BOSS` / `FLYING_BOSS` から引くため、ステージ追加時も自動で成立する)。
 
+### ストーリーテリング基盤(テキスト表示 / ログトリガー)
+
+> ストーリー本文は `docs/story.md`(北極星)を正本とし、ゲーム内表示はその確定テキストを反映する。設計の責務分割は「ジオメトリ(`config/stage1.ts`)とテキスト(`config/story/`)を混ぜない」。
+
+**テキスト種別(5種)**: ゲーム内テキストは `StoryTextKind`(`scientistLog` / `eclipseVoice` / `rayInner` / `stageIntro` / `terraLine`)で区別し、種別ごとに表示位置・色・フォント・一時停止要否を変える(話者ラベルは出さず、見た目だけで「誰の言葉か」を判別させる)。kind→スタイルのマップ `TEXT_STYLES` は純粋ロジック(`systems/storyDirector.ts`)に置き、描画(`ui/StoryOverlay.ts`)と共有する。
+
+**StoryDirector(純粋ロジック)**: `resolveStoryEvent(story, event)` が `StoryEvent`(`stageStart` / `logFound` / `bossIntro` / `inner`)を表示要求 `TextRequest[]` に変換する。Phaser 非依存でユニットテスト可能(`bossAi.ts` 等と同方針)。確定テキストは `config/story/stageN.ts`(`StageStory`)に持ち、`getStageStory(stageId)` で引く。
+
+**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。一時停止系(科学者ログ/ECLIPSE/開始テキスト)は `GameScene` を `scene.pause` し、タップで次へ。非停止系(RAY内心/TERRAセリフ)はプレイ継続のまま画面下部に浮かべ一定時間で自動消去する。`GameScene` → `UIScene` の表示要求は registry ではなく game レベルのイベント(`STORY_EVENT.show`)で離散的に送る(HUD と異なり毎フレーム共有ではないため)。開始テキストは UIScene の `create` 完了を待ってから emit する(launch 直後の同期 emit はリスナー未登録で取りこぼすため)。
+
+**ログトリガー**: `StageData.logTriggers?`(`slot` = `early` / `preBoss` / `postBoss`、位置)に基づき `GameScene` が `LogTrigger`(オーバーラップ判定のみ・衝突なし)を生成する。プレイヤーが重なると一度だけ(`tryConsume`)該当スロットの科学者ログを発火する。触れるかはプレイヤーの自由(任意接触・読み飛ばし可)。`postBoss` ログはボス撃破後の動線が必要なため、ボス後フロー実装(Stage 3 ブロック)で配置する。
+
 ### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
 
-**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ボストリガー、ボス系統 `bossKind?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 と続ける(`nextStageId` 無し=最終ステージ)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。
+**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 と続ける(`nextStageId` 無し=最終ステージ)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。
 
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 

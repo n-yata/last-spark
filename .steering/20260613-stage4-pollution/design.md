@@ -9,16 +9,17 @@
 ### 1. Stage 4 ステージデータ
 **責務**: 汚染地帯の地形・敵・ログトリガー・ボストリガー・環境表現を定義
 **実装の要点**:
+- ジオメトリは `src/config/stage1.ts` の `STAGES` に `STAGE4` を追加（ブロック1のファイル配置方針）。テキストは `config/story/stage4.ts`
 - `bossKind='ground'`（環境管理機は接地型を基本とする）
 - 汚染表現は背景色・パーティクル等の環境ストーリーテリングで。アセット未調達でもプレースホルダで成立させる
-- `nextStageId`: stage4 → stage5
+- `STAGE4.nextStageId='stage5'`
 
 ### 2. 環境管理機（浄化型）ボス
 **責務**: 毒・スプレー系の範囲攻撃を持つボス
 **実装の要点**:
-- `balance.ts` に `PURIFIER` 等のパラメータ追加
-- 範囲攻撃（スプレー）は既存の弾／エフェクト機構を流用。範囲・持続のパラメータ化
-- 既存 `bossAi.ts` の重みテーブルに浄化型の攻撃を追加 or 設定で表現
+- `balance.ts` に `PURIFIER` パラメータ追加
+- 範囲攻撃（スプレー）は通常の単発 `shoot` と挙動が異なるため、**`BossAction` 型に `spray` を追加し、`bossAi.ts` に浄化型の重みテーブル（`PURIFIER_WEIGHTS` 等）を追加する**。`spray` は既存の弾／エフェクト機構を流用しつつ、範囲・持続をパラメータ化
+- `BossAction` 拡張は型の追加のため、既存の接地/飛行ボスの抽選（GROUND/FLYING_WEIGHTS）には影響しないよう、浄化型専用の重みテーブルに閉じる
 
 ### 3. Stage 4 確定テキスト・演出
 **責務**: story.md の Stage 4 テキストを `config/story/stage4.ts`・`cutscenes.ts` に転記
@@ -30,8 +31,10 @@
 stage3 クリア → stage4 開始
 → ステージ開始テキスト → 開始演出（TERRA）→ プレイ
 → ログ接触（任意）→ ボス前語りかけ → 環境管理機戦
-→ 撃破 → ボス後ログ → クリア（markStageCleared('stage4')）
+→ 撃破 → ボス後ログ（任意接触）→ クリア（markStageCleared('stage4', timeMs)）
 ```
+
+> **ボス後演出シーンなし**: story.md では TERRA の演出シーンは Stage 3 救出後と各ステージ開始のみ。Stage 4 はボス後演出を持たず、撃破後はボス後ログ（任意）→クリアへ直行する（ブロック2で用意した「ボス後演出キーなし」分岐に乗る）。
 
 ## テスト戦略
 - `config/story/stage4` が必要キーを持つ
@@ -41,11 +44,12 @@ stage3 クリア → stage4 開始
 ## ディレクトリ構造
 ```
 src/
-├── config/story/stage4.ts     # 新規
+├── config/story/stage4.ts     # 新規: Stage 4 確定テキスト
 ├── config/story/cutscenes.ts  # 変更: Stage 4 開始演出
-├── (ステージ定義に stage4)     # 変更
-├── config/balance.ts          # 変更: 環境管理機
-└── systems/bossAi.ts          # 変更: 浄化型（必要なら）
+├── config/stage1.ts           # 変更: STAGE4 を STAGES に追加 + STAGE3.nextStageId 確認
+├── config/balance.ts          # 変更: 環境管理機（PURIFIER）
+├── types/boss.ts              # 変更: BossAction に 'spray' を追加
+└── systems/bossAi.ts          # 変更: 浄化型の重みテーブル（PURIFIER_WEIGHTS）追加
 ```
 
 ## 実装の順序

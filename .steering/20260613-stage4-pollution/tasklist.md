@@ -16,15 +16,16 @@
 ## フェーズ1: Stage 4 ステージデータ
 
 - [ ] `src/config/story/stage4.ts`（開始テキスト・ログ3本・語りかけ・内心）
-- [ ] Stage 4 のステージ定義（地形・敵・logTriggers・ボストリガー）
-- [ ] stage3 → stage4 → stage5 の連結
+- [ ] `src/config/stage1.ts` の `STAGES` に `STAGE4` を追加（地形・敵・logTriggers・ボストリガー・`nextStageId:'stage5'`・`bossKind:'ground'`）
+- [ ] `STAGE3.nextStageId='stage4'` が設定済みか確認（ブロック2で先行設定済みのはず）
 - [ ] 汚染地帯の環境表現（背景・パーティクル等、プレースホルダ可）
 
 ## フェーズ2: 環境管理機（浄化型）ボス
 
-- [ ] `balance.ts` に環境管理機パラメータを追加
-- [ ] 毒・スプレー系の範囲攻撃の実装
-- [ ] ボス行動（浄化型、必要なら bossAi 調整）
+- [ ] `src/types/boss.ts` の `BossAction` に `'spray'` を追加
+- [ ] `balance.ts` に環境管理機（PURIFIER）パラメータを追加
+- [ ] `bossAi.ts` に浄化型の重みテーブル（PURIFIER_WEIGHTS）を追加＋テスト
+- [ ] 毒・スプレー系の範囲攻撃（`spray` アクション）の実装
 
 ## フェーズ3: テキスト・演出組み込み
 

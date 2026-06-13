@@ -16,15 +16,15 @@
 ## フェーズ1: Stage 5 ステージデータ
 
 - [ ] `src/config/story/stage5.ts`（開始テキスト・ログ3本・語りかけ・内心）
-- [ ] Stage 5 のステージ定義（地形・敵・logTriggers・ボストリガー）
-- [ ] stage4 → stage5 → stage6 の連結
+- [ ] `src/config/stage1.ts` の `STAGES` に `STAGE5` を追加（地形・敵・logTriggers・ボストリガー・`nextStageId:'stage6'`）
+- [ ] `STAGE4.nextStageId='stage5'` 設定済みか確認
 - [ ] 外縁部の環境表現（プレースホルダ可）
 
 ## フェーズ2: ECLIPSEの使者（高速型）ボス
 
-- [ ] `balance.ts` に使者パラメータを追加（高速・短い行動間隔）
-- [ ] 高速移動・連続攻撃のヒット&アウェイ挙動
-- [ ] 予測しにくい行動抽選（必要なら bossAi 調整）
+- [ ] `balance.ts` に使者パラメータを追加（ENVOY / FlyingBossConfig 形式・高速・dive頻度高め）
+- [ ] 既存 `FlyingBoss` を基底に使者を生成（必要なら微調整のみ）
+- [ ] `FLYING_WEIGHTS` の枠組みで予測しにくい挙動を調整（BossAction 追加なし）
 
 ## フェーズ3: テキスト・演出組み込み
 

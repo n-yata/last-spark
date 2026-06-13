@@ -57,7 +57,7 @@ interface StoryTextStyle {
 - 「同一シーンで複数テキストが発生する場合の順序」を純粋関数で解決する（story.md の表示順序ルール）
 
 **実装の要点**:
-- Phaser 非依存の純粋ロジックを中心にし、`systems/` の既存方針（`bossAi.ts` 等）に合わせる
+- Phaser 非依存の純粋関数として実装する（既存の `bossAi.ts` / `shotControl.ts` / `playerMovement.ts` と同じスタイル）
 - 表示要求のキューイング（開始テキスト→演出…の順序制御）を純粋関数 `nextTextRequest()` 等で表現
 - ユニットテスト対象
 
@@ -81,7 +81,16 @@ interface StoryTextStyle {
 **実装の要点**:
 - 物理オブジェクト（オーバーラップ判定のみ、衝突なし）
 - 一度解錠したら再発火しない（接触済みフラグ）
-- 配置データは `StageData` に `logTriggers?`（位置＋ログキー）として追加
+- 配置データは `StageData`（`src/config/stage1.ts` の既存 interface）に `logTriggers?`（位置＋ログキー）として追加
+
+### ファイル配置方針（全ブロック共通の前提）
+
+既存コードではステージのジオメトリ定義（`StageData` interface・`STAGES` テーブル・`getStageData`）が **`src/config/stage1.ts`** に集約され、`GameScene` / `SpawnSystem` / `Player` がそこから import している。本ブロック以降、以下の責務分割を厳守する:
+
+- **ステージのジオメトリ（地形・梯子・敵・ボストリガー・logTriggers・nextStageId・bossKind）** → `src/config/stage1.ts` の `STAGES` テーブルに追加する（ファイルのリネームはしない。churn を避けるため stage1.ts に全ステージを集約し続ける）
+- **ストーリーテキスト（開始テキスト・ログ本文・ECLIPSEの語りかけ・RAYの内心）** → `src/config/story/stageN.ts` に置く
+
+> この分割により、ジオメトリ（Phaser依存・SpawnSystem が読む）とテキスト（静的データ・StoryDirector が読む）が混ざらない。ブロック2以降の「ステージ定義」はすべて `stage1.ts` の `STAGES` への追加を指す。
 
 ### 6. GameScene / SpawnSystem への組み込み
 
@@ -137,7 +146,7 @@ src/
 ├── entities/LogTrigger.ts      # 新規: ログトリガーオブジェクト
 ├── scenes/GameScene.ts         # 変更: storyEvent 発火点の追加
 ├── scenes/UIScene.ts           # 変更: StoryOverlay の組み込み
-└── config/stageData.ts (該当箇所)# 変更: StageData に logTriggers 追加
+└── config/stage1.ts            # 変更: StageData interface に logTriggers? を追加
 ```
 
 ## 実装の順序

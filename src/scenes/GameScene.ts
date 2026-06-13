@@ -6,18 +6,23 @@ import { STAGE, BOSS } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
+import { STORY_EVENT } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
 import { Projectile } from '../entities/Projectile';
+import { LogTrigger } from '../entities/LogTrigger';
 import { InputController } from '../systems/InputController';
 import { CombatSystem } from '../systems/CombatSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { EffectsManager } from '../systems/EffectsManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
+import { resolveStoryEvent } from '../systems/storyDirector';
 import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
+import { getStageStory } from '../config/story';
+import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 
 // ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括する。
 
@@ -54,6 +59,12 @@ export class GameScene extends Phaser.Scene {
   private boss?: Boss;
   private startTime = 0;
   private ended = false;
+  /** 現在ステージの確定テキスト(未登録ステージなら undefined)。 */
+  private story?: StageStory;
+  private logTriggers!: Phaser.Physics.Arcade.Group;
+  /** 内心トリガの一度きり発火フラグ。 */
+  private firstEnemyInnerDone = false;
+  private firstLogDone = false;
 
   constructor() {
     super(SCENE_KEYS.game);
@@ -69,7 +80,10 @@ export class GameScene extends Phaser.Scene {
     // シーンはステージ継続(stage1→stage2)で再利用される。前ステージのボス参照が残ると
     // spawnBoss の早期 return で次ステージのボスが出ないため、必ずクリアする。
     this.boss = undefined;
+    this.firstEnemyInnerDone = false;
+    this.firstLogDone = false;
     this.stage = getStageData(this.stageId);
+    this.story = getStageStory(this.stageId);
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 
     this.buildPlatforms();
@@ -77,6 +91,7 @@ export class GameScene extends Phaser.Scene {
     this.createGroups();
     this.createPlayer();
     this.createSystems();
+    this.buildLogTriggers();
     this.setupCamera();
 
     this.startTime = this.time.now;
@@ -85,6 +100,48 @@ export class GameScene extends Phaser.Scene {
     this.setupOrientationHandling();
     fadeIn(this);
     getSound().playBgm('stage');
+    // UIScene の StoryOverlay リスナー登録は launch 後の create で行われるため、
+    // 同期的に emit するとイベントを取りこぼす。UI の create 完了を待ってから流す。
+    const ui = this.scene.get(SCENE_KEYS.ui);
+    if (this.scene.isActive(SCENE_KEYS.ui)) {
+      this.emitStory({ type: 'stageStart' });
+    } else {
+      ui.events.once(Phaser.Scenes.Events.CREATE, () => this.emitStory({ type: 'stageStart' }));
+    }
+  }
+
+  /** ストーリーイベントを解決し、UIScene の StoryOverlay へ表示要求を送る。 */
+  private emitStory(event: StoryEvent): void {
+    if (!this.story) return;
+    const requests = resolveStoryEvent(this.story, event);
+    if (requests.length > 0) this.game.events.emit(STORY_EVENT.show, requests);
+  }
+
+  private buildLogTriggers(): void {
+    this.logTriggers = this.physics.add.group();
+    for (const spec of this.stage.logTriggers ?? []) {
+      const trigger = new LogTrigger(this, spec.x, spec.y, spec.slot);
+      this.logTriggers.add(trigger);
+    }
+    this.physics.add.overlap(this.player, this.logTriggers, (_player, obj) => {
+      this.onLogOverlap(obj as LogTrigger);
+    });
+  }
+
+  /** ログトリガー接触: 該当ログを表示。最初のログだけは前後に内心を添える。 */
+  private onLogOverlap(trigger: LogTrigger): void {
+    if (!trigger.tryConsume()) return;
+    const requests: TextRequest[] = [];
+    if (!this.firstLogDone && this.story) {
+      this.firstLogDone = true;
+      // 「誰かがいた/これを書いた」(発見) → ログ本文 → 「読んだ後」の内心、の順。
+      requests.push(...resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'firstLogFound' }));
+      requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
+      requests.push(...resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'firstLogRead' }));
+    } else if (this.story) {
+      requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
+    }
+    if (requests.length > 0) this.game.events.emit(STORY_EVENT.show, requests);
   }
 
   private buildPlatforms(): void {
@@ -174,6 +231,10 @@ export class GameScene extends Phaser.Scene {
       onEnemyDefeated: (enemy) => {
         this.effects.explodeSmall(enemy.x, enemy.y);
         getSound().playSe('enemyDefeated');
+        if (!this.firstEnemyInnerDone) {
+          this.firstEnemyInnerDone = true;
+          this.emitStory({ type: 'inner', sceneKey: 'firstEnemyDefeated' });
+        }
       },
       onPlayerDamaged: () => {
         this.effects.playerDamaged();
@@ -191,7 +252,11 @@ export class GameScene extends Phaser.Scene {
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
     this.spawn.loadStage(this.stageId);
-    this.spawn.onBossTrigger(() => this.spawnBoss());
+    this.spawn.onBossTrigger(() => {
+      // ボスを出現させてから ECLIPSE の語りかけ(一時停止)を重ねる。タップで戦闘開始。
+      this.spawnBoss();
+      this.emitStory({ type: 'bossIntro' });
+    });
   }
 
   private setupCamera(): void {
