@@ -147,13 +147,19 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** 開始演出の完了後: Game/UI を再開し、カメラを戻してフェードインで本編へ滑らかに入り、開始テキストを出す。 */
+  /**
+   * 開始演出の完了後: Game/UI を再開し、カメラを戻してフェードインで本編へ滑らかに入る。
+   * 演出が開始テキストを兼ねるステージ(introCutsceneCoversStartText)は、同一文の二重表示を
+   * 避けるため開始テキストを出さない。別内容の演出(stage4/5)は従来どおり開始テキストへ続ける。
+   */
   private finishIntro(): void {
     this.scene.resume();
     this.scene.resume(SCENE_KEYS.ui);
     this.cameras.main.setAlpha(1);
     fadeIn(this);
-    this.emitStageStart();
+    if (!this.stage.introCutsceneCoversStartText) {
+      this.emitStageStart();
+    }
   }
 
   /** 開始テキスト+開始内心を registry の表示キューへ積む(UIScene が drain)。 */

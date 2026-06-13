@@ -54,6 +54,14 @@ export interface StageData {
    * StoryOverlay の中央テキスト(stageIntro)で開始する(stage2-3)。
    */
   introCutsceneKey?: string;
+  /**
+   * 開始演出(introCutsceneKey)が開始テキスト(stageIntro + 開始内心)を兼ねるか(任意)。
+   * true のステージは、演出の中で開始ストーリーを出し切っているため、演出完了後に
+   * 通常の開始テキストを重ねて出さない(stage1: 演出が intro+目覚めの内心そのもの)。
+   * 未定義/false のステージは演出と開始テキストが別内容のため、演出 → 開始テキストの順に出す
+   * (stage4/5: 演出は TERRA との会話で、開始テキストとは別物)。
+   */
+  introCutsceneCoversStartText?: boolean;
   /** プレイヤー初期位置(中心) */
   playerStart: { x: number; y: number };
   platforms: PlatformRect[];
@@ -126,7 +134,10 @@ const GROUND_THICK = STAGE.height - STAGE.groundY;
 const STAGE1: StageData = {
   id: 'stage1',
   // 開始演出を背景画像つきの専用シーンで再生する(stage3 救出演出と同方式)。
+  // この演出は intro+「目覚め」の内心そのもの(stage1-intro)なので、演出完了後に
+  // 通常の開始テキストを重ねない(同一文の二重表示を防ぐ)。
   introCutsceneKey: 'stage1-intro',
+  introCutsceneCoversStartText: true,
   // 地面に接した状態で開始する(本体半身=PLAYER.height/2=20)。これより高く置くと
   // 開始時に落下して着地するため、ステージ開始テキストで一時停止した瞬間に
   // 「上から落ちてくる」不自然な演出になる。接地位置に置いて落下をなくす。
