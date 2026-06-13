@@ -46,6 +46,17 @@ const PURIFIER_WEIGHTS: PhaseWeights = {
   phase2: { move: 25, shoot: 25, spray: 40, idle: 10 },
 };
 
+/**
+ * ECLIPSE本体(stage6 ラスボス)のフェーズ別重み(相対値)。浮遊して静止するコアのため
+ * move/jump は持たない。phase1=支援型(配下召喚 summon を主軸に shoot/idle を織り交ぜる)、
+ * phase2=直接攻撃型(summon を完全に止め、コアが shoot に集中して圧をかける)。
+ * summon は phase1 のみに置き、phase2 へは混入させない(フェーズで攻撃様式を切り替える設計)。
+ */
+const CORE_WEIGHTS: PhaseWeights = {
+  phase1: { summon: 40, shoot: 35, idle: 25 },
+  phase2: { shoot: 75, idle: 25 },
+};
+
 /** 直前と同一アクションに掛ける重み係数(連続抑制)。 */
 const REPEAT_PENALTY = 0.5;
 
@@ -152,6 +163,23 @@ export function pickNextPurifierBossAction(
   return pickWeightedAction(PURIFIER_WEIGHTS[phase], last, rng);
 }
 
+/**
+ * ECLIPSE本体(stage6 ラスボス)の次アクションを重み付き抽選で決定する。
+ * phase1 は summon を含み、phase2 は summon を含まない(フェーズで攻撃様式が変わる)。
+ *
+ * @param phase - 現在のボスフェーズ
+ * @param last - 直前に実行したアクション
+ * @param rng - 乱数源(テスト用に注入可能)
+ * @returns 次に実行するアクション
+ */
+export function pickNextCoreBossAction(
+  phase: BossPhase,
+  last: BossAction,
+  rng: Rng = Math.random,
+): BossAction {
+  return pickWeightedAction(CORE_WEIGHTS[phase], last, rng);
+}
+
 /** 接地ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */
 export function allowedActions(phase: BossPhase): BossAction[] {
   return Object.keys(GROUND_WEIGHTS[phase]) as BossAction[];
@@ -170,6 +198,11 @@ export function allowedPurifierActions(phase: BossPhase): BossAction[] {
 /** 飛行ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */
 export function allowedFlyingActions(phase: BossPhase): BossAction[] {
   return Object.keys(FLYING_WEIGHTS[phase]) as BossAction[];
+}
+
+/** ECLIPSE本体(stage6)のフェーズで許可されるアクション一覧(テスト/UI 用)。 */
+export function allowedCoreActions(phase: BossPhase): BossAction[] {
+  return Object.keys(CORE_WEIGHTS[phase]) as BossAction[];
 }
 
 /**

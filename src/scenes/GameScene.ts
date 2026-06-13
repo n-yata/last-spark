@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS, FLYING_BOSS, ENVOY } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, ENVOY, getStageTuning } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
@@ -12,6 +12,7 @@ import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
 import { WardenBoss } from '../entities/WardenBoss';
 import { PurifierBoss } from '../entities/PurifierBoss';
+import { CoreBoss } from '../entities/CoreBoss';
 import { Projectile } from '../entities/Projectile';
 import { LogTrigger } from '../entities/LogTrigger';
 import { InputController } from '../systems/InputController';
@@ -25,6 +26,7 @@ import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
+import { SaveManager } from '../persistence/SaveManager';
 import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 
 // ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括する。
@@ -437,13 +439,22 @@ export class GameScene extends Phaser.Scene {
     const arenaLeft = Math.floor(cam.scrollX);
     const arenaRight = this.stage.width;
 
-    // ステージ系統に応じてボスを出し分ける。飛行型は重力なしで空中に滞空するため
+    // ステージ系統に応じてボスを出し分ける。飛行型・コア型は重力なしで空中に滞空するため
     // 地面コライダーを付けない(接地型・warden は地面に乗りジャンプ着地する)。
-    const flying = this.stage.bossKind === 'flying';
-    if (flying) {
+    const airborne = this.stage.bossKind === 'flying' || this.stage.bossKind === 'core';
+    if (this.stage.bossKind === 'flying') {
       // 飛行型。stage5 の使者(envoy)は高速型 ENVOY、それ以外(stage2)は既定 FLYING_BOSS。
       const flyingConfig = this.stage.bossVariant === 'envoy' ? ENVOY : FLYING_BOSS;
       this.boss = new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, flyingConfig);
+    } else if (this.stage.bossKind === 'core') {
+      // stage6: ECLIPSE本体(巨大コア・浮遊)。配下召喚のため敵グループ等のコンテキストを注入する。
+      const core = new CoreBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      core.setSummonContext({
+        enemies: this.enemies,
+        enemyShots: this.enemyShots,
+        tuning: getStageTuning(this.stageId),
+      });
+      this.boss = core;
     } else if (this.stage.bossKind === 'warden') {
       // stage3: 収容番人(重装ミサイル型)。接地型なので地面コライダーを付ける。
       this.boss = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
@@ -458,7 +469,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
-    if (!flying) {
+    if (!airborne) {
       this.physics.add.collider(this.boss, this.groundGroup); // 重力で接地・ジャンプ着地(地面のみ)
     }
     this.combat.registerBoss(this.boss);
@@ -585,7 +596,13 @@ export class GameScene extends Phaser.Scene {
    * それを見せてから遷移する。持たないステージは即座に遷移する。
    */
   private finishStageClear(clearTimeMs: number): void {
+    const endingKey = this.stage.endingCutsceneKey;
     const go = (): void => {
+      // 最終ステージ(endingCutsceneKey あり): ClearScene を経ずエンディング演出へ。
+      if (endingKey) {
+        this.startEnding(endingKey, clearTimeMs);
+        return;
+      }
       this.inputController.destroy();
       this.scene.stop(SCENE_KEYS.ui);
       // 次ステージがあれば中継して継続、なければ最終クリアとしてタイトルへ。
@@ -607,6 +624,32 @@ export class GameScene extends Phaser.Scene {
     this.pushStory(reflection);
     const holdMs = readingDurationMs(reflection[0].text) + 400;
     this.time.delayedCall(holdMs, go);
+  }
+
+  /**
+   * 最終ステージ(stage6)のエンディング演出を起動する。CutsceneScene で結末スクリプトを
+   * 再生し(エンディング BGM へ切替)、完了後に全クリアを保存してタイトルへ帰還する。
+   * 物理ステップ中の scene.pause() を避けるため、タイマー経由で状態を変更する(救出演出と同方式)。
+   */
+  private startEnding(scriptKey: string, clearTimeMs: number): void {
+    this.inputController.destroy();
+    this.time.delayedCall(300, () => {
+      this.scene.pause(SCENE_KEYS.ui);
+      this.scene.launch(SCENE_KEYS.cutscene, {
+        scriptKey,
+        bgm: 'ending',
+        onComplete: () => this.finalizeEnding(clearTimeMs),
+      });
+      this.scene.pause();
+    });
+  }
+
+  /** エンディング演出の完了後: 全クリアを保存し、タイトルへ帰還する。 */
+  private finalizeEnding(clearTimeMs: number): void {
+    this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
+    this.scene.stop(SCENE_KEYS.ui);
+    new SaveManager().markStageCleared(this.stageId, clearTimeMs);
+    transitionTo(this, SCENE_KEYS.title);
   }
 
   private handleGameOver(): void {

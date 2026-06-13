@@ -11,10 +11,11 @@ describe('getStageStory', () => {
     expect(getStageStory('stage2')).toBeDefined();
   });
 
-  it('stage3 / stage4 / stage5 のストーリーが登録されている', () => {
+  it('stage3 / stage4 / stage5 / stage6 のストーリーが登録されている', () => {
     expect(getStageStory('stage3')).toBeDefined();
     expect(getStageStory('stage4')).toBeDefined();
     expect(getStageStory('stage5')).toBeDefined();
+    expect(getStageStory('stage6')).toBeDefined();
   });
 
   it('未登録ステージは undefined', () => {
@@ -81,7 +82,20 @@ describe('getStageStory', () => {
     expect(s.inner.bossDefeated).toBe('俺は、感じるために作られた。それだけで——十分だ');
   });
 
-  it('全3スロットのログ本文が確定版として存在する', () => {
+  it('stage6 の確定テキストが story.md と一致する', () => {
+    const s = getStageStory('stage6')!;
+    expect(s.intro).toContain('支配中枢。ここがECLIPSEの心臓だ。');
+    expect(s.eclipseVoice).toBe('地球を守るために、お前を終了する');
+    // Stage 6 は序盤ログのみ(科学者の最後のメッセージ)。
+    expect(s.logs.early).toContain('RAY、お前を誇りに思う');
+    expect(s.logs.preBoss).toBeUndefined();
+    expect(s.logs.postBoss).toBeUndefined();
+    expect(s.inner.stageStart).toBe('ここだ。ここで——終わる');
+    expect(s.inner.eclipseReaction).toBe('これが、俺の答えだ');
+    expect(s.inner.bossDefeated).toBe('……終わった');
+  });
+
+  it('stage1〜5 は全3スロットのログ本文が確定版として存在する(stage6 は序盤のみ)', () => {
     for (const id of ['stage1', 'stage2', 'stage3', 'stage4', 'stage5']) {
       const s = getStageStory(id)!;
       expect(s.logs.early).toBeTruthy();
@@ -101,26 +115,34 @@ describe('ボス後演出フローのステージ条件', () => {
     expect(s.bossKind).toBe('warden');
   });
 
-  it('stage1 / stage2 / stage4 / stage5 はボス後演出を持たない(撃破→(ボス後ログ)→クリア)', () => {
-    for (const id of ['stage1', 'stage2', 'stage4', 'stage5']) {
+  it('stage1 / stage2 / stage4 / stage5 / stage6 はボス後演出(救出)を持たない', () => {
+    for (const id of ['stage1', 'stage2', 'stage4', 'stage5', 'stage6']) {
       const s = getStageData(id);
       expect(s.postBossCutsceneKey).toBeUndefined();
       expect(s.cage).toBeUndefined();
     }
   });
 
-  it('stage2→stage3→stage4→stage5 と連結している', () => {
+  it('stage2→stage3→stage4→stage5→stage6 と連結している', () => {
     expect(getStageData('stage2').nextStageId).toBe('stage3');
     expect(getStageData('stage3').nextStageId).toBe('stage4');
     expect(getStageData('stage4').nextStageId).toBe('stage5');
+    expect(getStageData('stage5').nextStageId).toBe('stage6');
   });
 
-  it('stage5 は飛行型(使者)ボス・開始演出を持ち、現状は最終ステージ(stage6 未実装のため nextStageId なし)', () => {
+  it('stage5 は飛行型(使者)ボス・開始演出を持ち、stage6 へ連結している', () => {
     const s = getStageData('stage5');
     expect(s.bossKind).toBe('flying');
     expect(s.bossVariant).toBe('envoy');
     expect(s.introCutsceneKey).toBe('stage5-intro');
-    // stage6 の実体ができるまで未接続にして、未実装ステージへの遷移(stage1 フォールバック)を防ぐ。
+    expect(s.nextStageId).toBe('stage6');
+  });
+
+  it('stage6 はコア型ラスボス・最終ステージで、撃破後はエンディング演出へ分岐する', () => {
+    const s = getStageData('stage6');
+    expect(s.bossKind).toBe('core');
+    expect(s.endingCutsceneKey).toBe('stage6-ending');
+    // 最終ステージ: 次ステージなし(未実装ステージへの遷移=stage1 フォールバックを防ぐ)。
     expect(s.nextStageId).toBeUndefined();
   });
 });
@@ -162,6 +184,14 @@ describe('ログトリガー配置', () => {
       expect(postBoss).toBeDefined();
       expect(postBoss!.x).toBeLessThan(stage.bossTriggerX);
     }
+  });
+
+  it('stage6 は序盤ログのみ(ボス前・ボス後なし)で、ボストリガー手前に置かれている', () => {
+    const stage = getStageData('stage6');
+    const slots = (stage.logTriggers ?? []).map((t) => t.slot);
+    expect(slots).toEqual(['early']);
+    const early = (stage.logTriggers ?? []).find((t) => t.slot === 'early');
+    expect(early!.x).toBeLessThan(stage.bossTriggerX);
   });
 
   it('stage3 の postBoss ログはアリーナ内(ボストリガーより後ろ)に置かれている', () => {

@@ -2,6 +2,8 @@
 // docs/story.md「テキスト表示仕様(5種の視覚的区別)」「テキストコンテンツ(確定版)」に対応。
 // 表示ロジック(storyDirector)と描画(StoryOverlay)が共有する。
 
+import type { BgmKey } from '../config/audio';
+
 /** ゲーム内テキストの種別(5種)。種別ごとに表示位置・スタイル・色調が異なる。 */
 export type StoryTextKind =
   | 'scientistLog' // 科学者のログ(画面上部・暖色・手書き風)
@@ -46,10 +48,12 @@ export type StoryEvent =
  * CutsceneScene の起動データ。scriptKey で再生する演出スクリプト(config/story/cutscenes.ts)を
  * 指定し、onComplete で完了後の遷移(GameScene 再開 / 次シーン起動)を呼び出し側へ委ねる。
  * Stage 4-6 の演出も scriptKey を差し替えるだけで再利用する。
+ * bgm を指定すると演出開始時に BGM を切り替える(エンディング等)。未指定なら現在の BGM を維持する。
  */
 export interface CutsceneSceneData {
   scriptKey: string;
   onComplete: () => void;
+  bgm?: BgmKey;
 }
 
 /** 1ステージ分の確定テキスト。docs/story.md の転記。 */

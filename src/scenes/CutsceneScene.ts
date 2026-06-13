@@ -2,18 +2,21 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { getCutscene, type CutsceneLine } from '../config/story/cutscenes';
 import { CUTSCENE_BACKGROUND } from '../config/assetKeys';
+import { getSound } from '../systems/SoundManager';
 import type { CutsceneSceneData } from '../types/story';
 
-// 演出シーン: 静止画的な簡易演出の上に、TERRAのセリフ↔RAYの内心↔ト書きを 1 行ずつ表示する。
+// 演出シーン: 静止画的な簡易演出の上に、TERRAのセリフ↔RAYの内心↔ト書き↔ナレーションを 1 行ずつ表示する。
 // ゲームを止めて再生し、タップで送り、最後に onComplete(完了後の遷移)を呼ぶ。
 // 話者ラベルは出さず、色調・字体で誰の言葉かを区別する(docs/story.md テキスト表示仕様)。
-// scriptKey 差し替えで Stage 4-6 の演出にも再利用する。
+// scriptKey 差し替えで Stage 4-6 の演出・エンディングにも再利用する(BGM は起動データで差し替え可能)。
 
 /** 話者種別ごとの見た目。StoryOverlay の色調に揃える(暖色=人間/TERRA、白=RAY内心)。 */
 const LINE_STYLE: Record<CutsceneLine['kind'], { color: string; fontStyle: string; fontSize: string }> = {
   terraLine: { color: '#ffd9a0', fontStyle: 'normal', fontSize: '26px' },
   rayInner: { color: '#f2f4f8', fontStyle: 'italic', fontSize: '24px' },
   direction: { color: '#9aa3b2', fontStyle: 'italic', fontSize: '18px' },
+  // ナレーション/システム文(管理解除・エンディング本文)。括弧で囲まず、世界の声として中央に大きく。
+  narration: { color: '#9fffe8', fontStyle: 'normal', fontSize: '22px' },
 };
 
 const INPUT_GUARD_MS = 350;
@@ -23,6 +26,8 @@ export class CutsceneScene extends Phaser.Scene {
   private scriptKey = '';
   private index = 0;
   private onComplete: () => void = () => {};
+  /** 演出中に再生する BGM(任意)。エンディング等で差し替える。未指定なら現在の BGM を維持。 */
+  private bgm?: CutsceneSceneData['bgm'];
   private bodyText!: Phaser.GameObjects.Text;
   private hint!: Phaser.GameObjects.Text;
   private inputReady = false;
@@ -37,6 +42,7 @@ export class CutsceneScene extends Phaser.Scene {
     const script = getCutscene(data?.scriptKey);
     this.lines = script ? script.lines : [];
     this.onComplete = data?.onComplete ?? (() => {});
+    this.bgm = data?.bgm;
     this.index = 0;
     this.inputReady = false;
     this.finished = false;
@@ -44,6 +50,11 @@ export class CutsceneScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+
+    // 演出専用 BGM の指定があれば切り替える(エンディングなど)。未指定なら現在の BGM を維持する。
+    if (this.bgm) {
+      getSound().playBgm(this.bgm);
+    }
 
     // 背景。実静止画があればそれを敷き、無ければ簡易シルエットへフォールバックする。
     this.add.rectangle(0, 0, width, height, 0x05080d, 1).setOrigin(0);

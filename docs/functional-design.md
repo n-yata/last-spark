@@ -57,8 +57,8 @@ Phaser の Scene を画面/状態の単位とする。
 | `GameScene` | ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括 |
 | `UIScene` | HUD(プレイヤーライフ、ボスHP、チャージゲージ)。`GameScene` と並行起動 |
 | `GameOverScene` | ゲームオーバー表示とリトライ導線 |
-| `ClearScene` | ボス撃破時のクリア演出。クリア状況(ステージ単位)を保存しタイトル/次ステージへ |
-| `CutsceneScene`(オーバーレイ) | 演出シーン。静止画的演出+交互テキスト(TERRA/RAY)+ト書きをタップ送りで再生し、完了後に指定遷移を呼ぶ。Stage 3 救出後演出で使用 |
+| `ClearScene` | ボス撃破時のクリア演出。クリア状況(ステージ単位)を保存しタイトル/次ステージへ。最終ステージ全クリアで「ALL CLEAR」を表示 |
+| `CutsceneScene`(オーバーレイ) | 演出シーン。静止画的演出+交互テキスト(TERRA/RAY)+ト書き+ナレーションをタップ送りで再生し、完了後に指定遷移を呼ぶ。Stage 1 開始演出・Stage 3 救出後演出・Stage 4-5 開始演出・Stage 6 エンディングで使用(BGM は起動データで差し替え可能) |
 | `OrientationScene`(オーバーレイ) | 縦持ち検知時に「横向きにしてください」案内を最前面表示 |
 
 ## データモデル定義
@@ -129,11 +129,12 @@ interface BossState {
 type EnemyPattern = 'walker' | 'turret';      // MVP の雑魚2種(案)
 type BossPhase = 'phase1' | 'phase2';          // HP 50% で移行
 // 系統共通の行動。接地は idle/move/shoot/jump/stagger、飛行は hover/move/shoot/dive/stagger、
-// 収容番人(stage3)は接地 + missile(放物線ミサイル)、浄化型(stage4)は idle/move/shoot/spray/stagger
-// を使う(missile/spray は系統専用の重みテーブルに閉じる)
-type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'missile' | 'spray';
-// 接地型(stage1) / 飛行・浮遊型(stage2,5) / 重装ミサイル型(stage3 収容番人)
-type BossKind = 'ground' | 'flying' | 'warden';
+// 収容番人(stage3)は接地 + missile(放物線ミサイル)、浄化型(stage4)は idle/move/shoot/spray/stagger、
+// ECLIPSE本体(stage6 ラスボス)は idle/shoot/stagger + summon(配下召喚)を使う
+// (missile/spray/summon は系統専用の重みテーブルに閉じる)
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'missile' | 'spray' | 'summon';
+// 接地型(stage1) / 飛行・浮遊型(stage2,5) / 重装ミサイル型(stage3 収容番人) / 巨大コア型(stage6 ECLIPSE本体)
+type BossKind = 'ground' | 'flying' | 'warden' | 'core';
 // 系統内の種別(任意)。'purifier'=stage4 の環境管理機(接地・浄化型・扇状の範囲攻撃)、
 // 'envoy'=stage5 の ECLIPSE の使者(飛行・高速ヒット&アウェイ。FlyingBoss を ENVOY 値で流用)
 type BossVariant = 'purifier' | 'envoy';
@@ -309,9 +310,12 @@ class Boss extends Phaser.Physics.Arcade.Sprite {
 class FlyingBoss extends Boss {}
 // 浄化型ボス(stage4・環境管理機)。接地型のまま spray(扇状の範囲攻撃)を持つ
 class PurifierBoss extends Boss {}
+// ECLIPSE本体(stage6 ラスボス)。非人型の巨大コア。重力なしで浮遊・静止し、
+// phase1=summon(配下 Enemy の動的召喚)で支援型、phase2=召喚を止め shoot に集中する直接攻撃型
+class CoreBoss extends Boss {}
 ```
 
-**ボス系統(接地 / 飛行 / 浄化型)**: `Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。飛行ボス `FlyingBoss`(stage2)は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックをそのまま再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` のみを上書きする。飛行ボスは重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。浄化型ボス `PurifierBoss`(stage4)は接地型(重力あり)のまま `Boss` を継承し、`beginNextAction` のみ上書きして浄化型専用の重みテーブル(`bossAi` の `PURIFIER_WEIGHTS`)で抽選する。`jump` を持たず、`spray`(プレイヤー方向の水平を中心に扇状へ複数弾を散布する範囲攻撃=毒霧スプレー)を主軸に `move`/`shoot` を織り交ぜる。`spray` の弾数・開き角・速度は `PurifierBossConfig.spray` でパラメータ化し、既存の弾プール/`Projectile` を流用する(発射後に鉛直速度を与えて扇形にする)。系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)/ `PURIFIER`(`PurifierBossConfig`)に分離する。
+**ボス系統(接地 / 飛行 / 浄化型)**: `Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。飛行ボス `FlyingBoss`(stage2)は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックをそのまま再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` のみを上書きする。飛行ボスは重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。浄化型ボス `PurifierBoss`(stage4)は接地型(重力あり)のまま `Boss` を継承し、`beginNextAction` のみ上書きして浄化型専用の重みテーブル(`bossAi` の `PURIFIER_WEIGHTS`)で抽選する。`jump` を持たず、`spray`(プレイヤー方向の水平を中心に扇状へ複数弾を散布する範囲攻撃=毒霧スプレー)を主軸に `move`/`shoot` を織り交ぜる。`spray` の弾数・開き角・速度は `PurifierBossConfig.spray` でパラメータ化し、既存の弾プール/`Projectile` を流用する(発射後に鉛直速度を与えて扇形にする)。系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)/ `PURIFIER`(`PurifierBossConfig`)に分離する。最終ステージ stage6 のラスボス `CoreBoss`(`ECLIPSE_CORE` / `CoreBossConfig`)は非人型の巨大コアで、重力を切って空中に静止し(移動なし)、人型リグの代わりに専用ビジュアル(八角形の装甲+発光する眼)を描く。`beginNextAction` を上書きして `CORE_WEIGHTS` で抽選し、phase1 は固有アクション `summon`(既存 Enemy/敵グループを流用して配下を動的生成。場の上限 `summonMaxActive` を超えない)で支援型、phase2 は `summon` を止めて `shoot` に集中する直接攻撃型へ切り替わる。
 
 ### SaveManager(Persistence)
 
@@ -335,9 +339,11 @@ stateDiagram-v2
     Preload --> Title
     Title --> Game: タップでスタート
     Game --> GameOver: ライフ0
-    Game --> Clear: ボス撃破(stage1-2: 即クリア)
+    Game --> Clear: ボス撃破(stage1-2,4-5: 即クリア)
     Game --> Cutscene: ボス撃破→ケージ接触(stage3: 救出後演出)
-    Cutscene --> Clear: 演出完了
+    Game --> Cutscene: ボス撃破(stage6: エンディング演出)
+    Cutscene --> Clear: 演出完了(stage3)
+    Cutscene --> Title: エンディング完了→全クリア保存→タイトル(stage6)
     GameOver --> Game: リトライ
     GameOver --> Title: タイトルへ
     Clear --> Game: 次ステージへ継続(nextStageId あり)
@@ -350,6 +356,9 @@ stateDiagram-v2
         ボス後演出ありのステージは
         撃破後に自由移動→ケージ接触で
         CutsceneScene を起動
+        最終ステージ(stage6)は撃破→撃破内心→
+        エンディング演出(CutsceneScene)→
+        全クリア保存→タイトルへ直行
     end note
 ```
 

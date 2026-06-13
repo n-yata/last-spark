@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
+import { STAGE_IDS } from '../config/stage1';
+import { isAllStagesCleared } from '../systems/progress';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 // 型のみの import はビルド時に消去されるため本番バンドルには含まれない。
@@ -71,16 +73,19 @@ export class TitleScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // クリア状況の表示(1ステージでもクリア済みなら表示)。BEST はステージ1のタイムを代表値とする。
+    // クリア状況の表示。全6ステージ制覇なら「ALL CLEAR」、1ステージ以上なら「CLEARED」。
+    // BEST はステージ1のタイムを代表値とする。
     const save = new SaveManager().getData();
     if (save.clearedStages.length > 0) {
+      const allClear = isAllStagesCleared(save.clearedStages, STAGE_IDS);
       const stage1Best = save.bestTimeMs?.stage1;
       const best = stage1Best !== undefined ? `  BEST ${this.formatTime(stage1Best)}` : '';
       this.add
-        .text(width / 2, height * 0.82, `CLEARED${best}`, {
+        .text(width / 2, height * 0.82, `${allClear ? 'ALL CLEAR' : 'CLEARED'}${best}`, {
           fontFamily: 'monospace',
           fontSize: '16px',
-          color: '#9fffe8',
+          color: allClear ? '#fff27a' : '#9fffe8',
+          fontStyle: allClear ? 'bold' : 'normal',
         })
         .setOrigin(0.5);
     }

@@ -42,7 +42,7 @@ export interface SeSpec {
 }
 
 /** BGM トラックキー(シーン連動)。 */
-export type BgmKey = 'title' | 'stage' | 'boss';
+export type BgmKey = 'title' | 'stage' | 'boss' | 'ending';
 
 /** ノート 1 つ。semitone は A4=0 を基準とした半音オフセット。null は休符。 */
 export interface NoteToken {
@@ -85,9 +85,10 @@ export const SE: Record<SeKey, SeSpec> = {
   uiTap: { wave: 'square', freqStart: 600, freqEnd: 600, durationMs: 60, attackMs: 1, releaseMs: 40, volume: 0.35 },
 } as const;
 
-// --- BGM トラック(3種) ---
+// --- BGM トラック(4種) ---
 // 半音オフセット(A4=0)で記述。暗め基調のミニマルなループ。
-// title: 静かな浮遊感 / stage: 推進力のあるアルペジオ / boss: 緊張感のある低音主体。
+// title: 静かな浮遊感 / stage: 推進力のあるアルペジオ / boss: 緊張感のある低音主体 /
+// ending: 苦い勝利と再生の希望(遅く荘重な、解決感のある長音主体)。
 export const BGM: Record<BgmKey, BgmTrack> = {
   title: {
     wave: 'triangle',
@@ -144,6 +145,22 @@ export const BGM: Record<BgmKey, BgmTrack> = {
       { semitone: -5, beats: 0.5 }, // E4
       { semitone: -6, beats: 0.5 }, // D#4
       { semitone: -12, beats: 1 }, // A3
+    ],
+  },
+  // エンディング: 遅く荘重に。短調から長3度を含む解決へ向かい、「終わりではなく始まり」を音で表す。
+  ending: {
+    wave: 'triangle',
+    bpm: 72,
+    baseVolume: 0.3,
+    loop: [
+      { semitone: -12, beats: 2 }, // A3(沈んだ始まり)
+      { semitone: -5, beats: 1 }, // E4
+      { semitone: 0, beats: 1 }, // A4
+      { semitone: 4, beats: 2 }, // C#5(長3度=希望の兆し)
+      { semitone: 2, beats: 1 }, // B4
+      { semitone: 0, beats: 1 }, // A4
+      { semitone: 7, beats: 2 }, // E5(開けた解決)
+      { semitone: null, beats: 2 }, // 余韻の休符
     ],
   },
 } as const;
