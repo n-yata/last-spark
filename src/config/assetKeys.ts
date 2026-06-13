@@ -26,11 +26,13 @@ export type TextureKey = (typeof TEX)[keyof typeof TEX];
 // これらは public/assets/cutscenes/ の SVG を PreloadScene が load.svg で読み込む。
 // scriptKey ごとに 1 枚。Stage 4-6 の演出を足す際はここへキーを追加する。
 export const CUTSCENE_TEX = {
+  stage1Intro: 'tex-cutscene-stage1-intro',
   stage3Rescue: 'tex-cutscene-stage3-rescue',
 } as const;
 
 // scriptKey(cutscenes.ts の key) と背景テクスチャの対応。CutsceneScene が参照する。
 export const CUTSCENE_BACKGROUND: Record<string, string> = {
+  'stage1-intro': CUTSCENE_TEX.stage1Intro,
   'stage3-rescue': CUTSCENE_TEX.stage3Rescue,
 };
 
