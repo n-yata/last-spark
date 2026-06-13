@@ -50,7 +50,7 @@ export class LogViewerScene extends Phaser.Scene {
 
     // 見出し
     this.add
-      .text(width / 2, 34, '記録ログ', {
+      .text(width / 2, 34, 'きろくログ', {
         fontFamily: LOG_FONT,
         fontSize: '28px',
         color: LOG_COLOR,
@@ -70,7 +70,7 @@ export class LogViewerScene extends Phaser.Scene {
 
     // 閉じる導線(戻る)。左上に配置し、タップ/ESC/BACK で閉じる。
     const back = this.add
-      .text(24, 38, '← 戻る', {
+      .text(24, 38, '← もどる', {
         fontFamily: 'monospace',
         fontSize: '16px',
         color: '#fff27a',
@@ -112,7 +112,7 @@ export class LogViewerScene extends Phaser.Scene {
     if (first) {
       this.select(first);
     } else {
-      this.bodyText.setText('まだ記録は見つかっていない。\nステージでログを拾うと、ここに残る。');
+      this.bodyText.setText('まだ、きろくは見つかっていない。\nステージでログをひろうと、ここにのこる。');
     }
 
     // キーボードでも閉じられるように。

@@ -24,7 +24,7 @@ export class BossHpBar {
     this.gfx = scene.add.graphics();
     this.gfx.setScrollFactor(0).setDepth(100).setVisible(false);
     this.label = scene.add
-      .text(0, 0, '守護機械', {
+      .text(0, 0, 'まもりのきかい', {
         fontFamily: 'monospace',
         fontSize: '14px',
         color: '#ff90a8',
