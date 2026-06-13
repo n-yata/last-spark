@@ -109,11 +109,6 @@ export interface StageData {
    * 環境ストーリーテリングの簡易表現として、ステージごとに空気感を変える(stage4=汚染の淀み)。
    */
   backgroundColor?: string;
-  /**
-   * ステージ開始時に再生する演出スクリプトキー(任意。config/story/cutscenes.ts)。
-   * 定義があるステージは開始演出(TERRA同行など)を再生してから開始テキストへ進む。
-   */
-  introCutsceneKey?: string;
   /** クリア後に続けて開始する次ステージ ID(任意)。未定義なら最終ステージ。 */
   nextStageId?: string;
 }
