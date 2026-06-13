@@ -5,8 +5,10 @@ import { TEXT_STYLES, readingDurationMs } from '../systems/storyDirector';
 import type { StoryTextKind, TextRequest } from '../types/story';
 
 // ストーリーテキストのオーバーレイ描画。UIScene 上に常駐し、TextRequest のキューを順に再生する。
-// - 一時停止系(科学者ログ/ECLIPSE/開始テキスト): GameScene を pause し、タップで次へ。
-// - 非停止系(RAY内心/TERRAセリフ): プレイ継続のまま画面下部に表示し、一定時間で自動消去。
+// - 開始テキスト(stageIntro): GameScene を pause し画面中央に出す。タップで進み、これが
+//   ステージ開始の合図になる(ゲームが止まっているので移動/ショットの誤タップは起きない)。
+// - それ以外のステージ中テキスト(科学者ログ/ECLIPSE/RAY内心/TERRA): プレイ継続のまま
+//   画面上部に表示し、本文長に応じた時間で自動消去する(操作の邪魔になりにくい)。
 // 種別の見た目(色・フォント)で「誰の言葉か」を瞬時に区別できるようにする(話者ラベルは出さない)。
 
 interface KindVisual {
@@ -38,10 +40,14 @@ export class StoryOverlay {
   private readonly container: Phaser.GameObjects.Container;
   private readonly backdrop: Phaser.GameObjects.Rectangle;
   private readonly text: Phaser.GameObjects.Text;
+  /** タップ進行系(開始テキスト)で出す「タップで進む」案内。非停止系では隠す。 */
+  private readonly hint: Phaser.GameObjects.Text;
   private readonly queue: TextRequest[] = [];
   private active = false;
   private current?: TextRequest;
   private autoTimer?: Phaser.Time.TimerEvent;
+  /** タップ受付までの猶予タイマー(フェードイン中の取りこぼし/直前タップの貫通を防ぐ)。 */
+  private tapGuard?: Phaser.Time.TimerEvent;
   private gamePaused = false;
 
   constructor(scene: Phaser.Scene) {
@@ -51,13 +57,22 @@ export class StoryOverlay {
       .text(0, 0, '', { fontSize: '20px', color: '#ffffff', align: 'center' })
       .setOrigin(0.5)
       .setVisible(false);
+    this.hint = scene.add
+      .text(0, 0, 'タップで進む', { fontSize: '13px', color: '#9aa3b2', align: 'center' })
+      .setOrigin(0.5)
+      .setVisible(false);
     this.container = scene.add
-      .container(0, 0, [this.backdrop, this.text])
+      .container(0, 0, [this.backdrop, this.text, this.hint])
       .setScrollFactor(0)
       .setDepth(DEPTH)
       .setAlpha(0)
       .setVisible(false);
   }
+
+  /** タップ進行(開始テキスト)用のハンドラ。off で外せるようフィールドに束縛しておく。 */
+  private readonly onTapAdvance = (): void => {
+    this.dismiss();
+  };
 
   /** テキスト要求の並びをキューに積み、再生中でなければ再生を開始する。 */
   enqueue(requests: TextRequest[]): void {
@@ -84,28 +99,35 @@ export class StoryOverlay {
     this.current = next;
     this.layout(next);
 
-    const style = TEXT_STYLES[next.kind];
-    if (style.pauseGame) {
-      this.pauseGame();
-    } else {
-      // 非停止テキスト(内心/TERRA)はプレイ継続のまま浮かべる。直前の停止テキストで
-      // ゲームが止まっていれば、ここで再開してから表示する(例: 開始テキスト→内心)。
-      this.resumeGameIfNeeded();
-    }
-
     this.container.setVisible(true);
     this.scene.tweens.add({ targets: this.container, alpha: 1, duration: FADE_MS });
 
-    // すべてのテキストは本文の長さに応じた時間で自動的に次へ進む。タップでは閉じない。
-    // プレイ中のタップ(移動/ジャンプ/ショット)や、ボス出現時の連射で誤って閉じて
-    // しまい「読む前に消える」のを防ぐ。一時停止系はこの間ゲームを止める。
-    this.autoTimer = this.scene.time.delayedCall(readingDurationMs(next.text), () => this.dismiss());
+    const style = TEXT_STYLES[next.kind];
+    if (style.pauseGame) {
+      // 開始テキストはゲームを止めてタップ待ち。止まっている間は移動/ショットの誤タップが
+      // 起きないので、タップ=ステージ開始の合図として安全に使える。フェードイン中の取り
+      // こぼしや直前タップの貫通を避けるため、短い猶予の後に受け付ける。
+      this.pauseGame();
+      this.tapGuard = this.scene.time.delayedCall(280, () => {
+        this.scene.input.once('pointerdown', this.onTapAdvance);
+      });
+    } else {
+      // それ以外のステージ中テキストはプレイ継続のまま浮かべ、本文長に応じて自動で進む。
+      // タップでは閉じない(プレイ中の移動/ジャンプ/ショットやボス出現時の連射で誤って
+      // 「読む前に消える」のを防ぐ)。直前の開始テキストで止まっていればここで再開する。
+      this.resumeGameIfNeeded();
+      this.autoTimer = this.scene.time.delayedCall(readingDurationMs(next.text), () => this.dismiss());
+    }
   }
 
   private dismiss(): void {
     if (!this.current) return;
     this.autoTimer?.remove();
     this.autoTimer = undefined;
+    this.tapGuard?.remove();
+    this.tapGuard = undefined;
+    this.scene.input.off('pointerdown', this.onTapAdvance);
+    this.hint.setVisible(false);
     // 非停止テキストを抜けたらゲームを再開(停止テキストが連続しない限り)。
     this.scene.tweens.add({
       targets: this.container,
@@ -138,7 +160,8 @@ export class StoryOverlay {
     // パネルだけ出て文字が出ない)。
     this.text.setVisible(true);
 
-    const pos = TEXT_STYLES[req.kind].position;
+    const style = TEXT_STYLES[req.kind];
+    const pos = style.position;
     let y: number;
     if (pos === 'top') y = Math.min(110, playH * 0.18);
     else if (pos === 'center') y = playH * 0.42;
@@ -155,6 +178,13 @@ export class StoryOverlay {
         .setVisible(true);
     } else {
       this.backdrop.setVisible(false);
+    }
+
+    // タップで進む系(開始テキスト)だけ案内を本文の下に出す。
+    if (style.pauseGame) {
+      this.hint.setPosition(0, this.text.height / 2 + 30).setVisible(true);
+    } else {
+      this.hint.setVisible(false);
     }
   }
 
@@ -176,6 +206,8 @@ export class StoryOverlay {
 
   destroy(): void {
     this.autoTimer?.remove();
+    this.tapGuard?.remove();
+    this.scene.input.off('pointerdown', this.onTapAdvance);
     this.resumeGameIfNeeded();
     this.container.destroy();
   }

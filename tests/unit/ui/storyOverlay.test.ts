@@ -105,7 +105,7 @@ function makeScene() {
       },
     },
     time: { delayedCall: () => ({ remove: () => {} }) },
-    input: { once: () => {} },
+    input: { once: () => {}, off: () => {} },
     scale: { width: 960, height: 540 },
     scene: {
       isActive: () => true,

@@ -3,10 +3,15 @@ import type { StageStory, StoryEvent, StoryTextKind, StoryTextStyle, TextRequest
 // ストーリーイベント → 表示要求(TextRequest[])への変換。Phaser 非依存の純粋ロジック。
 // bossAi.ts / shotControl.ts / playerMovement.ts と同じく、副作用を持たずテスト可能にする。
 
-/** kind ごとの既定スタイル(表示位置・一時停止要否)。StoryOverlay も同じ値を参照する。 */
+/**
+ * kind ごとの既定スタイル(表示位置・一時停止要否)。StoryOverlay も同じ値を参照する。
+ * 一時停止するのはステージ開始テキスト(stageIntro)のみ。中央に出してタップで進め、
+ * これがステージ開始の合図になる。それ以外のステージ中テキスト(科学者ログ/ECLIPSE/
+ * RAY内心/TERRA)は動きを止めず画面上部に出し、本文長に応じて自動で消える。
+ */
 export const TEXT_STYLES: Record<StoryTextKind, StoryTextStyle> = {
-  scientistLog: { position: 'top', pauseGame: true },
-  eclipseVoice: { position: 'top', pauseGame: true },
+  scientistLog: { position: 'top', pauseGame: false },
+  eclipseVoice: { position: 'top', pauseGame: false },
   rayInner: { position: 'top', pauseGame: false },
   stageIntro: { position: 'center', pauseGame: true },
   terraLine: { position: 'top', pauseGame: false },
@@ -36,7 +41,7 @@ export function readingDurationMs(text: string): number {
 export function resolveStoryEvent(story: StageStory, event: StoryEvent): TextRequest[] {
   switch (event.type) {
     case 'stageStart': {
-      // 開始テキスト(中央・一時停止) → 開始時の内心(下部) の順。
+      // 開始テキスト(中央・一時停止・タップで進む) → 開始時の内心(上部・非停止) の順。
       const out: TextRequest[] = [request('stageIntro', story.intro)];
       const inner = story.inner.stageStart;
       if (inner) out.push(request('rayInner', inner));
