@@ -4,6 +4,7 @@ import { TEX, CUTSCENE_TEX } from '../config/assetKeys';
 import { PLAYER, ENEMY, BOSS, SHOT } from '../config/balance';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/dimensions';
 import { allRigParts, type RigPartSpec } from '../config/characterRig';
+import { cappedDpr, scaledFontPx } from '../config/uiScale';
 
 // アセットのロード。本 MVP は本番スプライト未用意のため、Graphics で
 // プレースホルダのテクスチャを生成する(世界観=暗め基調+発光アクセントを配色で表現)。
@@ -15,28 +16,32 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // 演出シーンの背景静止画(実ファイルアセット)。論理解像度でラスタライズしておき、
-    // CutsceneScene が cover 配置で全画面に敷く。scriptKey ごとに 1 枚。
+    // 演出シーンの背景静止画(実ファイルアセット)。SVG はベクターなので高DPI(Retina)で
+    // 滲まないよう論理解像度の cappedDpr 倍でラスタライズする。CutsceneScene は cover 配置で
+    // 全画面に敷く(テクスチャ実寸基準なので表示倍率は自動で一致する)。scriptKey ごとに 1 枚。
     // base:'./' のため index.html 相対の 'assets/...' で参照する。
+    const dpr = cappedDpr();
+    const svgW = GAME_WIDTH * dpr;
+    const svgH = GAME_HEIGHT * dpr;
     this.load.svg(CUTSCENE_TEX.stage1Intro, 'assets/cutscenes/stage1-intro.svg', {
-      width: GAME_WIDTH,
-      height: GAME_HEIGHT,
+      width: svgW,
+      height: svgH,
     });
     this.load.svg(CUTSCENE_TEX.stage3Rescue, 'assets/cutscenes/stage3-rescue.svg', {
-      width: GAME_WIDTH,
-      height: GAME_HEIGHT,
+      width: svgW,
+      height: svgH,
     });
     this.load.svg(CUTSCENE_TEX.stage4Intro, 'assets/cutscenes/stage4-intro.svg', {
-      width: GAME_WIDTH,
-      height: GAME_HEIGHT,
+      width: svgW,
+      height: svgH,
     });
     this.load.svg(CUTSCENE_TEX.stage5Intro, 'assets/cutscenes/stage5-intro.svg', {
-      width: GAME_WIDTH,
-      height: GAME_HEIGHT,
+      width: svgW,
+      height: svgH,
     });
     this.load.svg(CUTSCENE_TEX.stage6Ending, 'assets/cutscenes/stage6-ending.svg', {
-      width: GAME_WIDTH,
-      height: GAME_HEIGHT,
+      width: svgW,
+      height: svgH,
     });
   }
 
@@ -50,7 +55,7 @@ export class PreloadScene extends Phaser.Scene {
     this.add
       .text(this.scale.width / 2, this.scale.height / 2, 'NOW LOADING...', {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: scaledFontPx(18),
         color: '#37f7d8',
       })
       .setOrigin(0.5);

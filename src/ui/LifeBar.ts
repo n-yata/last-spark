@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { EFFECTS } from '../config/effects';
+import { scaled } from '../config/uiScale';
 import { damageFlashActive, flashBlinkOn } from '../systems/hudFx';
 
 // プレイヤーライフのセグメント式エナジーバー(HUD 左上)。
@@ -58,8 +59,9 @@ export class LifeBar {
       } else {
         this.gfx.fillStyle(filled ? COLOR_FULL : COLOR_EMPTY, filled ? 1 : 0.5);
       }
-      const x = ORIGIN_X + i * (SEG_WIDTH + SEG_GAP);
-      this.gfx.fillRect(x, ORIGIN_Y, SEG_WIDTH, SEG_HEIGHT);
+      // セグメント寸法・配置は scaled() で物理px換算し、高DPIでも見た目を一定に保つ。
+      const x = scaled(ORIGIN_X + i * (SEG_WIDTH + SEG_GAP));
+      this.gfx.fillRect(x, scaled(ORIGIN_Y), scaled(SEG_WIDTH), scaled(SEG_HEIGHT));
     }
   }
 

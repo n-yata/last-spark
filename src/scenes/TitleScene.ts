@@ -5,6 +5,7 @@ import { STAGE_IDS } from '../config/stage1';
 import { isAllStagesCleared } from '../systems/progress';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
+import { scaled, scaledFontPx } from '../config/uiScale';
 // 型のみの import はビルド時に消去されるため本番バンドルには含まれない。
 import type { DevMode } from '../devMode/stageSelect';
 
@@ -42,17 +43,17 @@ export class TitleScene extends Phaser.Scene {
     this.add
       .text(width / 2, height * 0.34, 'LAST SPARK', {
         fontFamily: 'monospace',
-        fontSize: '64px',
+        fontSize: scaledFontPx(64),
         color: '#37f7d8',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
-      .setShadow(0, 0, '#37f7d8', 18, true, true);
+      .setShadow(0, 0, '#37f7d8', scaled(18), true, true);
 
     this.add
-      .text(width / 2, height * 0.34 + 52, '― すさんだ世界の、のぞみ ―', {
+      .text(width / 2, height * 0.34 + scaled(52), '― すさんだ世界の、のぞみ ―', {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: scaledFontPx(18),
         color: '#7fe9dd',
       })
       .setOrigin(0.5);
@@ -61,7 +62,7 @@ export class TitleScene extends Phaser.Scene {
     const start = this.add
       .text(width / 2, height * 0.66, 'TAP TO START', {
         fontFamily: 'monospace',
-        fontSize: '26px',
+        fontSize: scaledFontPx(26),
         color: '#fff27a',
       })
       .setOrigin(0.5);
@@ -83,7 +84,7 @@ export class TitleScene extends Phaser.Scene {
       this.add
         .text(width / 2, height * 0.82, `${allClear ? 'ALL CLEAR' : 'CLEARED'}${best}`, {
           fontFamily: 'monospace',
-          fontSize: '16px',
+          fontSize: scaledFontPx(16),
           color: allClear ? '#fff27a' : '#9fffe8',
           fontStyle: allClear ? 'bold' : 'normal',
         })
@@ -130,17 +131,18 @@ export class TitleScene extends Phaser.Scene {
     // 遠景の発光ライン(地平線)
     g.fillStyle(0x12303a, 0.5);
     g.fillRect(0, height * 0.7, width, height * 0.3);
-    g.lineStyle(2, 0x37f7d8, 0.25);
+    g.lineStyle(scaled(2), 0x37f7d8, 0.25);
     g.lineBetween(0, height * 0.7, width, height * 0.7);
-    // 崩れたビルのシルエット
+    // 崩れたビルのシルエット。配置/横幅の絶対px は scaled() で物理px換算する
+    // (左端側は絶対座標、右端側は画面幅基準。w は全て絶対px)。
     g.fillStyle(0x0d141b, 1);
     const buildings = [
-      [40, 0.55, 90],
-      [160, 0.62, 70],
-      [260, 0.5, 110],
-      [width - 320, 0.58, 100],
-      [width - 180, 0.52, 130],
-      [width - 80, 0.64, 60],
+      [scaled(40), 0.55, scaled(90)],
+      [scaled(160), 0.62, scaled(70)],
+      [scaled(260), 0.5, scaled(110)],
+      [width - scaled(320), 0.58, scaled(100)],
+      [width - scaled(180), 0.52, scaled(130)],
+      [width - scaled(80), 0.64, scaled(60)],
     ] as const;
     for (const [x, topRatio, w] of buildings) {
       g.fillRect(x, height * topRatio, w, height);

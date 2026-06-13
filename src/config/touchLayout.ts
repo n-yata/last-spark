@@ -1,8 +1,11 @@
 // 横向き・両手持ち専用のタッチUIレイアウト。
 // InputController(入力判定)と UI(描画)で共有する。
-// RESIZE スケールに対応するため、レイアウトは実画面サイズから動的に算出する。
+// レイアウトは実画面サイズ(物理px)から動的に算出する。
+// 絶対px定数(ボタン半径・配置オフセット・不感帯)は scaled() で uiScale(=cappedDpr) 倍し、
+// 論理サイズの物理px化(高DPI対応)後も見た目・操作感を不変に保つ。
 
 import { EFFECTS } from './effects';
+import { scaled } from './uiScale';
 
 export interface CircleButton {
   x: number;
@@ -37,10 +40,11 @@ const BAND_BUTTON_MARGIN_PX = 2;
  * 帯が十分高い場合は通常半径(BUTTON_RADIUS)のまま。
  */
 function bandButtonRadius(bandHeight: number): number {
+  // bandHeight は物理px(scaled済みの帯高さ)。余白・上限半径は scaled() で揃える。
   const fitRadius = Math.floor(
-    (bandHeight / 2 - BAND_BUTTON_MARGIN_PX) / EFFECTS.touch.pressedRadiusScale,
+    (bandHeight / 2 - scaled(BAND_BUTTON_MARGIN_PX)) / EFFECTS.touch.pressedRadiusScale,
   );
-  return Math.min(BUTTON_RADIUS, Math.max(0, fitRadius));
+  return Math.min(scaled(BUTTON_RADIUS), Math.max(0, fitRadius));
 }
 
 /**
@@ -53,9 +57,9 @@ export function createTouchLayout(width: number, height: number, bandHeight = 0)
   if (bandHeight <= 0) {
     return {
       moveZone: { x: 0, y: 0, width: width / 2, height },
-      // ジャンプ=右上、ショット=左下(対角配置)。
-      jumpButton: { x: width - 84, y: height - 112, radius: BUTTON_RADIUS },
-      shootButton: { x: width - 188, y: height - 72, radius: BUTTON_RADIUS },
+      // ジャンプ=右上、ショット=左下(対角配置)。オフセット/半径は scaled() で物理px換算。
+      jumpButton: { x: width - scaled(84), y: height - scaled(112), radius: scaled(BUTTON_RADIUS) },
+      shootButton: { x: width - scaled(188), y: height - scaled(72), radius: scaled(BUTTON_RADIUS) },
     };
   }
   // 下部帯の縦中央にボタンを揃え、帯内へ収める。水平に並べて指が重ならないようにする。
@@ -67,8 +71,8 @@ export function createTouchLayout(width: number, height: number, bandHeight = 0)
   const radius = bandButtonRadius(bandHeight);
   return {
     moveZone: { x: 0, y: 0, width: width / 2, height: playHeight },
-    jumpButton: { x: width - 84, y: bandCenterY, radius },
-    shootButton: { x: width - 200, y: bandCenterY, radius },
+    jumpButton: { x: width - scaled(84), y: bandCenterY, radius },
+    shootButton: { x: width - scaled(200), y: bandCenterY, radius },
   };
 }
 
@@ -88,8 +92,10 @@ export const MOVE_PAD_MAX_RADIUS = 62;
  * 「押している間その向きへ歩き、離すと止まる」を原点相対で判定する。
  */
 export function moveDirFromDelta(deltaX: number): -1 | 0 | 1 {
-  if (deltaX < -MOVE_DEADZONE_PX) return -1;
-  if (deltaX > MOVE_DEADZONE_PX) return 1;
+  // deltaX は物理px(ポインタ移動量)。不感帯も scaled() で物理px換算し操作感を一定に保つ。
+  const dz = scaled(MOVE_DEADZONE_PX);
+  if (deltaX < -dz) return -1;
+  if (deltaX > dz) return 1;
   return 0;
 }
 
@@ -104,8 +110,9 @@ export const CLIMB_DEADZONE_PX = 28;
  * 画面Y方向に一致: 上へ動かす(deltaY<0)=登る(-1)、下へ動かす(deltaY>0)=降りる(1)。
  */
 export function climbDirFromDelta(deltaY: number): -1 | 0 | 1 {
-  if (deltaY < -CLIMB_DEADZONE_PX) return -1;
-  if (deltaY > CLIMB_DEADZONE_PX) return 1;
+  const dz = scaled(CLIMB_DEADZONE_PX);
+  if (deltaY < -dz) return -1;
+  if (deltaY > dz) return 1;
   return 0;
 }
 
@@ -122,10 +129,11 @@ export function clampStick(
   const dx = curX - baseX;
   const dy = curY - baseY;
   const dist = Math.hypot(dx, dy);
-  if (dist <= MOVE_PAD_MAX_RADIUS || dist === 0) {
+  const maxRadius = scaled(MOVE_PAD_MAX_RADIUS);
+  if (dist <= maxRadius || dist === 0) {
     return { x: curX, y: curY };
   }
-  const scale = MOVE_PAD_MAX_RADIUS / dist;
+  const scale = maxRadius / dist;
   return { x: baseX + dx * scale, y: baseY + dy * scale };
 }
 

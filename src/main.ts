@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { createGameConfig } from './config/gameConfig';
+import { initHiDpiScaling } from './systems/dprScaling';
 import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -26,6 +27,10 @@ const game = new Phaser.Game(
     OrientationScene,
   ]),
 );
+
+// 高DPI(Retina)対応: バッキング解像度を物理px化して滲みを解消する。
+// Game 生成直後に配線し、uiScale を全シーンの create より前に確定させる。
+initHiDpiScaling(game);
 
 // 実行時イントロスペクション用にゲームインスタンスを公開する(常時有効)。
 // デバッグ・E2E でのアクティブシーン確認などに用いる。テスト専用分岐ではない。

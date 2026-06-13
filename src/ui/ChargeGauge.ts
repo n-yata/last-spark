@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { CircleButton } from '../config/touchLayout';
+import { scaled } from '../config/uiScale';
 
 // チャージ蓄積を示す円形ゲージ。ショットボタン付近に表示し、満タンで発光する。
 
@@ -18,22 +19,23 @@ export class ChargeGauge {
   render(ratio: number, shootButton: CircleButton): void {
     this.gfx.clear();
     if (ratio <= 0) return;
-    const radius = shootButton.radius + 10;
+    // shootButton.radius は layout 側で scaled 済み。追加の絶対px(間隔)も scaled() で揃える。
+    const radius = shootButton.radius + scaled(10);
     const clamped = Math.max(0, Math.min(1, ratio));
     const isFull = clamped >= 1;
     const color = isFull ? COLOR_FULL : COLOR_PROGRESS;
     const startAngle = -Math.PI / 2;
     const endAngle = startAngle + Math.PI * 2 * clamped;
 
-    this.gfx.lineStyle(6, color, isFull ? 1 : 0.85);
+    this.gfx.lineStyle(scaled(6), color, isFull ? 1 : 0.85);
     this.gfx.beginPath();
     this.gfx.arc(shootButton.x, shootButton.y, radius, startAngle, endAngle, false);
     this.gfx.strokePath();
 
     if (isFull) {
       // 発光感を出す外側の薄いリング
-      this.gfx.lineStyle(3, COLOR_FULL, 0.35);
-      this.gfx.strokeCircle(shootButton.x, shootButton.y, radius + 6);
+      this.gfx.lineStyle(scaled(3), COLOR_FULL, 0.35);
+      this.gfx.strokeCircle(shootButton.x, shootButton.y, radius + scaled(6));
     }
   }
 

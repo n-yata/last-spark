@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   createTouchLayout,
   moveDirFromDelta,
@@ -12,6 +12,13 @@ import {
 } from '../../../src/config/touchLayout';
 import { CONTROL_BAND_MIN_PX, CONTROL_BAND_MAX_PX } from '../../../src/config/controlBand';
 import { EFFECTS } from '../../../src/config/effects';
+import { setUiScale } from '../../../src/config/uiScale';
+
+// touchLayout の絶対px定数は scaled()=uiScale 倍される。uiScale はモジュール変数で
+// 状態を持つため、各テストの前後で必ず 1 に戻し、既存(uiScale=1)ケースへの
+// 状態リークを防ぐ。uiScale=2 を使うのは専用 describe 内だけに限定する。
+beforeEach(() => setUiScale(1));
+afterEach(() => setUiScale(1));
 
 describe('createTouchLayout(実画面サイズ基準のレイアウト)', () => {
   it('移動ゾーンは画面左半分を占め、左端は x=0(物理画面端まで届く)', () => {
@@ -204,5 +211,112 @@ describe('isInsideButton', () => {
     expect(isInsideButton(shootButton, shootButton.x + shootButton.radius + 5, shootButton.y)).toBe(
       false,
     );
+  });
+});
+
+// 高DPI(uiScale=2)時: 絶対px定数(半径・配置オフセット・不感帯)が scaled()=2倍され、
+// 物理px化後も見た目・操作感が不変に保たれること。各テストで明示的に setUiScale(2) する
+// (前後の beforeEach/afterEach により他テストには影響しない)。
+describe('uiScale=2(高DPI)でのレイアウト・判定', () => {
+  describe('createTouchLayout(帯なし) は絶対px定数を2倍にする', () => {
+    it('jumpButton: radius=88(scaled44), x=1200-168, y=540-224', () => {
+      setUiScale(2);
+      const layout = createTouchLayout(1200, 540);
+      expect(layout.jumpButton.radius).toBe(88); // scaled(44)
+      expect(layout.jumpButton.x).toBe(1200 - 168); // scaled(84)=168 → 1032
+      expect(layout.jumpButton.x).toBe(1032);
+      expect(layout.jumpButton.y).toBe(540 - 224); // scaled(112)=224
+    });
+
+    it('shootButton: radius=88, x=1200-376, y=540-144', () => {
+      setUiScale(2);
+      const layout = createTouchLayout(1200, 540);
+      expect(layout.shootButton.radius).toBe(88);
+      expect(layout.shootButton.x).toBe(1200 - 376); // scaled(188)=376 → 824
+      expect(layout.shootButton.x).toBe(824);
+      expect(layout.shootButton.y).toBe(540 - 144); // scaled(72)=144
+    });
+
+    it('移動ゾーン(画面比で決まる)は uiScale に依存せず左半分のまま', () => {
+      setUiScale(2);
+      const layout = createTouchLayout(1200, 540);
+      expect(layout.moveZone.x).toBe(0);
+      expect(layout.moveZone.width).toBe(600);
+      expect(layout.moveZone.height).toBe(540);
+    });
+
+    it('2倍スケールでも2ボタンは重ならない(中心間距離 > 両半径の和)', () => {
+      setUiScale(2);
+      const layout = createTouchLayout(1200, 540);
+      const dx = layout.shootButton.x - layout.jumpButton.x;
+      const dy = layout.shootButton.y - layout.jumpButton.y;
+      const dist = Math.hypot(dx, dy);
+      expect(dist).toBeGreaterThan(layout.shootButton.radius + layout.jumpButton.radius);
+    });
+  });
+
+  describe('createTouchLayout(帯あり) のショットボタンX', () => {
+    it('帯ありでは shootButton.x=width-scaled(200)=width-400', () => {
+      setUiScale(2);
+      // 帯高さも物理px(scaled済み)を渡す前提。半径切り詰めの影響を受けないよう
+      // 十分高い帯を与え、配置オフセットのみを検証する。
+      const layout = createTouchLayout(1200, 540, 240);
+      expect(layout.jumpButton.x).toBe(1200 - 168); // scaled(84)=168
+      expect(layout.shootButton.x).toBe(1200 - 400); // scaled(200)=400
+    });
+  });
+
+  describe('moveDirFromDelta は不感帯が scaled(18)=36 になる', () => {
+    it('37(>36)で右(1)、36(=しきい値)で停止(0)', () => {
+      setUiScale(2);
+      expect(moveDirFromDelta(37)).toBe(1);
+      expect(moveDirFromDelta(36)).toBe(0);
+    });
+
+    it('-37(<-36)で左(-1)、-36で停止(0)', () => {
+      setUiScale(2);
+      expect(moveDirFromDelta(-37)).toBe(-1);
+      expect(moveDirFromDelta(-36)).toBe(0);
+    });
+  });
+
+  describe('climbDirFromDelta は不感帯が scaled(28)=56 になる', () => {
+    it('57(>56)で降りる(1)、56(=しきい値)で静止(0)', () => {
+      setUiScale(2);
+      expect(climbDirFromDelta(57)).toBe(1);
+      expect(climbDirFromDelta(56)).toBe(0);
+    });
+
+    it('-57(<-56)で登る(-1)、-56で静止(0)', () => {
+      setUiScale(2);
+      expect(climbDirFromDelta(-57)).toBe(-1);
+      expect(climbDirFromDelta(-56)).toBe(0);
+    });
+  });
+
+  describe('clampStick の最大半径が scaled(62)=124 になる', () => {
+    it('原点から248(=124*2)離れた点は原点+124 に丸まる', () => {
+      setUiScale(2);
+      const r = clampStick(100, 100, 100 + MOVE_PAD_MAX_RADIUS * 2 * 2, 100); // 100+248
+      expect(r.x).toBeCloseTo(100 + 124, 5);
+      expect(r.y).toBeCloseTo(100, 5);
+    });
+
+    it('最大半径(124)以内ならそのまま返す', () => {
+      setUiScale(2);
+      // uiScale=1 では 120 はクランプ対象だが、uiScale=2 では 124 以内なので素通り。
+      expect(clampStick(100, 100, 220, 100)).toEqual({ x: 220, y: 100 });
+    });
+  });
+});
+
+// uiScale を 2 に設定したまま終了しても、afterEach により 1 に戻ることで
+// 後続テスト(別ファイル含む)へ状態が漏れないことを保証する回帰テスト。
+describe('uiScale の状態リーク防止(afterEach の検証)', () => {
+  it('直前テストで setUiScale(2) しても、このテストは初期スケール(1)で始まる', () => {
+    const layout = createTouchLayout(1200, 540);
+    // uiScale=1 の値であること(=リークしていない)
+    expect(layout.jumpButton.radius).toBe(44);
+    expect(layout.jumpButton.x).toBe(1200 - 84);
   });
 });

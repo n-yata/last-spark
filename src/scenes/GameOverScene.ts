@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
+import { scaled, scaledFontPx } from '../config/uiScale';
 
 // ゲームオーバー表示とリトライ/タイトル導線。
 
@@ -23,12 +24,12 @@ export class GameOverScene extends Phaser.Scene {
     this.add
       .text(width / 2, height * 0.32, 'GAME OVER', {
         fontFamily: 'monospace',
-        fontSize: '56px',
+        fontSize: scaledFontPx(56),
         color: '#ff2d55',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
-      .setShadow(0, 0, '#ff2d55', 16, true, true);
+      .setShadow(0, 0, '#ff2d55', scaled(16), true, true);
 
     this.makeButton(width / 2, height * 0.58, 'RETRY', '#fff27a', () =>
       transitionTo(this, SCENE_KEYS.game),
@@ -42,11 +43,11 @@ export class GameOverScene extends Phaser.Scene {
     const text = this.add
       .text(x, y, label, {
         fontFamily: 'monospace',
-        fontSize: '28px',
+        fontSize: scaledFontPx(28),
         color,
       })
       .setOrigin(0.5)
-      .setPadding(16, 8)
+      .setPadding(scaled(16), scaled(8))
       .setInteractive({ useHandCursor: true });
     text.on(Phaser.Input.Events.POINTER_DOWN, () => {
       getSound().playSe('uiTap');

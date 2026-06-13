@@ -3,6 +3,7 @@ import { SCENE_KEYS } from '../config/sceneKeys';
 import { getCutscene, type CutsceneLine } from '../config/story/cutscenes';
 import { CUTSCENE_BACKGROUND } from '../config/assetKeys';
 import { getSound } from '../systems/SoundManager';
+import { scaled, scaledFontPx } from '../config/uiScale';
 import type { CutsceneSceneData } from '../types/story';
 
 // 演出シーン: 静止画的な簡易演出の上に、TERRAのセリフ↔RAYの内心↔ト書き↔ナレーションを 1 行ずつ表示する。
@@ -10,13 +11,14 @@ import type { CutsceneSceneData } from '../types/story';
 // 話者ラベルは出さず、色調・字体で誰の言葉かを区別する(docs/story.md テキスト表示仕様)。
 // scriptKey 差し替えで Stage 4-6 の演出・エンディングにも再利用する(BGM は起動データで差し替え可能)。
 
+// fontSize は CSS px 基準のベース値(数値)。表示時に scaledFontPx() で物理px換算する。
 /** 話者種別ごとの見た目。StoryOverlay の色調に揃える(暖色=人間/TERRA、白=RAY内心)。 */
-const LINE_STYLE: Record<CutsceneLine['kind'], { color: string; fontStyle: string; fontSize: string }> = {
-  terraLine: { color: '#ffd9a0', fontStyle: 'normal', fontSize: '26px' },
-  rayInner: { color: '#f2f4f8', fontStyle: 'italic', fontSize: '24px' },
-  direction: { color: '#9aa3b2', fontStyle: 'italic', fontSize: '18px' },
+const LINE_STYLE: Record<CutsceneLine['kind'], { color: string; fontStyle: string; fontSize: number }> = {
+  terraLine: { color: '#ffd9a0', fontStyle: 'normal', fontSize: 26 },
+  rayInner: { color: '#f2f4f8', fontStyle: 'italic', fontSize: 24 },
+  direction: { color: '#9aa3b2', fontStyle: 'italic', fontSize: 18 },
   // ナレーション/システム文(管理解除・エンディング本文)。括弧で囲まず、世界の声として中央に大きく。
-  narration: { color: '#9fffe8', fontStyle: 'normal', fontSize: '22px' },
+  narration: { color: '#9fffe8', fontStyle: 'normal', fontSize: 22 },
 };
 
 const INPUT_GUARD_MS = 350;
@@ -64,10 +66,10 @@ export class CutsceneScene extends Phaser.Scene {
     this.bodyText = this.add
       .text(width / 2, height * 0.66, '', {
         fontFamily: 'sans-serif',
-        fontSize: '24px',
+        fontSize: scaledFontPx(24),
         color: '#ffffff',
         align: 'center',
-        wordWrap: { width: Math.min(760, width - 80) },
+        wordWrap: { width: Math.min(scaled(760), width - scaled(80)) },
       })
       .setOrigin(0.5);
 
@@ -75,7 +77,7 @@ export class CutsceneScene extends Phaser.Scene {
     this.hint = this.add
       .text(width / 2, height * 0.9, 'TAP', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: scaledFontPx(16),
         color: '#fff27a',
       })
       .setOrigin(0.5);
@@ -122,19 +124,19 @@ export class CutsceneScene extends Phaser.Scene {
   /** 簡易シルエット演出(フォールバック): 大きい冷色の影=RAY、小さい暖色の影=TERRA、奥に収容ケージの格子。 */
   private drawScene(width: number, height: number): void {
     const groundY = height * 0.82;
-    // 収容ケージの格子(解錠済み=開いた状態の名残)。
+    // 収容ケージの格子(解錠済み=開いた状態の名残)。寸法の絶対px は scaled() で物理px換算。
     const bars = this.add.graphics().setAlpha(0.25);
-    bars.lineStyle(4, 0x6f7b8a, 1);
+    bars.lineStyle(scaled(4), 0x6f7b8a, 1);
     for (let i = 0; i < 6; i += 1) {
-      const x = width * 0.62 + i * 22;
-      bars.lineBetween(x, groundY - 150, x, groundY);
+      const x = width * 0.62 + i * scaled(22);
+      bars.lineBetween(x, groundY - scaled(150), x, groundY);
     }
     // RAY(背の高い冷色シルエット)
-    this.add.ellipse(width * 0.42, groundY - 60, 60, 150, 0x2b3b4a).setOrigin(0.5, 1);
-    this.add.circle(width * 0.42, groundY - 150, 26, 0x37424f);
+    this.add.ellipse(width * 0.42, groundY - scaled(60), scaled(60), scaled(150), 0x2b3b4a).setOrigin(0.5, 1);
+    this.add.circle(width * 0.42, groundY - scaled(150), scaled(26), 0x37424f);
     // TERRA(小さい暖色シルエット)
-    this.add.ellipse(width * 0.55, groundY - 30, 34, 78, 0x5a4533).setOrigin(0.5, 1);
-    this.add.circle(width * 0.55, groundY - 78, 17, 0x6b5238);
+    this.add.ellipse(width * 0.55, groundY - scaled(30), scaled(34), scaled(78), 0x5a4533).setOrigin(0.5, 1);
+    this.add.circle(width * 0.55, groundY - scaled(78), scaled(17), 0x6b5238);
   }
 
   private showLine(i: number): void {
@@ -144,7 +146,7 @@ export class CutsceneScene extends Phaser.Scene {
     const text = line.kind === 'direction' ? `（${line.text}）` : line.text;
     this.bodyText.setColor(style.color);
     this.bodyText.setFontStyle(style.fontStyle);
-    this.bodyText.setFontSize(style.fontSize);
+    this.bodyText.setFontSize(scaledFontPx(style.fontSize));
     this.bodyText.setText(text);
   }
 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { TouchLayout } from '../config/touchLayout';
 import { EFFECTS } from '../config/effects';
+import { scaled, scaledFontPx } from '../config/uiScale';
 
 // 仮想ボタン/移動ゾーンの半透明ガイドを描画する(操作はしない=表示のみ)。
 // 実画面サイズに追従するため、毎フレーム render(layout) で再描画する。
@@ -18,7 +19,7 @@ export class TouchControls {
 
   constructor(scene: Phaser.Scene) {
     this.gfx = scene.add.graphics().setScrollFactor(0).setDepth(95).setAlpha(0.85);
-    const labelStyle = { fontFamily: 'monospace', fontSize: '14px' };
+    const labelStyle = { fontFamily: 'monospace', fontSize: scaledFontPx(14) };
     this.shootLabel = scene.add
       .text(0, 0, 'SHOT', { ...labelStyle, color: '#fff6c2' })
       .setOrigin(0.5)
@@ -32,7 +33,7 @@ export class TouchControls {
     this.moveHint = scene.add
       .text(0, 0, '◀  MOVE  ▶', {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: scaledFontPx(16),
         color: '#7fe9dd',
       })
       .setOrigin(0.5)
@@ -62,12 +63,18 @@ export class TouchControls {
       const bandTop = height - bandHeight;
       this.gfx.fillStyle(BAND_COLOR, 0.92);
       this.gfx.fillRect(0, bandTop, width, bandHeight);
-      this.gfx.lineStyle(2, ZONE_COLOR, 0.25);
+      this.gfx.lineStyle(scaled(2), ZONE_COLOR, 0.25);
       this.gfx.lineBetween(0, bandTop, width, bandTop);
     }
-    // 左: 移動ゾーンの境界
-    this.gfx.lineStyle(2, ZONE_COLOR, 0.12);
-    this.gfx.strokeRect(moveZone.x + 4, moveZone.y + 4, moveZone.width - 8, moveZone.height - 8);
+    // 左: 移動ゾーンの境界。線幅・内側余白は scaled() で物理px換算する。
+    const inset = scaled(4);
+    this.gfx.lineStyle(scaled(2), ZONE_COLOR, 0.12);
+    this.gfx.strokeRect(
+      moveZone.x + inset,
+      moveZone.y + inset,
+      moveZone.width - inset * 2,
+      moveZone.height - inset * 2,
+    );
     this.gfx.fillStyle(ZONE_COLOR, 0.06);
     this.gfx.fillRect(moveZone.x, moveZone.y, moveZone.width, moveZone.height);
     // 右: ジャンプ(左上) + ショット(右下)の仮想ボタン
@@ -77,7 +84,7 @@ export class TouchControls {
     this.shootLabel.setPosition(shootButton.x, shootButton.y);
     this.jumpLabel.setPosition(jumpButton.x, jumpButton.y);
     // 帯ありはプレイ領域の下端付近(帯の上)に、帯なしは従来どおり画面下端付近に置く。
-    const hintY = bandHeight > 0 ? height - bandHeight - 16 : height - 26;
+    const hintY = bandHeight > 0 ? height - bandHeight - scaled(16) : height - scaled(26);
     this.moveHint.setPosition(moveZone.x + moveZone.width / 2, hintY);
   }
 
@@ -86,7 +93,7 @@ export class TouchControls {
     const r = held ? radius * EFFECTS.touch.pressedRadiusScale : radius;
     this.gfx.fillStyle(color, held ? EFFECTS.touch.pressedFillAlpha : 0.12);
     this.gfx.fillCircle(x, y, r);
-    this.gfx.lineStyle(held ? 3 : 2, color, held ? 0.9 : 0.5);
+    this.gfx.lineStyle(scaled(held ? 3 : 2), color, held ? 0.9 : 0.5);
     this.gfx.strokeCircle(x, y, r);
   }
 

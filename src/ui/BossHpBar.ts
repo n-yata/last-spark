@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { EFFECTS } from '../config/effects';
+import { scaled, scaledFontPx } from '../config/uiScale';
 import { entranceFillRatio } from '../systems/hudFx';
 
 // ボス HP ゲージ(ボス戦中のみ画面下部に表示)。実画面サイズに追従する。
@@ -26,7 +27,7 @@ export class BossHpBar {
     this.label = scene.add
       .text(0, 0, 'まもりのきかい', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: scaledFontPx(14),
         color: '#ff90a8',
       })
       .setOrigin(0.5, 1)
@@ -52,8 +53,10 @@ export class BossHpBar {
     if (!this.visible) return;
     const screenW = this.scene.scale.width;
     const screenH = this.scene.scale.height;
-    const barWidth = Math.min(520, screenW - 80);
-    const barY = screenH - BOTTOM_MARGIN;
+    // 寸法・余白の絶対px は scaled() で物理px換算する。
+    const barHeight = scaled(BAR_HEIGHT);
+    const barWidth = Math.min(scaled(520), screenW - scaled(80));
+    const barY = screenH - scaled(BOTTOM_MARGIN);
     const x = (screenW - barWidth) / 2;
     const actualRatio = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
     // 出現直後は 0→満タンへ満ちるフィル演出。満ちた後は実際の HP 比率に従う。
@@ -63,11 +66,11 @@ export class BossHpBar {
         : 1;
     const ratio = Math.min(actualRatio, fillProgress);
 
-    this.label.setPosition(screenW / 2, barY - 6);
+    this.label.setPosition(screenW / 2, barY - scaled(6));
     this.gfx.clear();
-    this.gfx.fillStyle(BG, 0.85).fillRect(x, barY, barWidth, BAR_HEIGHT);
-    this.gfx.fillStyle(FILL, 1).fillRect(x, barY, barWidth * ratio, BAR_HEIGHT);
-    this.gfx.lineStyle(2, BORDER, 1).strokeRect(x, barY, barWidth, BAR_HEIGHT);
+    this.gfx.fillStyle(BG, 0.85).fillRect(x, barY, barWidth, barHeight);
+    this.gfx.fillStyle(FILL, 1).fillRect(x, barY, barWidth * ratio, barHeight);
+    this.gfx.lineStyle(scaled(2), BORDER, 1).strokeRect(x, barY, barWidth, barHeight);
   }
 
   destroy(): void {

@@ -4,6 +4,7 @@ import {
   MOVE_PAD_STICK_RADIUS,
   clampStick,
 } from '../config/touchLayout';
+import { scaled } from '../config/uiScale';
 
 // 追従式タッチパッドの描画。触れた箇所(原点)にリングを、指の位置にスティックを表示する。
 // 移動専用(ジャンプは右側の専用ボタンに分離)。
@@ -28,18 +29,18 @@ export class MovePad {
     }
     this.gfx.setVisible(true);
 
-    // 原点リング(ベース)
+    // 原点リング(ベース)。半径・線幅は scaled() で物理px換算し見た目を一定に保つ。
     this.gfx.fillStyle(BASE_COLOR, 0.12);
-    this.gfx.fillCircle(baseX, baseY, MOVE_PAD_BASE_RADIUS);
-    this.gfx.lineStyle(2, BASE_COLOR, 0.5);
-    this.gfx.strokeCircle(baseX, baseY, MOVE_PAD_BASE_RADIUS);
+    this.gfx.fillCircle(baseX, baseY, scaled(MOVE_PAD_BASE_RADIUS));
+    this.gfx.lineStyle(scaled(2), BASE_COLOR, 0.5);
+    this.gfx.strokeCircle(baseX, baseY, scaled(MOVE_PAD_BASE_RADIUS));
 
     // スティック(指の位置、原点から最大半径でクランプ)
     const stick = clampStick(baseX, baseY, curX, curY);
     this.gfx.fillStyle(STICK_COLOR, 0.45);
-    this.gfx.fillCircle(stick.x, stick.y, MOVE_PAD_STICK_RADIUS);
-    this.gfx.lineStyle(2, STICK_COLOR, 0.8);
-    this.gfx.strokeCircle(stick.x, stick.y, MOVE_PAD_STICK_RADIUS);
+    this.gfx.fillCircle(stick.x, stick.y, scaled(MOVE_PAD_STICK_RADIUS));
+    this.gfx.lineStyle(scaled(2), STICK_COLOR, 0.8);
+    this.gfx.strokeCircle(stick.x, stick.y, scaled(MOVE_PAD_STICK_RADIUS));
   }
 
   destroy(): void {

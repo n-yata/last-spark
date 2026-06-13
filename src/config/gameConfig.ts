@@ -17,10 +17,12 @@ export function createGameConfig(
     parent: 'game-root',
     backgroundColor: '#0a0e14',
     scale: {
-      // RESIZE でキャンバスを常に画面いっぱいに広げ、レターボックス(左右の黒帯)を
-      // 作らない。これによりタッチ操作ゾーンが物理画面の端まで届く。
+      // NONE: リサイズは systems/dprScaling が自前で制御する。高DPI(Retina)で滲まないよう
+      // バッキング解像度を物理px化(論理サイズ=CSS px×cappedDpr)し、canvas の CSS 表示サイズは
+      // 画面いっぱい(CSS px)に保つ。レターボックスを作らずタッチ操作ゾーンが画面端まで届く。
       // ワールドの見え方は GameScene でカメラズーム(高さ基準)を合わせて一定に保つ。
-      mode: Phaser.Scale.RESIZE,
+      // 初期 width/height は起動直後に dprScaling が物理pxへ上書きする暫定値。
+      mode: Phaser.Scale.NONE,
       autoCenter: Phaser.Scale.NO_CENTER,
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
