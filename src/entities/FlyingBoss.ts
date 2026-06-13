@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
-import { FLYING_BOSS, STAGE } from '../config/balance';
+import { FLYING_BOSS, STAGE, type FlyingBossConfig } from '../config/balance';
 import type { MotionState } from '../systems/rigAnimation';
 import { pickNextFlyingBossAction, bossActionDuration } from '../systems/bossAi';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
 
-// stage2 専用・飛行/浮遊型ボス。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束を
+// 飛行/浮遊型ボス。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束を
 // そのまま再利用しつつ、重力なしで空中に滞空し「hover/move/shoot/dive(急降下)」で戦う。
 // 接地ボス(stage1)とはアクション集合・上下移動・降下突進で明確に対比する。
+// 飛行固有のチューニング(滞空高度・バブ・急降下)はコンストラクタで差し替え可能にし、
+// stage2 の飛行ボス(FLYING_BOSS 既定)と stage5 の使者(高速型 ENVOY)で同一ロジックを共有する。
 
 export class FlyingBoss extends Boss {
+  /** 飛行固有チューニング(滞空高度・バブ・急降下)。系統で差し替える。 */
+  private readonly fcfg: FlyingBossConfig;
   /** 滞空の基準高度(本体中心 Y)。center = groundY - hoverAltitude。 */
   private readonly hoverCenterY: number;
   /** 上下バブ/復帰の上限(最も高い位置の中心 Y)。 */
@@ -16,24 +20,25 @@ export class FlyingBoss extends Boss {
   /** 急降下の最下点(本体下端が地面近くに来る中心 Y)。 */
   private readonly diveBottomY: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, { config: FLYING_BOSS, rigFamily: 'bossFlying', gravity: false });
-    this.hoverCenterY = STAGE.groundY - FLYING_BOSS.hoverAltitude;
-    this.topY = this.hoverCenterY - FLYING_BOSS.hoverAmplitude;
-    this.diveBottomY = STAGE.groundY - FLYING_BOSS.diveBottomMargin - FLYING_BOSS.height / 2;
+  constructor(scene: Phaser.Scene, x: number, y: number, config: FlyingBossConfig = FLYING_BOSS) {
+    super(scene, x, y, { config, rigFamily: 'bossFlying', gravity: false });
+    this.fcfg = config;
+    this.hoverCenterY = STAGE.groundY - config.hoverAltitude;
+    this.topY = this.hoverCenterY - config.hoverAmplitude;
+    this.diveBottomY = STAGE.groundY - config.diveBottomMargin - config.height / 2;
   }
 
   /** 現在時刻での目標滞空高度(基準高度 + 正弦バブ)。 */
   private hoverTargetY(now: number): number {
-    const t = (now % FLYING_BOSS.hoverPeriodMs) / FLYING_BOSS.hoverPeriodMs;
-    return this.hoverCenterY + FLYING_BOSS.hoverAmplitude * Math.sin(t * Math.PI * 2);
+    const t = (now % this.fcfg.hoverPeriodMs) / this.fcfg.hoverPeriodMs;
+    return this.hoverCenterY + this.fcfg.hoverAmplitude * Math.sin(t * Math.PI * 2);
   }
 
   /** 目標高度へ向けて鉛直速度を与える(climbSpeed で頭打ち)。 */
   private followAltitude(now: number): void {
     const dy = this.hoverTargetY(now) - this.y;
     // 距離比例で寄せ、行き過ぎないよう climbSpeed でクランプする。
-    const vy = Phaser.Math.Clamp(dy * 6, -FLYING_BOSS.climbSpeed, FLYING_BOSS.climbSpeed);
+    const vy = Phaser.Math.Clamp(dy * 6, -this.fcfg.climbSpeed, this.fcfg.climbSpeed);
     this.setVelocityY(vy);
   }
 
@@ -64,8 +69,8 @@ export class FlyingBoss extends Boss {
       case 'dive': {
         // 急降下: プレイヤーへ水平接近しつつ最下点まで降下する。
         const dir: 1 | -1 = playerX < this.x ? -1 : 1;
-        this.setVelocityX(dir * FLYING_BOSS.moveSpeed);
-        this.setVelocityY(this.y < this.diveBottomY ? FLYING_BOSS.diveSpeed : 0);
+        this.setVelocityX(dir * this.fcfg.moveSpeed);
+        this.setVelocityY(this.y < this.diveBottomY ? this.fcfg.diveSpeed : 0);
         break;
       }
       case 'move':

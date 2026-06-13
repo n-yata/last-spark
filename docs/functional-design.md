@@ -129,11 +129,14 @@ interface BossState {
 type EnemyPattern = 'walker' | 'turret';      // MVP の雑魚2種(案)
 type BossPhase = 'phase1' | 'phase2';          // HP 50% で移行
 // 系統共通の行動。接地は idle/move/shoot/jump/stagger、飛行は hover/move/shoot/dive/stagger、
-// 浄化型(stage4)は idle/move/shoot/spray/stagger を使う(spray=扇状の範囲攻撃。浄化型専用)
-type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'spray';
-type BossKind = 'ground' | 'flying';           // 接地型(stage1,3,4) / 飛行・浮遊型(stage2)
-// 接地型の種別(任意)。'purifier'=stage4 の環境管理機(浄化型・扇状の範囲攻撃)
-type BossVariant = 'purifier';
+// 収容番人(stage3)は接地 + missile(放物線ミサイル)、浄化型(stage4)は idle/move/shoot/spray/stagger
+// を使う(missile/spray は系統専用の重みテーブルに閉じる)
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'missile' | 'spray';
+// 接地型(stage1) / 飛行・浮遊型(stage2,5) / 重装ミサイル型(stage3 収容番人)
+type BossKind = 'ground' | 'flying' | 'warden';
+// 系統内の種別(任意)。'purifier'=stage4 の環境管理機(接地・浄化型・扇状の範囲攻撃)、
+// 'envoy'=stage5 の ECLIPSE の使者(飛行・高速ヒット&アウェイ。FlyingBoss を ENVOY 値で流用)
+type BossVariant = 'purifier' | 'envoy';
 ```
 
 ### パラメータ定義(チューニング値の集中管理)
@@ -300,7 +303,9 @@ class Boss extends Phaser.Physics.Arcade.Sprite {
   takeDamage(amount: number): void;
 }
 
-// 飛行/浮遊型ボス(stage2)。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束を再利用する
+// 飛行/浮遊型ボス。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束を再利用する。
+// 飛行固有値(滞空高度・バブ・急降下)をコンストラクタで差し替え、stage2(既定 FLYING_BOSS)と
+// stage5 の使者(高速型 ENVOY・bossVariant='envoy')で同一ロジックを共有する
 class FlyingBoss extends Boss {}
 // 浄化型ボス(stage4・環境管理機)。接地型のまま spray(扇状の範囲攻撃)を持つ
 class PurifierBoss extends Boss {}

@@ -74,4 +74,19 @@ describe('getCutscene', () => {
       true,
     );
   });
+
+  it('stage5-intro が登録され、TERRA と RAY の交互セリフを含む', () => {
+    const cs = getCutscene('stage5-intro');
+    expect(cs).toBeDefined();
+    const kinds = new Set(cs!.lines.map((l) => l.kind));
+    expect(kinds.has('terraLine')).toBe(true);
+    expect(kinds.has('rayInner')).toBe(true);
+  });
+
+  it('stage5-intro は ECLIPSE が近づく緊張への TERRA の怯えで始まる(確定版)', () => {
+    const cs = getCutscene('stage5-intro')!;
+    expect(cs.lines[0]).toEqual({ kind: 'terraLine', text: 'ここ、怖い。ECLIPSEが近い' });
+    // 勝てる保証はないが止まれない——決意の入口を RAY の内心で締める。
+    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('止まれない'))).toBe(true);
+  });
 });

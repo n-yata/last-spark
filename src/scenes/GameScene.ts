@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, ENVOY } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
@@ -441,7 +441,9 @@ export class GameScene extends Phaser.Scene {
     // 地面コライダーを付けない(接地型・warden は地面に乗りジャンプ着地する)。
     const flying = this.stage.bossKind === 'flying';
     if (flying) {
-      this.boss = new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      // 飛行型。stage5 の使者(envoy)は高速型 ENVOY、それ以外(stage2)は既定 FLYING_BOSS。
+      const flyingConfig = this.stage.bossVariant === 'envoy' ? ENVOY : FLYING_BOSS;
+      this.boss = new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, flyingConfig);
     } else if (this.stage.bossKind === 'warden') {
       // stage3: 収容番人(重装ミサイル型)。接地型なので地面コライダーを付ける。
       this.boss = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);

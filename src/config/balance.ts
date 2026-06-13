@@ -257,6 +257,40 @@ export const FLYING_BOSS = {
 } as const satisfies FlyingBossConfig;
 
 /**
+ * stage5 専用・ECLIPSEの使者(高速型)の設定。飛行型(FlyingBoss)を流用しつつ、
+ * 「スリムで流線型・高速移動・連続攻撃のヒット&アウェイ」を、より小さい機体・速い移動と急降下・
+ * 短い行動間隔・速い弾で表現する。アクション集合と重み(FLYING_WEIGHTS)は stage2 飛行ボスと共有し、
+ * パラメータ(速度・継続時間)の調整のみで「予測しにくい速さ」を出す(BossAction の追加はしない)。
+ */
+export const ENVOY = {
+  maxHp: 26, // 飛行ボス(24)よりやや硬く、浄化型(28)より柔らかい終盤手前の硬さ
+  phase2HpRatio: 0.5,
+  contactDamage: 2,
+  bulletDamage: 1,
+  bulletSpeed: 320, // 速い弾(飛行ボス280より速く、ヒット&アウェイの圧を上げる)
+  moveSpeed: 130, // 高速移動(飛行ボス90より速い。dive/move ともこの速度で水平接近する)
+  staggerDamageThreshold: 7, // 軽量機体ゆえのけぞりやすい(高速な分、反撃の隙を作る)
+  width: 60, // スリムな流線型(飛行ボス76より細い)
+  height: 52, // 平たく小さい空中機体
+  // アクション継続時間(ms)。全体に短くして手数の多いヒット&アウェイのリズムにする。
+  actionDurationMs: {
+    hover: 700,
+    move: 600,
+    shoot: 500,
+    dive: 600,
+    stagger: 650,
+  },
+  phase2SpeedFactor: 0.65, // phase2 で行動間隔をさらに詰めて攻勢を強める
+  // --- 飛行固有 ---
+  hoverAltitude: 160, // 外縁部の高い位置を舞う(飛行ボス150よりやや高い)
+  hoverAmplitude: 28, // 大きめの上下バブで居場所を読みにくくする
+  hoverPeriodMs: 1400, // 速いバブ周期(飛行ボス1800より速い)
+  diveSpeed: 460, // 鋭い急降下(飛行ボス360より速い)
+  climbSpeed: 320, // 急降下後すぐ高度復帰する(ヒット&アウェイの「アウェイ」)
+  diveBottomMargin: 12, // より地面近くまで降りて圧をかける
+} as const satisfies FlyingBossConfig;
+
+/**
  * ステージ別の雑魚敵難易度係数。後半ステージほど敵を強め、難易度カーブを作る。
  * 値は ENEMY の基準値に乗算され、ロジック側へのマジックナンバー埋め込みを避ける。
  */
@@ -289,6 +323,11 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   stage4: {
     walkerSpeedFactor: 1.5,
     turretIntervalFactor: 0.6,
+  },
+  // stage5 は ECLIPSE 外縁部。終盤の決意ステージとして難易度カーブをさらに引き上げる。
+  stage5: {
+    walkerSpeedFactor: 1.55,
+    turretIntervalFactor: 0.55,
   },
 } as const;
 

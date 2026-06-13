@@ -1,4 +1,4 @@
-import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, type BossConfig } from './balance';
+import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, ENVOY, type BossConfig } from './balance';
 import type { EnemyPattern } from '../types/enemy';
 import type { BossKind } from '../types/boss';
 import type { RigFamily } from './characterRig';
@@ -73,10 +73,12 @@ export interface StageData {
   /** ボス系統。未定義なら接地型('ground')。stage2 は飛行型('flying')。 */
   bossKind?: BossKind;
   /**
-   * 接地型ボスの種別(任意)。'purifier' は stage4 の環境管理機(浄化型・扇状の範囲攻撃)。
-   * 未定義なら通常の接地ボス(bossConfig/bossRig で差し替え)。bossKind='flying' とは併用しない。
+   * ボスの種別(任意)。系統(bossKind)内でさらに見た目・チューニングを出し分ける。
+   * - 'purifier': stage4 の環境管理機(接地型・浄化型・扇状の範囲攻撃)。bossKind は 'ground'。
+   * - 'envoy': stage5 の ECLIPSE の使者(飛行型・高速ヒット&アウェイ)。bossKind は 'flying'。
+   * 未定義なら系統の既定ボス(接地は bossConfig/bossRig、飛行は FLYING_BOSS)。
    */
-  bossVariant?: 'purifier';
+  bossVariant?: 'purifier' | 'envoy';
   /**
    * ボス固有チューニング(任意)。未定義なら接地型の既定 BOSS。
    * stage3 は重装型 CONTAINMENT_WARDEN を差す。
@@ -107,11 +109,6 @@ export interface StageData {
    * 環境ストーリーテリングの簡易表現として、ステージごとに空気感を変える(stage4=汚染の淀み)。
    */
   backgroundColor?: string;
-  /**
-   * ステージ開始時に再生する演出スクリプトキー(任意。config/story/cutscenes.ts)。
-   * 定義があるステージは開始演出(TERRA同行など)を再生してから開始テキストへ進む。
-   */
-  introCutsceneKey?: string;
   /** クリア後に続けて開始する次ステージ ID(任意)。未定義なら最終ステージ。 */
   nextStageId?: string;
 }
@@ -357,8 +354,72 @@ const STAGE4: StageData = {
   backgroundColor: '#151a0c',
   // ステージ開始演出(TERRA同行)。汚染地帯の空気に TERRA が反応する。
   introCutsceneKey: 'stage4-intro',
-  // stage5(ECLIPSE外縁部)は後続ブロックで実体追加する。実体ができ次第 nextStageId='stage5' を付ける。
-  // 現状は未定義=最終ステージ扱い(未実装の stage5 へ遷移して stage1 にフォールバックするのを防ぐ)。
+  // stage4 クリア後は stage5(ECLIPSE外縁部)へ続く。
+  nextStageId: 'stage5',
+};
+
+// ステージ5「ECLIPSE外縁部」: 科学者の遺志を完全に受け取り、RAY の迷いが消える決意のステージ。
+// ボスは「ECLIPSEの使者(高速型)」。スリムで流線型、高速移動・連続攻撃のヒット&アウェイで戦う
+// (飛行型 FlyingBoss を流用し、ENVOY パラメータで速さを表現)。ログ3本はすべて「RAYへ」宛ての
+// 直接的なメッセージで、postBoss が遺言(クライマックス)にあたる。ボス後演出シーンは持たず、
+// 撃破→(ボス後ログ任意接触)→ボス撃破内心→クリアへ直行する(stage1-2・stage4 と同じ「演出キーなし」分岐)。
+const STAGE5_WIDTH = 4800;
+const STAGE5: StageData = {
+  id: 'stage5',
+  playerStart: { x: 120, y: GROUND_TOP - 20 },
+  platforms: [
+    // 地面セグメント 1(スタート〜外縁部の溝手前)
+    { x: 0, y: GROUND_TOP, width: 1500, height: GROUND_THICK },
+    // 溝 1: 1500–1572(幅 72px。ジャンプで越える)
+    // 地面セグメント 2
+    { x: 1572, y: GROUND_TOP, width: 1300, height: GROUND_THICK },
+    // 溝 2: 2872–2944
+    // 地面セグメント 3(ボスアリーナ手前まで)
+    { x: 2944, y: GROUND_TOP, width: 856, height: GROUND_THICK },
+    // 地面セグメント 4(ボスアリーナ。連続した足場で空中ボスの急降下をさばく)
+    { x: 3800, y: GROUND_TOP, width: STAGE5_WIDTH - 3800, height: GROUND_THICK },
+
+    // 機械の密度が高い外縁部の構造物(任意の足場)
+    { x: 560, y: GROUND_TOP - 130, width: 180, height: 24 },
+    { x: 1180, y: GROUND_TOP - 180, width: 180, height: 24 },
+    { x: 2100, y: GROUND_TOP - 140, width: 200, height: 24 },
+    { x: 2520, y: GROUND_TOP - 220, width: 180, height: 24 },
+    { x: 3220, y: GROUND_TOP - 150, width: 200, height: 24 },
+  ],
+  enemies: [
+    { pattern: 'walker', x: 800, y: GROUND_TOP - 60 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 1120, y: GROUND_TOP - 16 },
+    { pattern: 'walker', x: 1980, y: GROUND_TOP - 60 },
+    // 高台(top=GROUND_TOP-140)の上に接地。
+    { pattern: 'turret', x: 2180, y: GROUND_TOP - 156 },
+    { pattern: 'walker', x: 2600, y: GROUND_TOP - 260 },
+    { pattern: 'walker', x: 3260, y: GROUND_TOP - 190 },
+    // 末尾の雑魚はボス出現位置(x=4150)と十分離す(ボスまで約600px)。
+    { pattern: 'walker', x: 3460, y: GROUND_TOP - 60 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 3620, y: GROUND_TOP - 16 },
+  ],
+  // ボス後演出シーンを持たない(=撃破後フリーロームなし)ため、ログ3本はすべてボス前の
+  // 走行区間で拾える位置に置く。postBoss(遺言・クライマックス)はボストリガー(4000)直前に配置する。
+  logTriggers: [
+    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
+    { slot: 'preBoss', x: 2780, y: GROUND_TOP - 40 },
+    { slot: 'postBoss', x: 3860, y: GROUND_TOP - 40 },
+  ],
+  bossTriggerX: 4000,
+  // 使者は飛行型。空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
+  bossSpawn: { x: 4150, y: GROUND_TOP - ENVOY.hoverAltitude },
+  bossKind: 'flying',
+  bossVariant: 'envoy',
+  bossArenaMinX: 4200,
+  width: STAGE5_WIDTH,
+  // 外縁部の冷たい金属の空気を背景色で表現する(青みがかった暗い鋼色。プレースホルダの環境表現)。
+  backgroundColor: '#0c1119',
+  // ステージ開始演出(TERRA同行)。ECLIPSE が近づく緊張に TERRA が怯える。
+  introCutsceneKey: 'stage5-intro',
+  // stage6(ECLIPSE支配中枢)は後続ブロックで実体追加する。実体ができ次第 nextStageId='stage6' を付ける。
+  // 現状は未定義=最終ステージ扱い(未実装の stage6 へ遷移して stage1 にフォールバックするのを防ぐ)。
 };
 
 const STAGES: Record<string, StageData> = {
@@ -366,6 +427,7 @@ const STAGES: Record<string, StageData> = {
   stage2: STAGE2,
   stage3: STAGE3,
   stage4: STAGE4,
+  stage5: STAGE5,
 };
 
 /** stageId に対応するステージデータを返す。未知の ID は stage1 にフォールバック。 */
