@@ -66,16 +66,25 @@ describe('resolveStoryEvent', () => {
     const intro = resolveStoryEvent(STORY, { type: 'stageStart' })[0];
     expect(intro.pauseGame).toBe(TEXT_STYLES.stageIntro.pauseGame);
     const log = resolveStoryEvent(STORY, { type: 'logFound', slot: 'early' })[0];
-    expect(log.pauseGame).toBe(true);
+    expect(log.pauseGame).toBe(false);
     const inner = resolveStoryEvent(STORY, { type: 'inner', sceneKey: 'stageStart' })[0];
     expect(inner.pauseGame).toBe(false);
   });
 
-  it('科学者ログとECLIPSEは一時停止、内心は非停止', () => {
-    expect(TEXT_STYLES.scientistLog.pauseGame).toBe(true);
-    expect(TEXT_STYLES.eclipseVoice.pauseGame).toBe(true);
+  it('一時停止するのは開始テキストのみで、ステージ中テキストは全て非停止', () => {
+    expect(TEXT_STYLES.stageIntro.pauseGame).toBe(true);
+    expect(TEXT_STYLES.scientistLog.pauseGame).toBe(false);
+    expect(TEXT_STYLES.eclipseVoice.pauseGame).toBe(false);
     expect(TEXT_STYLES.rayInner.pauseGame).toBe(false);
     expect(TEXT_STYLES.terraLine.pauseGame).toBe(false);
+  });
+
+  it('開始テキストは中央、ステージ中テキストは上部に出す', () => {
+    expect(TEXT_STYLES.stageIntro.position).toBe('center');
+    expect(TEXT_STYLES.scientistLog.position).toBe('top');
+    expect(TEXT_STYLES.eclipseVoice.position).toBe('top');
+    expect(TEXT_STYLES.rayInner.position).toBe('top');
+    expect(TEXT_STYLES.terraLine.position).toBe('top');
   });
 });
 
