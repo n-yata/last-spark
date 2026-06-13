@@ -38,8 +38,19 @@ describe('getStageStory', () => {
     expect(s.inner.firstLogRead).toBe('俺のために、誰かが——');
   });
 
+  it('stage3 の確定テキストが story.md と一致する', () => {
+    const s = getStageStory('stage3')!;
+    expect(s.intro).toContain('収容施設。生きている人間の気配がある。');
+    expect(s.eclipseVoice).toBe('その個体は管理対象だ。返却せよ');
+    expect(s.logs.early).toContain('観察記録');
+    expect(s.logs.preBoss).toContain('息子は笑顔が好きだった。');
+    expect(s.logs.postBoss).toContain('この世界に、笑顔を取り戻せ');
+    expect(s.inner.stageStart).toBe('生きている。人間の、においがする');
+    expect(s.inner.terraFound).toBe('……この子が、囚われている');
+  });
+
   it('全3スロットのログ本文が確定版として存在する', () => {
-    for (const id of ['stage1', 'stage2']) {
+    for (const id of ['stage1', 'stage2', 'stage3']) {
       const s = getStageStory(id)!;
       expect(s.logs.early).toBeTruthy();
       expect(s.logs.preBoss).toBeTruthy();
@@ -48,9 +59,30 @@ describe('getStageStory', () => {
   });
 });
 
-describe('ログトリガー配置', () => {
-  it('stage1 / stage2 に early・preBoss のトリガーが配置されている', () => {
+describe('ボス後演出フローのステージ条件', () => {
+  it('stage3 はボス後演出(救出)を持つ: postBossCutsceneKey と cage が定義されている', () => {
+    const s = getStageData('stage3');
+    expect(s.postBossCutsceneKey).toBe('stage3-rescue');
+    expect(s.cage).toBeDefined();
+    expect(s.bossConfig).toBeDefined();
+  });
+
+  it('stage1 / stage2 はボス後演出を持たない(従来どおり撃破→即クリア)', () => {
     for (const id of ['stage1', 'stage2']) {
+      const s = getStageData(id);
+      expect(s.postBossCutsceneKey).toBeUndefined();
+      expect(s.cage).toBeUndefined();
+    }
+  });
+
+  it('stage2 は stage3 へ連結している', () => {
+    expect(getStageData('stage2').nextStageId).toBe('stage3');
+  });
+});
+
+describe('ログトリガー配置', () => {
+  it('stage1 / stage2 / stage3 に early・preBoss のトリガーが配置されている', () => {
+    for (const id of ['stage1', 'stage2', 'stage3']) {
       const slots = (getStageData(id).logTriggers ?? []).map((t) => t.slot);
       expect(slots).toContain('early');
       expect(slots).toContain('preBoss');
@@ -58,11 +90,20 @@ describe('ログトリガー配置', () => {
   });
 
   it('preBoss トリガーはボストリガー手前に置かれている', () => {
-    for (const id of ['stage1', 'stage2']) {
+    for (const id of ['stage1', 'stage2', 'stage3']) {
       const stage = getStageData(id);
       const preBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'preBoss');
       expect(preBoss).toBeDefined();
       expect(preBoss!.x).toBeLessThan(stage.bossTriggerX);
     }
+  });
+
+  it('stage3 の postBoss ログはアリーナ内(ボストリガーより後ろ)に置かれている', () => {
+    const stage = getStageData('stage3');
+    const postBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'postBoss');
+    expect(postBoss).toBeDefined();
+    expect(postBoss!.x).toBeGreaterThan(stage.bossTriggerX);
+    // ケージはさらに奥(ボス後ログを拾ってからケージへ向かう動線)。
+    expect(stage.cage!.x).toBeGreaterThan(postBoss!.x);
   });
 });

@@ -1,4 +1,4 @@
-import { STAGE, BOSS, FLYING_BOSS } from './balance';
+import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, type BossConfig } from './balance';
 import type { EnemyPattern } from '../types/enemy';
 import type { BossKind } from '../types/boss';
 
@@ -64,8 +64,24 @@ export interface StageData {
   bossSpawn: { x: number; y: number };
   /** ボス系統。未定義なら接地型('ground')。stage2 は飛行型('flying')。 */
   bossKind?: BossKind;
+  /**
+   * ボス固有チューニング(任意)。未定義なら接地型の既定 BOSS。
+   * stage3 は重装型 CONTAINMENT_WARDEN を差す。
+   */
+  bossConfig?: BossConfig;
   /** ボスアリーナ左端(カメラがここで止まる) */
   bossArenaMinX: number;
+  /**
+   * 収容ケージ(任意・中心座標)。撃破後に解錠し、接触で救出演出を開始する。
+   * stage3 のみ持つ。未定義ならケージなし。
+   */
+  cage?: { x: number; y: number };
+  /**
+   * ボス撃破後に再生する演出スクリプトキー(任意。config/story/cutscenes.ts)。
+   * 定義があるステージはボス撃破→(ボス後ログ任意接触)→ケージ接触で演出→クリアの順に流れる。
+   * 未定義(stage1-2)は従来どおりボス撃破→即クリアへ。
+   */
+  postBossCutsceneKey?: string;
   /** ステージ全幅 */
   width: number;
   /** クリア後に続けて開始する次ステージ ID(任意)。未定義なら最終ステージ。 */
@@ -184,12 +200,67 @@ const STAGE2: StageData = {
   bossKind: 'flying',
   bossArenaMinX: 4000,
   width: STAGE2_WIDTH,
-  // stage2 は最終ステージ(nextStageId なし)。
+  // stage2 クリア後は stage3(収容施設)へ続く。
+  nextStageId: 'stage3',
+};
+
+// ステージ3「収容施設」: ECLIPSE に管理された人間が収容される施設。終端のアリーナに
+// 収容ケージ(TERRA)があり、重装型ボス「収容番人」を倒すと解錠される。撃破後はその場で
+// 自由に動け、任意でボス後ログを拾い、ケージへ接触すると救出後演出シーンが再生される。
+const STAGE3_WIDTH = 4600;
+const STAGE3: StageData = {
+  id: 'stage3',
+  playerStart: { x: 120, y: GROUND_TOP - 20 },
+  platforms: [
+    // 地面セグメント 1(スタート〜小奈落手前)
+    { x: 0, y: GROUND_TOP, width: 1700, height: GROUND_THICK },
+    // 小奈落: 1700–1768(幅 68px。ジャンプで越える)
+    // 地面セグメント 2(奈落の先〜ボスアリーナ手前)
+    { x: 1768, y: GROUND_TOP, width: 1932, height: GROUND_THICK },
+    // 地面セグメント 3(ボスアリーナ。ケージまで連続した足場)
+    { x: 3700, y: GROUND_TOP, width: STAGE3_WIDTH - 3700, height: GROUND_THICK },
+
+    // 収容区画の足場(任意・監視台のイメージ)
+    { x: 520, y: GROUND_TOP - 120, width: 170, height: 24 },
+    { x: 1180, y: GROUND_TOP - 150, width: 180, height: 24 },
+    { x: 2150, y: GROUND_TOP - 130, width: 200, height: 24 },
+    { x: 2560, y: GROUND_TOP - 210, width: 180, height: 24 },
+    { x: 3000, y: GROUND_TOP - 140, width: 200, height: 24 },
+  ],
+  enemies: [
+    { pattern: 'walker', x: 760, y: GROUND_TOP - 60 },
+    { pattern: 'turret', x: 1080, y: GROUND_TOP - 200 },
+    { pattern: 'walker', x: 1900, y: GROUND_TOP - 60 },
+    { pattern: 'turret', x: 2240, y: GROUND_TOP - 170 },
+    { pattern: 'walker', x: 2640, y: GROUND_TOP - 250 },
+    { pattern: 'walker', x: 3060, y: GROUND_TOP - 180 },
+    // 末尾の雑魚はボス出現位置(x=4050)と十分離す(ボスまで約600px)。
+    { pattern: 'walker', x: 3300, y: GROUND_TOP - 60 },
+    { pattern: 'turret', x: 3480, y: GROUND_TOP - 150 },
+  ],
+  // 序盤=収容区画入口、ボス前=ボストリガー(3900)手前、ボス後=アリーナ内(ケージ手前・任意接触)。
+  logTriggers: [
+    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
+    { slot: 'preBoss', x: 3760, y: GROUND_TOP - 40 },
+    { slot: 'postBoss', x: 4300, y: GROUND_TOP - 40 },
+  ],
+  bossTriggerX: 3900,
+  // 収容番人は重装の接地型。本体下端=地面で接地させる。
+  bossSpawn: { x: 4050, y: GROUND_TOP - CONTAINMENT_WARDEN.height / 2 },
+  bossKind: 'ground',
+  bossConfig: CONTAINMENT_WARDEN,
+  bossArenaMinX: 4100,
+  // 収容ケージはアリーナ右端付近。撃破後にここへ接触して救出演出へ。
+  cage: { x: 4480, y: GROUND_TOP - 70 },
+  postBossCutsceneKey: 'stage3-rescue',
+  width: STAGE3_WIDTH,
+  // stage3 は現状の最終ステージ(stage4 はブロック3で実体追加。実体ができ次第 nextStageId を付ける)。
 };
 
 const STAGES: Record<string, StageData> = {
   stage1: STAGE1,
   stage2: STAGE2,
+  stage3: STAGE3,
 };
 
 /** stageId に対応するステージデータを返す。未知の ID は stage1 にフォールバック。 */

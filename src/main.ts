@@ -7,6 +7,7 @@ import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { ClearScene } from './scenes/ClearScene';
+import { CutsceneScene } from './scenes/CutsceneScene';
 import { OrientationScene } from './scenes/OrientationScene';
 
 // エントリポイント。Phaser.Game を生成し全シーンを登録する。
@@ -21,6 +22,7 @@ const game = new Phaser.Game(
     UIScene,
     GameOverScene,
     ClearScene,
+    CutsceneScene,
     OrientationScene,
   ]),
 );

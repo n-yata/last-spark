@@ -42,6 +42,16 @@ export type StoryEvent =
   | { type: 'bossIntro' }
   | { type: 'inner'; sceneKey: string };
 
+/**
+ * CutsceneScene の起動データ。scriptKey で再生する演出スクリプト(config/story/cutscenes.ts)を
+ * 指定し、onComplete で完了後の遷移(GameScene 再開 / 次シーン起動)を呼び出し側へ委ねる。
+ * Stage 4-6 の演出も scriptKey を差し替えるだけで再利用する。
+ */
+export interface CutsceneSceneData {
+  scriptKey: string;
+  onComplete: () => void;
+}
+
 /** 1ステージ分の確定テキスト。docs/story.md の転記。 */
 export interface StageStory {
   stageId: string;

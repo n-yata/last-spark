@@ -126,6 +126,33 @@ export const BOSS = {
 } as const satisfies BossConfig;
 
 /**
+ * stage3 専用・収容番人(重装型)の設定。接地型のまま、「遅いが重い単発攻撃」で差別化する。
+ * bossAi の GROUND_WEIGHTS をそのまま流用し、行動間隔を長く・攻撃の威力を高く・移動を遅くする
+ * ことで威圧感のある重装ボスを表現する(新アクションは追加しない)。
+ */
+export const CONTAINMENT_WARDEN = {
+  maxHp: 30, // 重装甲。stage1/2 ボス(24)より硬い
+  phase2HpRatio: 0.5,
+  contactDamage: 3, // 重い接触ダメージ
+  bulletDamage: 2, // 重い単発弾
+  bulletSpeed: 220, // 遅く重い弾(BOSS=260 より遅い)
+  moveSpeed: 38, // 遅い前後ペース(威圧感のある重い動き)
+  jumpVelocity: -460, // 重く低いジャンプ
+  staggerDamageThreshold: 10, // 重装でのけぞりにくい
+  width: 92,
+  height: 96, // 大柄
+  // アクション継続時間を全体に長くして「遅い・溜めてから撃つ」リズムにする。
+  actionDurationMs: {
+    idle: 1000,
+    move: 1200,
+    shoot: 900,
+    jump: 1000,
+    stagger: 800,
+  },
+  phase2SpeedFactor: 0.75,
+} as const satisfies BossConfig;
+
+/**
  * stage2 専用・飛行/浮遊型ボスの設定。難易度は接地ボスと「同等〜やや強い」に収める
  * (maxHp は同じ、弾速・移動をやや強化)。飛行固有の高度・急降下パラメータを持つ。
  */
@@ -180,6 +207,11 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   stage2: {
     walkerSpeedFactor: 1.3,
     turretIntervalFactor: 0.75,
+  },
+  // stage3 はさらに敵を強め、難易度カーブを継続させる。
+  stage3: {
+    walkerSpeedFactor: 1.45,
+    turretIntervalFactor: 0.65,
   },
 } as const;
 

@@ -1,7 +1,7 @@
 import type { SaveData, GameSettings } from '../types/save';
 import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
-// Persistence レイヤー: SaveData の読み書き・既定値生成・バージョン検証。
+// Persistence レイヤー: SaveData の読み書き・既定値生成・バージョン検証・旧形式マイグレーション。
 // プレイ継続を最優先し、localStorage が不可/破損でも throw しない。
 
 /** 既定のユーザー設定。 */
@@ -13,7 +13,7 @@ export function defaultSettings(): GameSettings {
 export function defaultSaveData(): SaveData {
   return {
     version: SAVE_VERSION,
-    cleared: false,
+    clearedStages: [],
     bestTimeMs: undefined,
     settings: defaultSettings(),
   };
@@ -33,6 +33,19 @@ function isValidSettings(value: unknown): value is GameSettings {
   );
 }
 
+/** clearedStages が「文字列の配列」かを検証する。 */
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === 'string');
+}
+
+/** bestTimeMs(任意)が「ステージID→非負有限数」のレコードかを検証する。 */
+function isValidBestTimes(value: unknown): value is Record<string, number> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every((v) =>
+    isFiniteInRange(v, 0, Number.MAX_SAFE_INTEGER),
+  );
+}
+
 /**
  * 読み込んだ値が現行バージョンの SaveData として妥当かを検証する。
  * 型・version 一致・値域をチェックし、改ざん/破損で進行不能にならないようにする。
@@ -41,12 +54,35 @@ export function isValidSaveData(value: unknown): value is SaveData {
   if (typeof value !== 'object' || value === null) return false;
   const d = value as Record<string, unknown>;
   if (d.version !== SAVE_VERSION) return false;
-  if (typeof d.cleared !== 'boolean') return false;
-  if (d.bestTimeMs !== undefined && !isFiniteInRange(d.bestTimeMs, 0, Number.MAX_SAFE_INTEGER)) {
-    return false;
-  }
+  if (!isStringArray(d.clearedStages)) return false;
+  if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return false;
   if (!isValidSettings(d.settings)) return false;
   return true;
+}
+
+/**
+ * 旧形式(v1: cleared:boolean / bestTimeMs:number)を現行形式へ移行する。
+ * 移行できない/不正な場合は undefined を返し、呼び出し側で既定値へフォールバックさせる。
+ */
+function migrate(value: unknown): SaveData | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const d = value as Record<string, unknown>;
+  // v1 のみ移行対象(version 未指定・不一致で cleared を持つもの)。
+  if (typeof d.cleared !== 'boolean') return undefined;
+  if (!isValidSettings(d.settings)) return undefined;
+
+  const clearedStages = d.cleared ? ['stage1'] : [];
+  let bestTimeMs: Record<string, number> | undefined;
+  // 旧 bestTimeMs:number はステージ1のタイムとして移行する。
+  if (isFiniteInRange(d.bestTimeMs, 0, Number.MAX_SAFE_INTEGER)) {
+    bestTimeMs = { stage1: d.bestTimeMs };
+  }
+  return {
+    version: SAVE_VERSION,
+    clearedStages,
+    bestTimeMs,
+    settings: { ...(d.settings as GameSettings) },
+  };
 }
 
 export class SaveManager {
@@ -58,19 +94,33 @@ export class SaveManager {
 
   /** 現在のセーブデータ(内部状態のコピー)を返す。 */
   getData(): SaveData {
-    return { ...this.data, settings: { ...this.data.settings } };
+    return {
+      ...this.data,
+      clearedStages: [...this.data.clearedStages],
+      bestTimeMs: this.data.bestTimeMs ? { ...this.data.bestTimeMs } : undefined,
+      settings: { ...this.data.settings },
+    };
   }
 
   /**
-   * localStorage から読み込む。失敗・破損・バージョン不一致時は既定値を返す
-   * (throw しない)。
+   * localStorage から読み込む。現行形式ならそのまま、旧形式ならマイグレーションを試み、
+   * 失敗・破損・移行不能時は既定値を返す(throw しない)。
    */
   load(): SaveData {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.save);
-      if (!raw) return defaultSaveData();
+      if (!raw) {
+        this.data = defaultSaveData();
+        return this.getData();
+      }
       const parsed: unknown = JSON.parse(raw);
-      const valid = isValidSaveData(parsed) ? parsed : defaultSaveData();
+      let valid: SaveData;
+      if (isValidSaveData(parsed)) {
+        valid = parsed;
+      } else {
+        // 現行形式でなければ旧形式からの移行を試みる。
+        valid = migrate(parsed) ?? defaultSaveData();
+      }
       this.data = valid;
       return this.getData();
     } catch {
@@ -82,7 +132,12 @@ export class SaveManager {
 
   /** localStorage へ保存する。利用不可時は no-op + 警告ログ(throw しない)。 */
   save(data: SaveData): void {
-    this.data = { ...data, settings: { ...data.settings } };
+    this.data = {
+      ...data,
+      clearedStages: [...data.clearedStages],
+      bestTimeMs: data.bestTimeMs ? { ...data.bestTimeMs } : undefined,
+      settings: { ...data.settings },
+    };
     try {
       localStorage.setItem(STORAGE_KEYS.save, JSON.stringify(this.data));
     } catch {
@@ -90,14 +145,30 @@ export class SaveManager {
     }
   }
 
-  /** クリアを記録する。最速タイムのみ更新する。 */
-  markCleared(timeMs: number): void {
+  /** 指定ステージのクリアを記録する。最速タイムのみ更新する。 */
+  markStageCleared(stageId: string, timeMs?: number): void {
     const next = this.getData();
-    next.cleared = true;
-    if (next.bestTimeMs === undefined || timeMs < next.bestTimeMs) {
-      next.bestTimeMs = timeMs;
+    if (!next.clearedStages.includes(stageId)) {
+      next.clearedStages = [...next.clearedStages, stageId];
+    }
+    if (timeMs !== undefined && Number.isFinite(timeMs) && timeMs >= 0) {
+      const times = next.bestTimeMs ?? {};
+      const prev = times[stageId];
+      if (prev === undefined || timeMs < prev) {
+        next.bestTimeMs = { ...times, [stageId]: timeMs };
+      }
     }
     this.save(next);
+  }
+
+  /** 旧 API 互換: ステージ1のクリアとして記録する。 */
+  markCleared(timeMs: number): void {
+    this.markStageCleared('stage1', timeMs);
+  }
+
+  /** 指定ステージがクリア済みか。 */
+  isStageCleared(stageId: string): boolean {
+    return this.data.clearedStages.includes(stageId);
   }
 
   /** 設定を部分更新して保存する。 */

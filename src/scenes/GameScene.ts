@@ -65,6 +65,15 @@ export class GameScene extends Phaser.Scene {
   /** 内心トリガの一度きり発火フラグ。 */
   private firstEnemyInnerDone = false;
   private firstLogDone = false;
+  // --- ボス後・救出フロー(stage3 など postBossCutsceneKey を持つステージ) ---
+  /** 収容ケージの格子(撃破後に解錠アニメで開く)。 */
+  private cageBars?: Phaser.GameObjects.Graphics;
+  /** ケージ解錠後に true。接触で救出演出を 1 度だけ起動する。 */
+  private cageArmed = false;
+  /** ボス撃破→クリアの間の救出フェーズ中か(handleClear の二重起動防止)。 */
+  private inPostBoss = false;
+  /** 撃破時刻で確定したクリアタイム(救出演出後のクリア遷移へ持ち越す)。 */
+  private pendingClearTimeMs = 0;
 
   constructor() {
     super(SCENE_KEYS.game);
@@ -82,6 +91,9 @@ export class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.firstEnemyInnerDone = false;
     this.firstLogDone = false;
+    this.cageArmed = false;
+    this.inPostBoss = false;
+    this.cageBars = undefined;
     // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
     this.registry.set(STORY.pending, []);
     this.stage = getStageData(this.stageId);
@@ -94,6 +106,7 @@ export class GameScene extends Phaser.Scene {
     this.createPlayer();
     this.createSystems();
     this.buildLogTriggers();
+    this.buildCage();
     this.setupCamera();
 
     this.startTime = this.time.now;
@@ -144,6 +157,87 @@ export class GameScene extends Phaser.Scene {
       requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
     }
     this.pushStory(requests);
+  }
+
+  /** 収容ケージ(stage3 など)の見た目と接触ゾーンを作る。撃破後に解錠し接触で救出演出へ。 */
+  private buildCage(): void {
+    const cage = this.stage.cage;
+    if (!cage) return;
+    // 閉じた状態の縦格子を描く(撃破後 unlockCage で開く)。
+    this.cageBars = this.add.graphics().setDepth(6);
+    this.drawCageBars(cage.x, cage.y);
+    // 接触ゾーン。撃破後(cageArmed)にのみ救出演出を起動する。
+    const zone = this.add.zone(cage.x, cage.y, 96, 150);
+    this.physics.add.existing(zone, true);
+    this.physics.add.overlap(this.player, zone, () => this.onCageReached());
+  }
+
+  /** ケージの縦格子を描画する(cageBars へ)。 */
+  private drawCageBars(cx: number, cy: number): void {
+    const g = this.cageBars;
+    if (!g) return;
+    g.clear();
+    const halfW = 48;
+    const top = cy - 75;
+    const bottom = cy + 75;
+    g.lineStyle(5, 0x8a93a3, 0.9);
+    g.strokeRect(cx - halfW, top, halfW * 2, bottom - top); // 枠
+    for (let x = cx - halfW + 14; x < cx + halfW; x += 14) {
+      g.lineBetween(x, top, x, bottom); // 縦格子
+    }
+  }
+
+  /** ボス撃破でケージを解錠する(格子をフェードアウト)。 */
+  private unlockCage(): void {
+    getSound().playSe('uiTap');
+    if (this.cageBars) {
+      this.tweens.add({
+        targets: this.cageBars,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => this.cageBars?.destroy(),
+      });
+    }
+  }
+
+  /** 解錠後のケージへ接触: 救出後演出シーンを 1 度だけ起動する。 */
+  private onCageReached(): void {
+    if (!this.cageArmed) return;
+    this.cageArmed = false;
+    const scriptKey = this.stage.postBossCutsceneKey;
+    if (!scriptKey) {
+      this.finalizeRescueClear();
+      return;
+    }
+    this.player.setVelocityX(0);
+    // ゲーム/HUD を止め、演出シーンをオーバーレイ起動する。完了で救出クリアへ。
+    this.scene.pause(SCENE_KEYS.ui);
+    this.scene.launch(SCENE_KEYS.cutscene, {
+      scriptKey,
+      onComplete: () => this.finalizeRescueClear(),
+    });
+    this.scene.pause();
+  }
+
+  /** ボス撃破後・自由移動フェーズへ入る。ボスを片付けてケージを解錠する。 */
+  private enterRescuePhase(dyingBoss: Boss): void {
+    dyingBoss.destroy();
+    this.registry.set(HUD.bossActive, false);
+    this.unlockCage();
+    this.cageArmed = true;
+  }
+
+  /** 救出演出後のクリア処理。一時停止を解いてクリアシーンへ遷移する。 */
+  private finalizeRescueClear(): void {
+    this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
+    this.ended = true;
+    this.inputController.destroy();
+    this.scene.stop(SCENE_KEYS.ui);
+    transitionTo(this, SCENE_KEYS.clear, {
+      clearTimeMs: this.pendingClearTimeMs,
+      stageId: this.stageId,
+      nextStageId: this.stage.nextStageId,
+    });
   }
 
   private buildPlatforms(): void {
@@ -255,8 +349,10 @@ export class GameScene extends Phaser.Scene {
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
     this.spawn.loadStage(this.stageId);
     this.spawn.onBossTrigger(() => {
-      // ボスを出現させてから ECLIPSE の語りかけ(一時停止)を重ねる。タップで戦闘開始。
+      // ボスを出現させ、(stage3 のみ)ケージの人影を見た内心 → ECLIPSE の語りかけ、の順に重ねる。
+      // terraFound 内心はその本文を持つステージ(stage3)でのみ表示され、他ステージでは空になる。
       this.spawnBoss();
+      this.emitStory({ type: 'inner', sceneKey: 'terraFound' });
       this.emitStory({ type: 'bossIntro' });
     });
   }
@@ -302,7 +398,9 @@ export class GameScene extends Phaser.Scene {
     const flying = this.stage.bossKind === 'flying';
     this.boss = flying
       ? new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
-      : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
+          config: this.stage.bossConfig,
+        });
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
     if (!flying) {
@@ -402,23 +500,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleClear(boss: Boss): void {
-    if (this.ended) return;
-    this.ended = true;
-    // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に
-    // プレイヤーを静止させる(滑走をカメラが追従して画面が流れるのを防ぐ)。
+    if (this.ended || this.inPostBoss) return;
+    // クリアタイムは撃破の瞬間で確定する(撃破演出/救出演出の時間を含めない)。
+    const clearTimeMs = this.time.now - this.startTime;
     this.player.setVelocityX(0);
     getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
     getSound().playSe('bossDefeated');
-    // クリアタイムは撃破の瞬間で確定する(撃破演出の時間を含めない)。
-    const clearTimeMs = this.time.now - this.startTime;
     this.registry.set(HUD.bossHp, 0);
-    // 撃破シーケンス(多段爆発+大シェイク)を見せてからクリアへ遷移する。
+
+    // ボス後演出を持つステージ(stage3 など): 即クリアせず、救出フェーズへ。
+    // 撃破演出後にケージを解錠し、自由移動でボス後ログを任意接触→ケージ接触で演出→クリア。
+    if (this.stage.postBossCutsceneKey && this.stage.cage) {
+      this.inPostBoss = true;
+      this.pendingClearTimeMs = clearTimeMs;
+      // 死亡ボスを update ループから切り離し(参照を断ち)、演出後に破棄する。
+      this.boss = undefined;
+      this.effects.bossDeathSequence(boss.x, boss.y, () => this.enterRescuePhase(boss));
+      return;
+    }
+
+    // 従来(stage1-2): 撃破演出後に即クリアへ。
+    // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に静止させる。
+    this.ended = true;
     this.effects.bossDeathSequence(boss.x, boss.y, () => {
       this.inputController.destroy();
       this.scene.stop(SCENE_KEYS.ui);
       // 次ステージがあれば中継して継続、なければ最終クリアとしてタイトルへ。
       transitionTo(this, SCENE_KEYS.clear, {
         clearTimeMs,
+        stageId: this.stageId,
         nextStageId: this.stage.nextStageId,
       });
     });

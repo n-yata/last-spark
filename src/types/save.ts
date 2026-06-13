@@ -12,10 +12,10 @@ export interface GameSettings {
 export interface SaveData {
   /** セーブ構造のバージョン(マイグレーション用) */
   version: number;
-  /** ステージ1(ボス)をクリア済みか */
-  cleared: boolean;
-  /** ステージクリア最速タイム(ミリ秒)。未クリアは undefined */
-  bestTimeMs?: number;
+  /** クリア済みステージ ID の配列(旧 cleared:boolean から移行)。 */
+  clearedStages: string[];
+  /** ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーを持たない。 */
+  bestTimeMs?: Record<string, number>;
   /** ユーザー設定 */
   settings: GameSettings;
 }
