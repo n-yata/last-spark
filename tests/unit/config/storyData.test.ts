@@ -135,6 +135,20 @@ describe('ステージ開始演出フローのステージ条件', () => {
       expect(getStageData(id).introCutsceneKey).toBeUndefined();
     }
   });
+
+  it('stage1 は演出が開始テキストを兼ねる(introCutsceneCoversStartText): 演出後に開始テキストを重ねない', () => {
+    // 演出スクリプト(stage1-intro)が intro + 「目覚め」の内心そのものなので、
+    // 演出完了後に開始テキストを出すと同一文が二重表示になる。これを抑止するフラグ。
+    expect(getStageData('stage1').introCutsceneCoversStartText).toBe(true);
+  });
+
+  it('stage4 / stage5 は演出と開始テキストが別内容: introCutsceneCoversStartText を立てない(演出→開始テキスト)', () => {
+    for (const id of ['stage4', 'stage5']) {
+      const s = getStageData(id);
+      expect(s.introCutsceneKey).toBeDefined();
+      expect(s.introCutsceneCoversStartText).toBeFalsy();
+    }
+  });
 });
 
 describe('ログトリガー配置', () => {
