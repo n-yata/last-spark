@@ -21,7 +21,7 @@ export class OrientationScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height / 2 + 30, '端末を横向きにしてください', {
+      .text(width / 2, height / 2 + 30, 'がめんを横向きにしてください', {
         fontFamily: 'monospace',
         fontSize: '20px',
         color: '#9fffe8',
@@ -29,7 +29,7 @@ export class OrientationScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height / 2 + 64, '両手持ち・横向き専用です', {
+      .text(width / 2, height / 2 + 64, '両手で横向きにして、あそんでください', {
         fontFamily: 'monospace',
         fontSize: '14px',
         color: '#7fe9dd',

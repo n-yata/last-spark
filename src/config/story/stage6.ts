@@ -7,19 +7,19 @@ import type { StageStory } from '../../types/story';
 
 export const STAGE6_STORY: StageStory = {
   stageId: 'stage6',
-  intro: ['支配中枢。ここがECLIPSEの心臓だ。', 'ここから、世界のすべてが管理されてきた。', '——終わりにする。'].join(
+  intro: ['いちばんおくのへや。ここが、ECLIPSEのまんなかだ。', 'ここから、世界のすべてが、かんりされてきた。', '——終わりにする。'].join(
     '\n',
   ),
-  eclipseVoice: '地球を守るために、お前を終了する',
+  eclipseVoice: '地球を守るために、お前をけす',
   logs: {
     // Stage 6 は序盤ログのみ。科学者の最後のメッセージ(完全な肯定)。
-    early: ['これを読んでいるなら', 'お前はここまで来た。', '後は——お前次第だ。', 'RAY、お前を誇りに思う'].join('\n'),
+    early: ['これを読んでいるなら', 'お前は、ここまで来た。', 'あとは——お前しだいだ。', 'RAY、お前をほこりに思う'].join('\n'),
   },
   inner: {
     // 支配中枢を前に(ステージ開始時)。
     stageStart: 'ここだ。ここで——終わる',
     // ECLIPSE の語りかけ(ボス前=ECLIPSE対決前)を聞いて。bossIntro の直後に発火する。
-    eclipseReaction: 'これが、俺の答えだ',
+    eclipseReaction: 'これが、おれの答えだ',
     // ECLIPSE撃破後。撃破演出後・エンディング遷移前に発火する。
     bossDefeated: '……終わった',
   },

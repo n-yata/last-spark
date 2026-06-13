@@ -60,7 +60,7 @@ export class ClearScene extends Phaser.Scene {
       .text(
         width / 2,
         height * 0.6,
-        isFinal ? '最後の灯は、まだ消えていない。' : '次の立坑へ——まだ先がある。',
+        isFinal ? '最後のあかりは、まだ消えていない。' : '次のたて穴へ——まだ先がある。',
         {
           fontFamily: 'monospace',
           fontSize: '16px',

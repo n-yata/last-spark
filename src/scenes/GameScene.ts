@@ -35,7 +35,7 @@ import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 const DEFAULT_STAGE_ID = 'stage1';
 const PROJECTILE_POOL = 32;
 /** ログ取得時に HUD 隅へ短時間表示するトーストの文言。 */
-const LOG_TOAST_MESSAGE = 'ログを取得';
+const LOG_TOAST_MESSAGE = 'ログをひろった';
 
 /** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
 export interface GameSceneData {

@@ -50,7 +50,7 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(0, 0, '#37f7d8', 18, true, true);
 
     this.add
-      .text(width / 2, height * 0.34 + 52, '― 退廃の中の希望 ―', {
+      .text(width / 2, height * 0.34 + 52, '― すさんだ世界の、のぞみ ―', {
         fontFamily: 'monospace',
         fontSize: '18px',
         color: '#7fe9dd',
@@ -93,7 +93,7 @@ export class TitleScene extends Phaser.Scene {
     // 「記録ログ」導線。startZone より後に追加することで Phaser の topOnly(既定 true)で
     // 前面となり、スタート判定に巻き込まれずに開ける(DEV MODE ボタンと同じ作法)。
     const logBtn = this.add
-      .text(width - 20, 20, '記録ログ', {
+      .text(width - 20, 20, 'きろくログ', {
         fontFamily: 'monospace',
         fontSize: '16px',
         color: '#ffcf8f',
