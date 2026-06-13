@@ -61,7 +61,7 @@ export function createDevMode(
 
     o.add(
       scene.add
-        .text(width / 2, height * 0.2, 'STAGE SELECT (DEV)', {
+        .text(width / 2, height * 0.14, 'STAGE SELECT (DEV)', {
           fontFamily: 'monospace',
           fontSize: '28px',
           color: '#37f7d8',
@@ -70,12 +70,16 @@ export function createDevMode(
         .setOrigin(0.5),
     );
 
-    // ステージボタンを縦に並べる。
-    const startY = height * 0.34;
-    const gap = 56;
+    // ステージボタン + BACK を縦に並べる。ステージ数が増えても画面内に収まるよう、
+    // タイトル下から下端マージンまでの領域に行数ぶんを均等割りして配置する。
+    // ステージが少ないときに間延びしないよう、間隔には上限(56px)を設ける。
+    const top = height * 0.26;
+    const bottom = height * 0.93;
+    const rows = PLAYABLE_STAGES.length + 1; // ステージ + BACK
+    const gap = Math.min(56, (bottom - top) / (rows - 1));
     PLAYABLE_STAGES.forEach((stage, index) => {
       o.add(
-        makeMenuButton(width / 2, startY + gap * index, stage.label, () => {
+        makeMenuButton(width / 2, top + gap * index, stage.label, () => {
           // 開始へ進む。効果音は onStartStage 側に任せ、二重再生を避ける。
           destroyOverlay();
           onStartStage(stage.id);
@@ -83,9 +87,9 @@ export function createDevMode(
       );
     });
 
-    // BACK: 効果音を鳴らして閉じる。
+    // BACK: 効果音を鳴らして閉じる。最後のステージの下に配置する。
     o.add(
-      makeMenuButton(width / 2, startY + gap * PLAYABLE_STAGES.length + 24, '◂ BACK', () => {
+      makeMenuButton(width / 2, top + gap * PLAYABLE_STAGES.length, '◂ BACK', () => {
         getSound().playSe('uiTap');
         destroyOverlay();
       }),
