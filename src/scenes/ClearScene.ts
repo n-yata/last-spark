@@ -6,6 +6,8 @@ import { transitionTo, fadeIn } from '../systems/sceneTransition';
 
 interface ClearData {
   clearTimeMs: number;
+  /** 今クリアしたステージ ID(セーブ記録用)。 */
+  stageId?: string;
   /** 次ステージ ID(任意)。あれば中継表示で次ステージへ継続、なければ最終クリア。 */
   nextStageId?: string;
 }
@@ -25,9 +27,9 @@ export class ClearScene extends Phaser.Scene {
     const nextStageId = data?.nextStageId;
     const isFinal = !nextStageId;
 
-    // クリア記録は最終ステージ到達時のみ(途中ステージでは記録しない)。
-    if (isFinal) {
-      new SaveManager().markCleared(clearTimeMs);
+    // クリアはステージ単位で記録する(途中ステージも到達状況として保存する)。
+    if (data?.stageId) {
+      new SaveManager().markStageCleared(data.stageId, clearTimeMs);
     }
 
     // BGM を止めてクリアジングルを鳴らす

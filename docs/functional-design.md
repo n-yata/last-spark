@@ -57,7 +57,8 @@ Phaser の Scene を画面/状態の単位とする。
 | `GameScene` | ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括 |
 | `UIScene` | HUD(プレイヤーライフ、ボスHP、チャージゲージ)。`GameScene` と並行起動 |
 | `GameOverScene` | ゲームオーバー表示とリトライ導線 |
-| `ClearScene` | ボス撃破時のクリア演出。クリア状況を保存しタイトルへ |
+| `ClearScene` | ボス撃破時のクリア演出。クリア状況(ステージ単位)を保存しタイトル/次ステージへ |
+| `CutsceneScene`(オーバーレイ) | 演出シーン。静止画的演出+交互テキスト(TERRA/RAY)+ト書きをタップ送りで再生し、完了後に指定遷移を呼ぶ。Stage 3 救出後演出で使用 |
 | `OrientationScene`(オーバーレイ) | 縦持ち検知時に「横向きにしてください」案内を最前面表示 |
 
 ## データモデル定義
@@ -68,10 +69,10 @@ Phaser の Scene を画面/状態の単位とする。
 
 ```typescript
 interface SaveData {
-  version: number;          // セーブ構造のバージョン(マイグレーション用)
-  cleared: boolean;         // ステージ1(ボス)をクリア済みか
-  bestTimeMs?: number;      // ステージクリア最速タイム(ミリ秒)、未クリアは undefined
-  settings: GameSettings;   // ユーザー設定
+  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 2)
+  clearedStages: string[];          // クリア済みステージID(全6ステージ対応)
+  bestTimeMs?: Record<string, number>; // ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーなし
+  settings: GameSettings;           // ユーザー設定
 }
 
 interface GameSettings {
@@ -84,7 +85,9 @@ interface GameSettings {
 **制約**:
 - 保存キーは `lastspark:save`(名前空間付き)。
 - `localStorage` 利用不可・破損時は既定値で起動し、ゲーム自体は継続可能(進捗が無いだけ)。
-- `version` 不一致時は安全側にフォールバック(既定値で再生成)。
+- `version` 不一致時は、旧形式(v1: `cleared:boolean` / `bestTimeMs:number`)からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。
+  - v1→v2 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。
+- API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。
 
 ### 実行時モデル: 主要 Entity
 
@@ -225,13 +228,15 @@ class SpawnSystem {
 
 **StoryDirector(純粋ロジック)**: `resolveStoryEvent(story, event)` が `StoryEvent`(`stageStart` / `logFound` / `bossIntro` / `inner`)を表示要求 `TextRequest[]` に変換する。Phaser 非依存でユニットテスト可能(`bossAi.ts` 等と同方針)。確定テキストは `config/story/stageN.ts`(`StageStory`)に持ち、`getStageStory(stageId)` で引く。
 
-**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。**すべてのテキストはタップでは閉じず、本文の長さに応じた読了時間(`readingDurationMs`)で自動的に次へ進む**。これはプレイ中のタップ(移動/ジャンプ/ショット)やボス出現時の連射で「読む前に消える」のを防ぐため。一時停止系(科学者ログ/ECLIPSE/開始テキスト)はこの表示時間中 `GameScene` を `scene.pause` し、終わると自動で再開する。非停止系(RAY内心/TERRAセリフ)はプレイ継続のまま画面下部・中央に浮かべる。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
+**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。表示挙動は2段構成: **(1) ステージ開始テキスト(`stageIntro`)のみ**画面中央に出して `GameScene` を `scene.pause` し、**タップで進む**(ステージ開始の合図。止まっている間は移動/ショットの誤タップが起きないので安全)。**(2) それ以外のステージ中テキスト(科学者ログ/ECLIPSE/RAY内心/TERRA)**は動きを止めず画面上部に出し、本文の長さに応じた読了時間(`readingDurationMs`)で自動的に次へ進む(タップでは閉じない=プレイ中の移動/ジャンプ/ショットやボス出現時の連射で「読む前に消える」のを防ぐ)。kind→位置/一時停止要否は `TEXT_STYLES` が持つ。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
 
-**ログトリガー**: `StageData.logTriggers?`(`slot` = `early` / `preBoss` / `postBoss`、位置)に基づき `GameScene` が `LogTrigger`(オーバーラップ判定のみ・衝突なし)を生成する。プレイヤーが重なると一度だけ(`tryConsume`)該当スロットの科学者ログを発火する。触れるかはプレイヤーの自由(任意接触・読み飛ばし可)。`postBoss` ログはボス撃破後の動線が必要なため、ボス後フロー実装(Stage 3 ブロック)で配置する。
+**ログトリガー**: `StageData.logTriggers?`(`slot` = `early` / `preBoss` / `postBoss`、位置)に基づき `GameScene` が `LogTrigger`(オーバーラップ判定のみ・衝突なし)を生成する。プレイヤーが重なると一度だけ(`tryConsume`)該当スロットの科学者ログを発火する。触れるかはプレイヤーの自由(任意接触・読み飛ばし可)。`postBoss` ログはボス撃破後の動線(ボス後フロー)で拾えるよう、アリーナ内(ケージへ向かう動線上)に配置する(Stage 3)。
+
+**演出シーン(CutsceneScene)とボス後フロー**: ボス撃破後に物語の転換(Stage 3 の TERRA 救出など)を見せるための独立シーン。`StageData.postBossCutsceneKey?` と `cage?` を持つステージは、ボス撃破→撃破演出→**ケージ解錠→自由移動(ボス後ログを任意接触)→ケージ接触で `CutsceneScene` 起動→クリア処理**の順で流れる(`GameScene.handleClear` が分岐)。`postBossCutsceneKey` を持たない Stage 1-2 は従来どおり撃破→即クリア(後方互換)。`CutsceneScene` は `scriptKey`(`config/story/cutscenes.ts` の `Cutscene`)を受け取り、TERRA のセリフ↔RAY の内心↔ト書き(`direction`)をタップ送りで 1 行ずつ再生し、`onComplete` で完了後の遷移を呼ぶ。scriptKey 差し替えで Stage 4-6 の演出にも再利用する。
 
 ### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
 
-**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 と続ける(`nextStageId` 無し=最終ステージ)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。
+**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、ボス固有チューニング `bossConfig?`、収容ケージ `cage?`、ボス後演出キー `postBossCutsceneKey?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → stage3 と続ける(`nextStageId` 無し=最終ステージ)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。`bossConfig` を持つステージ(stage3 の重装型 `CONTAINMENT_WARDEN`)は接地ボスの既定 `BOSS` に代えてその設定で生成する(`bossAi` の行動ロジックは共通のまま、行動間隔・威力・移動速度のパラメータだけで差別化)。
 
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
@@ -320,7 +325,9 @@ stateDiagram-v2
     Preload --> Title
     Title --> Game: タップでスタート
     Game --> GameOver: ライフ0
-    Game --> Clear: ボス撃破
+    Game --> Clear: ボス撃破(stage1-2: 即クリア)
+    Game --> Cutscene: ボス撃破→ケージ接触(stage3: 救出後演出)
+    Cutscene --> Clear: 演出完了
     GameOver --> Game: リトライ
     GameOver --> Title: タイトルへ
     Clear --> Game: 次ステージへ継続(nextStageId あり)
@@ -330,6 +337,9 @@ stateDiagram-v2
         UIScene を並行起動(HUD)
         縦持ち検知時は
         OrientationScene を最前面表示
+        ボス後演出ありのステージは
+        撃破後に自由移動→ケージ接触で
+        CutsceneScene を起動
     end note
 ```
 

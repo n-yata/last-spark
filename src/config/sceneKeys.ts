@@ -8,6 +8,7 @@ export const SCENE_KEYS = {
   ui: 'UIScene',
   gameOver: 'GameOverScene',
   clear: 'ClearScene',
+  cutscene: 'CutsceneScene',
   orientation: 'OrientationScene',
 } as const;
 

@@ -54,11 +54,11 @@ export class TitleScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // クリア状況の表示
+    // クリア状況の表示(1ステージでもクリア済みなら表示)。BEST はステージ1のタイムを代表値とする。
     const save = new SaveManager().getData();
-    if (save.cleared) {
-      const best =
-        save.bestTimeMs !== undefined ? `  BEST ${this.formatTime(save.bestTimeMs)}` : '';
+    if (save.clearedStages.length > 0) {
+      const stage1Best = save.bestTimeMs?.stage1;
+      const best = stage1Best !== undefined ? `  BEST ${this.formatTime(stage1Best)}` : '';
       this.add
         .text(width / 2, height * 0.82, `CLEARED${best}`, {
           fontFamily: 'monospace',
