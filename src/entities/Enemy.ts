@@ -49,11 +49,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.setVisible(false);
     this.rig = new CharacterRig(scene, pattern === 'turret' ? 'turret' : 'walker', 8);
 
-    if (pattern === 'turret') {
+    this.configureBody();
+    if (pattern !== 'turret') {
+      this.setVelocityX(this.moveDir * this.effectiveMoveSpeed);
+    }
+  }
+
+  /**
+   * 系統別のボディ設定(重力/不動)を適用する。
+   * 注意: Arcade の `Group.add()` はグループ既定値(allowGravity=true ほか)を
+   * createCallback で上書きするため、コンストラクタだけで設定すると turret の
+   * 重力 OFF が打ち消される。turret は不動 × 重力 OFF だが、静止地面(同じく不動)
+   * とは衝突分離されないため、重力が残ると床をすり抜けて画面外へ落下する。
+   * これを防ぐため SpawnSystem はグループ追加後に本メソッドを再適用する。
+   */
+  configureBody(): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (this.pattern === 'turret') {
       body.setAllowGravity(false);
       body.setImmovable(true);
     } else {
-      this.setVelocityX(this.moveDir * this.effectiveMoveSpeed);
+      body.setAllowGravity(true);
+      body.setImmovable(false);
     }
   }
 

@@ -68,8 +68,6 @@ export class GameScene extends Phaser.Scene {
   // --- ボス後・救出フロー(stage3 など postBossCutsceneKey を持つステージ) ---
   /** 収容ケージの格子(撃破後に解錠アニメで開く)。 */
   private cageBars?: Phaser.GameObjects.Graphics;
-  /** ケージ解錠後に true。接触で救出演出を 1 度だけ起動する。 */
-  private cageArmed = false;
   /** ボス撃破→クリアの間の救出フェーズ中か(handleClear の二重起動防止)。 */
   private inPostBoss = false;
   /** 撃破時刻で確定したクリアタイム(救出演出後のクリア遷移へ持ち越す)。 */
@@ -91,7 +89,6 @@ export class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.firstEnemyInnerDone = false;
     this.firstLogDone = false;
-    this.cageArmed = false;
     this.inPostBoss = false;
     this.cageBars = undefined;
     // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
@@ -159,17 +156,13 @@ export class GameScene extends Phaser.Scene {
     this.pushStory(requests);
   }
 
-  /** 収容ケージ(stage3 など)の見た目と接触ゾーンを作る。撃破後に解錠し接触で救出演出へ。 */
+  /** 収容ケージ(stage3 など)の見た目を作る。撃破後に解錠アニメを再生する。 */
   private buildCage(): void {
     const cage = this.stage.cage;
     if (!cage) return;
     // 閉じた状態の縦格子を描く(撃破後 unlockCage で開く)。
     this.cageBars = this.add.graphics().setDepth(6);
     this.drawCageBars(cage.x, cage.y);
-    // 接触ゾーン。撃破後(cageArmed)にのみ救出演出を起動する。
-    const zone = this.add.zone(cage.x, cage.y, 96, 150);
-    this.physics.add.existing(zone, true);
-    this.physics.add.overlap(this.player, zone, () => this.onCageReached());
   }
 
   /** ケージの縦格子を描画する(cageBars へ)。 */
@@ -200,19 +193,25 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** 解錠後のケージへ接触: 救出後演出シーンを 1 度だけ起動する。 */
-  private onCageReached(): void {
-    if (!this.cageArmed) return;
-    this.cageArmed = false;
+  /** ボス撃破後・救出フェーズへ入る。ボスを片付けてケージを解錠し、救出演出を即起動する。 */
+  private enterRescuePhase(dyingBoss: Boss): void {
+    dyingBoss.destroy();
+    this.registry.set(HUD.bossActive, false);
+    this.unlockCage();
+    this.startRescueCutscene();
+  }
+
+  /** 救出演出シーンを 1 度だけ起動する。完了で救出クリアへ。 */
+  private startRescueCutscene(): void {
     const scriptKey = this.stage.postBossCutsceneKey;
     if (!scriptKey) {
       this.finalizeRescueClear();
       return;
     }
     this.player.setVelocityX(0);
-    // physics overlap コールバック内から直接 scene.pause() を呼ぶと Phaser の
-    // 物理ステップが中断しフリーズする。次フレームへ遅延して安全に実行する。
-    this.time.delayedCall(0, () => {
+    // ケージ解錠アニメ(600ms)を見せてから演出へ。タイマー経由で次フレーム以降に
+    // シーン状態を変更し、物理ステップ中の scene.pause() によるフリーズを避ける。
+    this.time.delayedCall(700, () => {
       this.scene.pause(SCENE_KEYS.ui);
       this.scene.launch(SCENE_KEYS.cutscene, {
         scriptKey,
@@ -220,14 +219,6 @@ export class GameScene extends Phaser.Scene {
       });
       this.scene.pause();
     });
-  }
-
-  /** ボス撃破後・自由移動フェーズへ入る。ボスを片付けてケージを解錠する。 */
-  private enterRescuePhase(dyingBoss: Boss): void {
-    dyingBoss.destroy();
-    this.registry.set(HUD.bossActive, false);
-    this.unlockCage();
-    this.cageArmed = true;
   }
 
   /** 救出演出後のクリア処理。一時停止を解いてクリアシーンへ遷移する。 */
@@ -403,6 +394,7 @@ export class GameScene extends Phaser.Scene {
       ? new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
       : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
           config: this.stage.bossConfig,
+          rigFamily: this.stage.bossRig,
         });
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);

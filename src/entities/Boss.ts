@@ -51,8 +51,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   // 射撃の狙い高さ(プレイヤーの Y)。update 毎に更新し、fireVolley が参照する。
   protected targetY: number;
   protected readonly rig: CharacterRig;
-  /** BossConfig.tint で指定された基本色合い。stagger 後に復元するために保持する。 */
-  protected readonly baseTint: number | undefined;
 
   constructor(scene: Phaser.Scene, x: number, y: number, options?: BossOptions) {
     super(scene, x, y, TEX.boss);
@@ -76,10 +74,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
     this.setVisible(false);
     this.rig = new CharacterRig(scene, rigFamily, 9);
-    this.baseTint = this.cfg.tint;
-    if (this.baseTint !== undefined) {
-      this.rig.setTint(this.baseTint);
-    }
   }
 
   protected get onGround(): boolean {
@@ -138,11 +132,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     }
     this.rig.syncTo(this.x, this.y, true, faceDir);
     this.rig.setMotionState(state);
-    // stagger 中は被弾色、それ以外は基本色(未設定時はデフォルト色)。
+    // stagger 中は被弾色、それ以外は通常色。
     if (state === 'stagger') {
       this.rig.setTint(0xff6b6b);
-    } else if (this.baseTint !== undefined) {
-      this.rig.setTint(this.baseTint);
     } else {
       this.rig.clearTint();
     }
