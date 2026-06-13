@@ -178,6 +178,53 @@ export const CONTAINMENT_WARDEN = {
 } as const satisfies WardenBossConfig;
 
 /**
+ * 浄化型ボス(環境管理機)固有の設定。BossConfig を継承し、扇状の範囲攻撃(spray)の
+ * パラメータを追加する。PurifierBoss はこの型を介して spray の弾数・開き角・速度を参照する。
+ */
+export interface PurifierBossConfig extends BossConfig {
+  spray: {
+    /** スプレー 1 回あたりの弾数(扇状に散布)。 */
+    count: number;
+    /** 扇の総開き角(ラジアン)。中心はプレイヤー方向の水平。 */
+    spreadRad: number;
+    /** スプレー弾の速度(px/s)。単発弾より遅く、毒霧らしくまとわせる。 */
+    speed: number;
+  };
+}
+
+/**
+ * stage4 専用・環境管理機(浄化型)の設定。接地型のまま、毒・スプレー系の範囲攻撃(spray)で
+ * 差別化する。「浄化」という名の汚染をまき散らす皮肉な攻撃を、扇状に広がる遅い弾束で表現する。
+ * jump は持たず(重い浄化タンク搭載機)、spray を主軸に move/shoot を織り交ぜる。
+ */
+export const PURIFIER = {
+  maxHp: 28, // stage1/2 ボス(24)より硬く、収容番人(30)より柔らかい中間
+  phase2HpRatio: 0.5,
+  contactDamage: 2,
+  bulletDamage: 1,
+  bulletSpeed: 240,
+  moveSpeed: 48, // やや遅い前後ペース(タンクを背負った機械の重さ)
+  staggerDamageThreshold: 9,
+  width: 88,
+  height: 84,
+  // アクション継続時間(ms)。浄化型は idle/move/shoot/spray/stagger を使う(jump なし)。
+  actionDurationMs: {
+    idle: 800,
+    move: 1000,
+    shoot: 700,
+    spray: 900,
+    stagger: 750,
+  },
+  phase2SpeedFactor: 0.72,
+  // 扇状スプレー: 5 発を約90度に散布。遅い毒霧で広範囲に圧をかける。
+  spray: {
+    count: 5,
+    spreadRad: Math.PI * 0.5,
+    speed: 200,
+  },
+} as const satisfies PurifierBossConfig;
+
+/**
  * stage2 専用・飛行/浮遊型ボスの設定。難易度は接地ボスと「同等〜やや強い」に収める
  * (maxHp は同じ、弾速・移動をやや強化)。飛行固有の高度・急降下パラメータを持つ。
  */
@@ -237,6 +284,11 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   stage3: {
     walkerSpeedFactor: 1.45,
     turretIntervalFactor: 0.65,
+  },
+  // stage4 は汚染地帯。難易度カーブを継続し、終盤に向けてさらに敵を強める。
+  stage4: {
+    walkerSpeedFactor: 1.5,
+    turretIntervalFactor: 0.6,
   },
 } as const;
 

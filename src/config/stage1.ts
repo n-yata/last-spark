@@ -1,4 +1,4 @@
-import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, type BossConfig } from './balance';
+import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, type BossConfig } from './balance';
 import type { EnemyPattern } from '../types/enemy';
 import type { BossKind } from '../types/boss';
 import type { RigFamily } from './characterRig';
@@ -66,6 +66,11 @@ export interface StageData {
   /** ボス系統。未定義なら接地型('ground')。stage2 は飛行型('flying')。 */
   bossKind?: BossKind;
   /**
+   * 接地型ボスの種別(任意)。'purifier' は stage4 の環境管理機(浄化型・扇状の範囲攻撃)。
+   * 未定義なら通常の接地ボス(bossConfig/bossRig で差し替え)。bossKind='flying' とは併用しない。
+   */
+  bossVariant?: 'purifier';
+  /**
    * ボス固有チューニング(任意)。未定義なら接地型の既定 BOSS。
    * stage3 は重装型 CONTAINMENT_WARDEN を差す。
    */
@@ -90,6 +95,16 @@ export interface StageData {
   postBossCutsceneKey?: string;
   /** ステージ全幅 */
   width: number;
+  /**
+   * カメラ背景色(任意・CSS 色文字列)。未定義なら既定の暗色。
+   * 環境ストーリーテリングの簡易表現として、ステージごとに空気感を変える(stage4=汚染の淀み)。
+   */
+  backgroundColor?: string;
+  /**
+   * ステージ開始時に再生する演出スクリプトキー(任意。config/story/cutscenes.ts)。
+   * 定義があるステージは開始演出(TERRA同行など)を再生してから開始テキストへ進む。
+   */
+  introCutsceneKey?: string;
   /** クリア後に続けて開始する次ステージ ID(任意)。未定義なら最終ステージ。 */
   nextStageId?: string;
 }
@@ -270,13 +285,78 @@ const STAGE3: StageData = {
   cage: { x: 4480, y: GROUND_TOP - 70 },
   postBossCutsceneKey: 'stage3-rescue',
   width: STAGE3_WIDTH,
-  // stage3 は現状の最終ステージ(stage4 はブロック3で実体追加。実体ができ次第 nextStageId を付ける)。
+  // stage3 救出(TERRA同行)後は stage4(汚染地帯)へ続く。
+  nextStageId: 'stage4',
+};
+
+// ステージ4「汚染地帯」: 環境破壊の実態を目撃し、ECLIPSE の論理に揺らぐステージ。
+// TERRA 同行後の最初のステージで、開始演出に TERRA が登場する(introCutsceneKey)。
+// ボスは環境管理機(浄化型・扇状の範囲攻撃=毒霧スプレー)。ボス後演出シーンは持たず、
+// 撃破→(ボス後ログ任意接触)→ボス撃破内心→クリアへ直行する(stage1-2 と同じ「演出キーなし」分岐)。
+const STAGE4_WIDTH = 4600;
+const STAGE4: StageData = {
+  id: 'stage4',
+  playerStart: { x: 120, y: GROUND_TOP - 20 },
+  platforms: [
+    // 地面セグメント 1(スタート〜汚染溜まりの奈落手前)
+    { x: 0, y: GROUND_TOP, width: 1600, height: GROUND_THICK },
+    // 汚染溜まりの奈落: 1600–1668(幅 68px。ジャンプで越える)
+    // 地面セグメント 2(奈落の先〜2 つ目の奈落手前)
+    { x: 1668, y: GROUND_TOP, width: 1232, height: GROUND_THICK },
+    // 2 つ目の奈落: 2900–2968
+    // 地面セグメント 3(ボスアリーナ手前まで)
+    { x: 2968, y: GROUND_TOP, width: 732, height: GROUND_THICK },
+    // 地面セグメント 4(ボスアリーナ。連続した足場)
+    { x: 3700, y: GROUND_TOP, width: STAGE4_WIDTH - 3700, height: GROUND_THICK },
+
+    // 朽ちた構造物の足場(任意)
+    { x: 540, y: GROUND_TOP - 120, width: 170, height: 24 },
+    { x: 1120, y: GROUND_TOP - 160, width: 180, height: 24 },
+    { x: 2080, y: GROUND_TOP - 130, width: 200, height: 24 },
+    { x: 2480, y: GROUND_TOP - 210, width: 180, height: 24 },
+    { x: 3160, y: GROUND_TOP - 140, width: 200, height: 24 },
+  ],
+  enemies: [
+    { pattern: 'walker', x: 780, y: GROUND_TOP - 60 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 1100, y: GROUND_TOP - 16 },
+    { pattern: 'walker', x: 1950, y: GROUND_TOP - 60 },
+    // 高台(top=GROUND_TOP-130)の上に接地。
+    { pattern: 'turret', x: 2160, y: GROUND_TOP - 146 },
+    { pattern: 'walker', x: 2560, y: GROUND_TOP - 250 },
+    { pattern: 'walker', x: 3200, y: GROUND_TOP - 180 },
+    // 末尾の雑魚はボス出現位置(x=4050)と十分離す(ボスまで約600px)。
+    { pattern: 'walker', x: 3360, y: GROUND_TOP - 60 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 3520, y: GROUND_TOP - 16 },
+  ],
+  // ボス後演出シーンを持たない(=撃破後フリーロームなし)ため、ログ3本はすべてボス前の
+  // 走行区間で拾える位置に置く。postBoss(科学者の最後の気づき)は、ボストリガー(3900)直前に配置する。
+  logTriggers: [
+    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
+    { slot: 'preBoss', x: 2740, y: GROUND_TOP - 40 },
+    { slot: 'postBoss', x: 3760, y: GROUND_TOP - 40 },
+  ],
+  bossTriggerX: 3900,
+  // 環境管理機は接地型。本体下端=地面で接地させる。
+  bossSpawn: { x: 4050, y: GROUND_TOP - PURIFIER.height / 2 },
+  bossKind: 'ground',
+  bossVariant: 'purifier',
+  bossArenaMinX: 4100,
+  width: STAGE4_WIDTH,
+  // 汚染の淀みを背景色で表現する(緑がかった暗い土気色。プレースホルダの環境表現)。
+  backgroundColor: '#151a0c',
+  // ステージ開始演出(TERRA同行)。汚染地帯の空気に TERRA が反応する。
+  introCutsceneKey: 'stage4-intro',
+  // stage5(ECLIPSE外縁部)は後続ブロックで実体追加する。実体ができ次第 nextStageId='stage5' を付ける。
+  // 現状は未定義=最終ステージ扱い(未実装の stage5 へ遷移して stage1 にフォールバックするのを防ぐ)。
 };
 
 const STAGES: Record<string, StageData> = {
   stage1: STAGE1,
   stage2: STAGE2,
   stage3: STAGE3,
+  stage4: STAGE4,
 };
 
 /** stageId に対応するステージデータを返す。未知の ID は stage1 にフォールバック。 */
