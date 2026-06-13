@@ -22,6 +22,17 @@ export interface EnemySpawn {
 }
 
 /**
+ * ログトリガー(科学者の遺品・旧式端末)の配置。x,y は中心。
+ * slot はログ断片のスロット(序盤/ボス前/ボス後)で、確定テキストの引き当てに使う。
+ * 実体テキストは config/story/stageN.ts が持つ(ジオメトリとテキストを分離する)。
+ */
+export interface LogTriggerSpawn {
+  slot: 'early' | 'preBoss' | 'postBoss';
+  x: number;
+  y: number;
+}
+
+/**
  * 梯子の矩形領域。x,y は左上、width/height は px。重なり判定にのみ使う(物理衝突なし)。
  * 制約: height は `LADDER.boardDownReach`(降り乗り込みの進入量)より十分大きくすること。
  * 極端に低い梯子は、降り乗り込んだ瞬間に最下部離脱条件へ達して把持できない恐れがある。
@@ -41,6 +52,8 @@ export interface StageData {
   /** 梯子(任意)。未定義なら梯子なしステージ。 */
   ladders?: LadderRect[];
   enemies: EnemySpawn[];
+  /** ログトリガー(任意)。未定義ならログなしステージ。 */
+  logTriggers?: LogTriggerSpawn[];
   /**
    * このカメラ右端 X を超えるとボス戦に突入する(最短地点)。
    * 実際の発火は SpawnSystem が「ボス全身が画面内に見える位置」まで遅らせるため、
@@ -97,6 +110,12 @@ const STAGE1: StageData = {
     { pattern: 'walker', x: 3200, y: GROUND_TOP - 60 },
     { pattern: 'turret', x: 3380, y: GROUND_TOP - 150 },
   ],
+  // 序盤=導入区間、ボス前=ボストリガー(4200)手前に配置。
+  // postBoss はボス撃破後エリアの動線が必要なため block 2(ボス後フロー)で追加する。
+  logTriggers: [
+    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
+    { slot: 'preBoss', x: 4060, y: GROUND_TOP - 40 },
+  ],
   bossTriggerX: 4200,
   // ボスはトリガー地点(プレイヤー x≈3720, カメラ右端4200)のすぐ先に出現させ、
   // 間合いが開きすぎて戦闘が成立しないのを防ぐ。本体下端=地面で接地させ、
@@ -146,6 +165,10 @@ const STAGE2: StageData = {
     { pattern: 'turret', x: 2880, y: GROUND_TOP - 180 },
     { pattern: 'walker', x: 3400, y: GROUND_TOP - 60 },
     { pattern: 'turret', x: 3700, y: GROUND_TOP - 120 },
+  ],
+  logTriggers: [
+    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
+    { slot: 'preBoss', x: 3520, y: GROUND_TOP - 40 },
   ],
   bossTriggerX: 3700,
   // 飛行ボスは空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
