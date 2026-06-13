@@ -6,7 +6,7 @@ import { STAGE, BOSS } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
-import { STORY_EVENT } from '../config/storyEvents';
+import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
@@ -82,6 +82,8 @@ export class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.firstEnemyInnerDone = false;
     this.firstLogDone = false;
+    // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
+    this.registry.set(STORY.pending, []);
     this.stage = getStageData(this.stageId);
     this.story = getStageStory(this.stageId);
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
@@ -100,21 +102,21 @@ export class GameScene extends Phaser.Scene {
     this.setupOrientationHandling();
     fadeIn(this);
     getSound().playBgm('stage');
-    // UIScene の StoryOverlay リスナー登録は launch 後の create で行われるため、
-    // 同期的に emit するとイベントを取りこぼす。UI の create 完了を待ってから流す。
-    const ui = this.scene.get(SCENE_KEYS.ui);
-    if (this.scene.isActive(SCENE_KEYS.ui)) {
-      this.emitStory({ type: 'stageStart' });
-    } else {
-      ui.events.once(Phaser.Scenes.Events.CREATE, () => this.emitStory({ type: 'stageStart' }));
-    }
+    // 開始テキスト+開始内心。registry に積み、UIScene が drain する(起動順に依存しない)。
+    this.emitStory({ type: 'stageStart' });
   }
 
-  /** ストーリーイベントを解決し、UIScene の StoryOverlay へ表示要求を送る。 */
+  /** ストーリーイベントを解決し、registry の表示キューへ積む(UIScene が drain)。 */
   private emitStory(event: StoryEvent): void {
     if (!this.story) return;
-    const requests = resolveStoryEvent(this.story, event);
-    if (requests.length > 0) this.game.events.emit(STORY_EVENT.show, requests);
+    this.pushStory(resolveStoryEvent(this.story, event));
+  }
+
+  /** 表示要求を registry の pending 配列へ追加する。 */
+  private pushStory(requests: TextRequest[]): void {
+    if (requests.length === 0) return;
+    const queue = (this.registry.get(STORY.pending) as TextRequest[] | undefined) ?? [];
+    this.registry.set(STORY.pending, [...queue, ...requests]);
   }
 
   private buildLogTriggers(): void {
@@ -141,7 +143,7 @@ export class GameScene extends Phaser.Scene {
     } else if (this.story) {
       requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
     }
-    if (requests.length > 0) this.game.events.emit(STORY_EVENT.show, requests);
+    this.pushStory(requests);
   }
 
   private buildPlatforms(): void {

@@ -9,7 +9,7 @@ import { MovePad } from '../ui/MovePad';
 import { StoryOverlay } from '../ui/StoryOverlay';
 import { createTouchLayout } from '../config/touchLayout';
 import { resolveControlBand } from '../config/controlBand';
-import { STORY_EVENT } from '../config/storyEvents';
+import { STORY } from '../config/storyEvents';
 import type { TextRequest } from '../types/story';
 
 // HUD(ライフ/ボスHP/チャージゲージ)+ タッチ操作ガイド。GameScene と並行起動。
@@ -37,12 +37,7 @@ export class UIScene extends Phaser.Scene {
     this.storyOverlay = new StoryOverlay(this);
     this.bossShown = false;
 
-    // GameScene からの表示要求を受けてオーバーレイへ積む(game レベルのイベント)。
-    const onStory = (requests: TextRequest[]): void => this.storyOverlay.enqueue(requests);
-    this.game.events.on(STORY_EVENT.show, onStory);
-
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.game.events.off(STORY_EVENT.show, onStory);
       this.lifeBar.destroy();
       this.bossHpBar.destroy();
       this.chargeGauge.destroy();
@@ -54,6 +49,14 @@ export class UIScene extends Phaser.Scene {
 
   override update(): void {
     const reg = this.registry;
+    // GameScene が registry に積んだ表示要求を drain してオーバーレイへ。
+    // cross-scene イベントと違い、UIScene の起動が遅れても取りこぼさない。
+    const pending = reg.get(STORY.pending) as TextRequest[] | undefined;
+    if (pending && pending.length > 0) {
+      reg.set(STORY.pending, []);
+      this.storyOverlay.enqueue(pending);
+    }
+
     const band = resolveControlBand(this);
     const layout = createTouchLayout(this.scale.width, this.scale.height, band);
     const shootHeld = (reg.get(HUD.shootHeld) as boolean) ?? false;
