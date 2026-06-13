@@ -17,4 +17,6 @@ export const HUD = {
   movePadBaseY: 'hud.movepad.baseY',
   movePadCurX: 'hud.movepad.curX',
   movePadCurY: 'hud.movepad.curY',
+  // 取得フィードバックの軽量トースト。GameScene が表示メッセージを積み、UIScene が drain して表示する。
+  toast: 'hud.toast',
 } as const;

@@ -16,6 +16,8 @@ export interface SaveData {
   clearedStages: string[];
   /** ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーを持たない。 */
   bestTimeMs?: Record<string, number>;
+  /** 取得済みログのキー配列(形式 "stageId:slot" 例: "stage6:early")。LogViewerScene で閲覧する。 */
+  collectedLogs: string[];
   /** ユーザー設定 */
   settings: GameSettings;
 }
