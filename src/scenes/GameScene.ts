@@ -210,13 +210,16 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.player.setVelocityX(0);
-    // ゲーム/HUD を止め、演出シーンをオーバーレイ起動する。完了で救出クリアへ。
-    this.scene.pause(SCENE_KEYS.ui);
-    this.scene.launch(SCENE_KEYS.cutscene, {
-      scriptKey,
-      onComplete: () => this.finalizeRescueClear(),
+    // physics overlap コールバック内から直接 scene.pause() を呼ぶと Phaser の
+    // 物理ステップが中断しフリーズする。次フレームへ遅延して安全に実行する。
+    this.time.delayedCall(0, () => {
+      this.scene.pause(SCENE_KEYS.ui);
+      this.scene.launch(SCENE_KEYS.cutscene, {
+        scriptKey,
+        onComplete: () => this.finalizeRescueClear(),
+      });
+      this.scene.pause();
     });
-    this.scene.pause();
   }
 
   /** ボス撃破後・自由移動フェーズへ入る。ボスを片付けてケージを解錠する。 */
