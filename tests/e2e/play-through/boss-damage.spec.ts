@@ -1,28 +1,14 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { startGame } from '../_helpers';
 
 // 実ブラウザでボスにショットが命中し HP が減ることを検証する。
 // 以前はボスが空中に浮いて地上ショットが当たらず撃破できなかったため、その回帰防止。
 // (canvas 描画のため、公開済みの game インスタンスからシーン状態を読む)
 
-async function activeScenes(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const game = window.lastSpark;
-    if (!game) return [];
-    return game.scene.getScenes(true).map((s) => s.scene.key);
-  });
-}
-
-async function waitForScene(page: Page, key: string): Promise<void> {
-  await expect
-    .poll(async () => (await activeScenes(page)).includes(key), { timeout: 10_000 })
-    .toBe(true);
-}
-
 test('ボスにショットを当てると HP が減る', async ({ page }) => {
   await page.goto('/');
-  await waitForScene(page, 'TitleScene');
-  await page.locator('#game-root canvas').click();
-  await waitForScene(page, 'GameScene');
+  // 開始演出を送り切り、GameScene が実行中になってからボスを出す(演出中は物理が止まる)。
+  await startGame(page);
 
   // ボスを出現させ、最大HPを取得
   const maxHp = await page.evaluate(() => {

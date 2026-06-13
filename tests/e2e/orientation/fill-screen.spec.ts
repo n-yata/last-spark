@@ -1,26 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { startGame } from '../_helpers';
 
 // レターボックス(左右の黒帯)が出ず、キャンバスが物理画面いっぱいに広がること、
 // および画面左端のタッチが移動ゾーンとして拾われることを検証する。
 // (以前は 16:9 固定 + FIT のため横長端末で左右に空白が出て、左端の操作が切れていた)
-
-async function activeScenes(page: Page): Promise<string[]> {
-  return page.evaluate(() =>
-    (window.lastSpark?.scene.getScenes(true) ?? []).map((s) => s.scene.key),
-  );
-}
-
-async function waitForScene(page: Page, key: string): Promise<void> {
-  await expect
-    .poll(async () => (await activeScenes(page)).includes(key), { timeout: 10_000 })
-    .toBe(true);
-}
-
-async function startGame(page: Page): Promise<void> {
-  await waitForScene(page, 'TitleScene');
-  await page.locator('#game-root canvas').click();
-  await waitForScene(page, 'GameScene');
-}
 
 test('横長端末でキャンバスが画面いっぱいに広がり左右の空白が出ない', async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 400 }); // 2.25:1(16:9 より横長)

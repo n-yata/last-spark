@@ -12,5 +12,11 @@
 - [x] SpawnSystem.ts: warden のボス幅でトリガー可視位置を補正
 - [x] テスト追加(wardenBossAi / shot.computeLobVelocity / wardenBoss)
 - [x] lint + typecheck + test 通過
-- [ ] e2e: 環境のネットワーク制限で Playwright ブラウザ未取得のため未実行
-      (cdn.playwright.dev が egress 許可外。コード起因の失敗ではない)
+- [x] e2e: Chromium が利用可能になったため実行・解消(2026-06-13)。
+      当初は Playwright ブラウザ未取得で未実行だった(環境制約)。実行にあたり、e2e がブロック当時から
+      陳腐化していた点を現行ゲームに合わせて修正:
+        - stage1 開始演出(背景つき CutsceneScene)で GameScene が一時停止するため、開始処理を
+          共通ヘルパー `tests/e2e/_helpers.ts` の `startGame`(演出を送り切って GameScene 実行中にする)へ集約
+        - SaveData v1(`cleared` boolean)前提のクリア永続化テストを v2(`clearedStages` 配列)に更新
+        - リアルタイムゲームの実操作 e2e が並列競合で不安定だったため `playwright.config.ts` の worker を 2 に制限
+      結果: 全9 e2e が安定パス(boss-damage=ミサイル/接地ボスの命中回帰防止 を含む)。
