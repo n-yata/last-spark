@@ -7,9 +7,9 @@ import type { StageStory, StoryEvent, StoryTextKind, StoryTextStyle, TextRequest
 export const TEXT_STYLES: Record<StoryTextKind, StoryTextStyle> = {
   scientistLog: { position: 'top', pauseGame: true },
   eclipseVoice: { position: 'top', pauseGame: true },
-  rayInner: { position: 'bottom', pauseGame: false },
+  rayInner: { position: 'top', pauseGame: false },
   stageIntro: { position: 'center', pauseGame: true },
-  terraLine: { position: 'bottom', pauseGame: false },
+  terraLine: { position: 'top', pauseGame: false },
 };
 
 function request(kind: StoryTextKind, text: string): TextRequest {
