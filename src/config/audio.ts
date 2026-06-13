@@ -132,7 +132,9 @@ export const BGM: Record<BgmKey, BgmTrack> = {
   stage: {
     wave: 'triangle',
     bpm: 96,
-    baseVolume: 0.24,
+    // 三角波は矩形波より体感が小さく、疎なメロディ+休符で鳴る時間も短いため、
+    // 「探索中ほぼ聞こえない」を避けるべく基準音量を底上げする(クリップ余裕あり)。
+    baseVolume: 0.4,
     drone: { semitone: -24, volume: 0.5 }, // A2 の持続パッド(土台)
     loop: [
       { semitone: 0, beats: 2 }, // A4
@@ -149,7 +151,7 @@ export const BGM: Record<BgmKey, BgmTrack> = {
   stageWarm: {
     wave: 'triangle',
     bpm: 96,
-    baseVolume: 0.24,
+    baseVolume: 0.4, // 探索(stage)と同じ音圧で揃える(底上げ理由は stage 参照)
     detuneCents: 8, // わずかなコーラス感(温もり)
     drone: { semitone: -24, volume: 0.45 },
     loop: [
