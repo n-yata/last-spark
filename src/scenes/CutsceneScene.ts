@@ -62,16 +62,20 @@ export class CutsceneScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x05080d, 1).setOrigin(0);
     this.drawBackground(width, height);
 
-    // 本文(1 行ずつ差し替え)。中央下寄りに大きく表示する。
+    // 本文(1 行ずつ差し替え)。SVG 背景は中央〜下部にキャラ・発光があり文字と被って
+    // 読みにくいため、画面上部(全カットシーンで最も暗い帯)に表示する。さらに局所的な
+    // 明部(月・発光ハロ等)や将来の背景でも確実に読めるよう、影と細い縁取りで縁を立てる。
     this.bodyText = this.add
-      .text(width / 2, height * 0.66, '', {
+      .text(width / 2, Math.min(scaled(96), height * 0.12), '', {
         fontFamily: 'sans-serif',
         fontSize: scaledFontPx(24),
         color: '#ffffff',
         align: 'center',
         wordWrap: { width: Math.min(scaled(760), width - scaled(80)) },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0)
+      .setStroke('#05080d', scaled(4))
+      .setShadow(0, scaled(2), '#000000', scaled(6), true, true);
 
     // タップ送り案内(点滅)。
     this.hint = this.add
