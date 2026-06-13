@@ -82,6 +82,10 @@ export class SpawnSystem {
     const enemy = new Enemy(this.scene, spawn.x, spawn.y, spawn.pattern, this.tuning);
     enemy.setProjectiles(this.enemyShots);
     this.enemies.add(enemy);
+    // Arcade の Group.add() はグループ既定値(allowGravity=true)でボディ設定を
+    // 上書きする。turret の重力 OFF が打ち消されると床をすり抜けて落下するため、
+    // 追加後に系統別のボディ設定を再適用する。
+    enemy.configureBody();
   }
 
   /** 生存中の敵すべてに毎フレームの振る舞いを適用する。 */
