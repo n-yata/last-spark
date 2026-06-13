@@ -134,6 +134,12 @@ export class GameScene extends Phaser.Scene {
   private startIntro(): void {
     const key = this.stage.introCutsceneKey;
     if (!key || !getCutscene(key)) {
+      // 演出なしステージ(stage2/3/6)の入場。多重遷移ガード(transition.fading)は scene.data に
+      // 保持され scene.start をまたいで残るため、ここで fadeIn を呼んで必ずリセットする。
+      // これを怠ると、前ステージのクリア遷移で立ったガードが居残り、本ステージのクリア遷移が
+      // 早期 return で握り潰されて「クリア後に次へ進めない」状態になる(他シーンは create で
+      // fadeIn 済み。GameScene の演出ありステージは finishIntro で fadeIn する)。
+      fadeIn(this);
       this.emitStageStart();
       return;
     }
