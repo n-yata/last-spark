@@ -292,3 +292,10 @@ const STAGES: Record<string, StageData> = {
 export function getStageData(stageId: string): StageData {
   return STAGES[stageId] ?? STAGE1;
 }
+
+/**
+ * プレイ可能なステージ ID の一覧(STAGES 登録順)。開発モードのステージ選択などで参照する。
+ * STAGES から導出するため、ステージを追加・削除しても自動で追従する(定義の二重管理を避ける)。
+ * 表示ラベル等は参照側(開発モードモジュール)が持ち、本番バンドルへ持ち込まない。
+ */
+export const STAGE_IDS: readonly string[] = Object.keys(STAGES);

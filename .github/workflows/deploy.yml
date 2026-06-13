@@ -45,7 +45,11 @@ jobs:
         run: npm test
 
       - name: Build (Vite + PWA)
+        # GitHub Pages は動作確認用の公開環境。開発モード(タイトルのステージ選択)を
+        # 有効化してビルドする。素の `npm run build`(フラグ無し)では無効のまま。
         run: npm run build
+        env:
+          VITE_DEV_MODE: 'true'
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
