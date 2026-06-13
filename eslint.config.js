@@ -23,6 +23,8 @@ export default [
         Storage: 'readonly',
         navigator: 'readonly',
         console: 'readonly',
+        // DOM 型(E2E の page.evaluate 内ブラウザコードで参照)
+        HTMLCanvasElement: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         setInterval: 'readonly',
