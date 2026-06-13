@@ -6,7 +6,7 @@
 // 寸法は balance.ts の width/height から比率で導出している(はみ出しすぎない範囲)。
 
 import { PART } from './assetKeys';
-import { PLAYER, ENEMY, BOSS, FLYING_BOSS } from './balance';
+import { PLAYER, ENEMY, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN } from './balance';
 
 /** パーツの描画形状。PreloadScene がこの種別に応じて Graphics で描き分ける。 */
 export type PartShape =
@@ -61,7 +61,7 @@ export interface RigPartSpec {
 
 /** 1 系統のリグ仕様。parts は背面→前面(描画順 = z 順)で並べる。 */
 export interface RigSpec {
-  family: 'player' | 'walker' | 'turret' | 'boss' | 'bossFlying';
+  family: 'player' | 'walker' | 'turret' | 'boss' | 'bossFlying' | 'bossWarden';
   /** 歩行スイングの基準振幅(rad)。系統ごとの脚の振り幅。 */
   swingRad: number;
   /** 歩行周期(ms)。小さいほど速く脚を動かす。 */
@@ -84,6 +84,8 @@ const PALETTE = {
   boss: { metal: 0x1a0b0f, base: 0x44181f, light: 0x6e2630, accent: 0xff2d55, accent2: 0xffb13b },
   // 飛行ボス: シアン主 × バイオレット副(冷たい空中機。赤い接地ボスと対比)。
   bossFlying: { metal: 0x0e1a24, base: 0x1d3a52, light: 0x2f5f82, accent: 0x37c8ff, accent2: 0xb78cff },
+  // 収容番人: 明るい鋼鉄 × ハザードアンバー(重装の管理機。赤いボス/冷たい飛行ボスと対比し、暗くなりすぎない)。
+  bossWarden: { metal: 0x3a4654, base: 0x55636f, light: 0x8a98a6, accent: 0xffc233, accent2: 0x46e0c0 },
 } as const;
 
 // プレイヤー(28x40): ヘルメット頭 + 胴 + 片腕アームキャノン + 二脚。
@@ -161,6 +163,25 @@ const bossFlyingRig: RigSpec = {
   ],
 };
 
+// 収容番人(92x96): 重装の大型管理機。stage1 ボスと別シルエットで「重い・広い・装甲」を表す。
+// 幅広の胴 + 肩の装甲バー(パールドロン) + 短く太い二脚 + 大型の拘束クランプ腕。
+// 歩行スイングは小さめ(重量級でのっそり動く)。色はハザードアンバー基調で視認性を確保する。
+const WD = PALETTE.bossWarden;
+const bossWardenRig: RigSpec = {
+  family: 'bossWarden',
+  swingRad: 0.3,
+  walkCycleMs: 720,
+  parts: [
+    { key: PART.bossWarden.legBack, shape: 'leg', w: 24, h: 26, fill: WD.metal, accent: WD.accent, x: -15, y: 20, originX: 0.5, originY: 0, role: 'legBack' },
+    { key: PART.bossWarden.legFront, shape: 'leg', w: 24, h: 26, fill: WD.metal, accent: WD.accent, x: 15, y: 20, originX: 0.5, originY: 0, role: 'legFront' },
+    { key: PART.bossWarden.armBack, shape: 'roundedBox', w: 20, h: 42, fill: WD.metal, accent: WD.accent, x: -36, y: -6, originX: 0.5, originY: 0.12, role: 'armBack' },
+    { key: PART.bossWarden.torso, shape: 'roundedBox', w: 62, h: 52, fill: WD.base, accent: WD.accent, accent2: WD.accent2, x: 0, y: 0, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossWarden.pauldron, shape: 'roundedBox', w: 70, h: 16, fill: WD.light, accent: WD.accent2, x: 0, y: -26, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossWarden.head, shape: 'helmet', w: 34, h: 26, fill: WD.light, accent: WD.accent, accent2: WD.accent2, x: 0, y: -38, originX: 0.5, originY: 0.5, role: 'head' },
+    { key: PART.bossWarden.armFront, shape: 'cannon', w: 42, h: 30, fill: WD.light, accent: WD.accent2, x: 26, y: -2, originX: 0.2, originY: 0.5, role: 'armFront' },
+  ],
+};
+
 /** 系統名 → リグ仕様。CharacterRig / PreloadScene が参照する。 */
 export const RIGS = {
   player: playerRig,
@@ -168,6 +189,7 @@ export const RIGS = {
   turret: turretRig,
   boss: bossRig,
   bossFlying: bossFlyingRig,
+  bossWarden: bossWardenRig,
 } as const;
 
 export type RigFamily = keyof typeof RIGS;
@@ -184,4 +206,5 @@ export const RIG_BODY_SIZE = {
   turret: { width: ENEMY.turret.width, height: ENEMY.turret.height },
   boss: { width: BOSS.width, height: BOSS.height },
   bossFlying: { width: FLYING_BOSS.width, height: FLYING_BOSS.height },
+  bossWarden: { width: CONTAINMENT_WARDEN.width, height: CONTAINMENT_WARDEN.height },
 } as const;

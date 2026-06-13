@@ -1,6 +1,7 @@
 import { STAGE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, type BossConfig } from './balance';
 import type { EnemyPattern } from '../types/enemy';
 import type { BossKind } from '../types/boss';
+import type { RigFamily } from './characterRig';
 
 // ステージ1「崩れた都市」のコード定義データ。
 // MVP は 1 ステージのため Tiled JSON ではなくここで地形/敵配置を定義する。
@@ -69,6 +70,11 @@ export interface StageData {
    * stage3 は重装型 CONTAINMENT_WARDEN を差す。
    */
   bossConfig?: BossConfig;
+  /**
+   * ボスの描画リグ系統(任意)。未定義なら接地型 'boss'。
+   * stage3 は専用シルエットの 'bossWarden' を差し、見た目を stage1 ボスと明確に分ける。
+   */
+  bossRig?: RigFamily;
   /** ボスアリーナ左端(カメラがここで止まる) */
   bossArenaMinX: number;
   /**
@@ -249,6 +255,7 @@ const STAGE3: StageData = {
   bossSpawn: { x: 4050, y: GROUND_TOP - CONTAINMENT_WARDEN.height / 2 },
   bossKind: 'ground',
   bossConfig: CONTAINMENT_WARDEN,
+  bossRig: 'bossWarden',
   bossArenaMinX: 4100,
   // 収容ケージはアリーナ右端付近。撃破後にここへ接触して救出演出へ。
   cage: { x: 4480, y: GROUND_TOP - 70 },

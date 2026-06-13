@@ -59,4 +59,13 @@ export const PART = {
     wingFront: 'part-bossflying-wingfront',
     cannon: 'part-bossflying-cannon',
   },
+  bossWarden: {
+    head: 'part-bosswarden-head',
+    torso: 'part-bosswarden-torso',
+    pauldron: 'part-bosswarden-pauldron',
+    armBack: 'part-bosswarden-armback',
+    armFront: 'part-bosswarden-clamp',
+    legBack: 'part-bosswarden-legback',
+    legFront: 'part-bosswarden-legfront',
+  },
 } as const;

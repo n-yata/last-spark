@@ -81,8 +81,6 @@ export interface BossConfig {
   phase2SpeedFactor: number;
   /** ジャンプ初速(接地ボスのみ。上向き負)。飛行ボスは持たない。 */
   jumpVelocity?: number;
-  /** リグに常時適用する色合い(乗算)。未設定時はデフォルト色。 */
-  tint?: number;
 }
 
 /**
@@ -152,8 +150,6 @@ export const CONTAINMENT_WARDEN = {
     stagger: 800,
   },
   phase2SpeedFactor: 0.75,
-  // 暗青鋼色: stage1 ボス(デフォルト色)と視覚的に区別し「重装管理機」の威圧感を表す。
-  tint: 0x5588bb,
 } as const satisfies BossConfig;
 
 /**

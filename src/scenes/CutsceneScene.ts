@@ -89,22 +89,111 @@ export class CutsceneScene extends Phaser.Scene {
     });
   }
 
-  /** 簡易シルエット演出: 大きい冷色の影=RAY、小さい暖色の影=TERRA、奥に収容ケージの格子。 */
+  /** 演出背景: 冷色のロボット=RAY、その隣に人間の少女=TERRA、奥に収容ケージの格子。 */
   private drawScene(width: number, height: number): void {
     const groundY = height * 0.82;
     // 収容ケージの格子(解錠済み=開いた状態の名残)。
-    const bars = this.add.graphics().setAlpha(0.25);
+    const bars = this.add.graphics().setAlpha(0.22);
     bars.lineStyle(4, 0x6f7b8a, 1);
     for (let i = 0; i < 6; i += 1) {
-      const x = width * 0.62 + i * 22;
+      const x = width * 0.66 + i * 22;
       bars.lineBetween(x, groundY - 150, x, groundY);
     }
-    // RAY(背の高い冷色シルエット)
-    this.add.ellipse(width * 0.42, groundY - 60, 60, 150, 0x2b3b4a).setOrigin(0.5, 1);
-    this.add.circle(width * 0.42, groundY - 150, 26, 0x37424f);
-    // TERRA(小さい暖色シルエット)
-    this.add.ellipse(width * 0.55, groundY - 30, 34, 78, 0x5a4533).setOrigin(0.5, 1);
-    this.add.circle(width * 0.55, groundY - 78, 17, 0x6b5238);
+    // RAY(背の高い冷色のロボット)と TERRA(人間の少女)を並べて描く。
+    this.drawRay(width * 0.4, groundY);
+    this.drawTerra(width * 0.56, groundY);
+  }
+
+  /** RAY: 背の高い冷色のロボット。胸部には名前の由来となる刻印「RAY」を描き込む。 */
+  private drawRay(x: number, baseY: number): void {
+    const g = this.add.graphics();
+    // 脚 + 足
+    g.fillStyle(0x2b3b4a, 1);
+    g.fillRect(x - 16, baseY - 72, 12, 72);
+    g.fillRect(x + 4, baseY - 72, 12, 72);
+    g.fillStyle(0x1d2a36, 1);
+    g.fillRect(x - 20, baseY - 8, 18, 8);
+    g.fillRect(x + 2, baseY - 8, 18, 8);
+    // 腕(肩の発光ライン付き)
+    g.fillStyle(0x2b3b4a, 1);
+    g.fillRect(x - 31, baseY - 130, 9, 60);
+    g.fillRect(x + 22, baseY - 130, 9, 60);
+    g.fillStyle(0x7fd4ff, 0.7);
+    g.fillRect(x - 31, baseY - 130, 9, 4);
+    g.fillRect(x + 22, baseY - 130, 9, 4);
+    // 胴(角張ったボディ)
+    g.fillStyle(0x35485a, 1);
+    g.fillRect(x - 22, baseY - 132, 44, 64);
+    // 胸部パネル(刻印を載せる暗い面)
+    g.fillStyle(0x223240, 1);
+    g.fillRect(x - 17, baseY - 122, 34, 26);
+    g.lineStyle(1, 0x4a6275, 1);
+    g.strokeRect(x - 17, baseY - 122, 34, 26);
+    // 頭(角型)
+    g.fillStyle(0x40566b, 1);
+    g.fillRect(x - 16, baseY - 170, 32, 36);
+    // バイザー(発光)
+    g.fillStyle(0x7fd4ff, 0.9);
+    g.fillRect(x - 11, baseY - 158, 22, 7);
+
+    // 胸部の刻印「RAY」。TERRA がこれを見て名前を知る(演出のト書きと対応)。
+    this.add
+      .text(x, baseY - 109, 'RAY', {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#9fe4ff',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setShadow(0, 0, '#3aa0ff', 6, false, true);
+  }
+
+  /** TERRA: 人間の少女。ぼかさず頭・髪・ワンピース・手足を描いて人らしい姿にする。 */
+  private drawTerra(x: number, baseY: number): void {
+    const skin = 0xf2c9a0;
+    const hair = 0x5b3b27;
+    const dress = 0xe08a52;
+    const g = this.add.graphics();
+    // 脚
+    g.fillStyle(skin, 1);
+    g.fillRect(x - 9, baseY - 26, 7, 26);
+    g.fillRect(x + 2, baseY - 26, 7, 26);
+    // 靴
+    g.fillStyle(0x4a3322, 1);
+    g.fillRect(x - 11, baseY - 6, 10, 6);
+    g.fillRect(x + 1, baseY - 6, 10, 6);
+    // ワンピース(肩から裾へ広がる台形)
+    g.fillStyle(dress, 1);
+    g.fillPoints(
+      [
+        new Phaser.Geom.Point(x - 13, baseY - 26),
+        new Phaser.Geom.Point(x + 13, baseY - 26),
+        new Phaser.Geom.Point(x + 9, baseY - 64),
+        new Phaser.Geom.Point(x - 9, baseY - 64),
+      ],
+      true,
+    );
+    // 腕
+    g.fillStyle(skin, 1);
+    g.fillRect(x - 15, baseY - 62, 5, 24);
+    g.fillRect(x + 10, baseY - 62, 5, 24);
+    // 首
+    g.fillRect(x - 3, baseY - 70, 6, 8);
+    // 後ろ髪(顔より大きめの円)
+    g.fillStyle(hair, 1);
+    g.fillCircle(x, baseY - 82, 15);
+    // 顔(少し下げて頭頂に髪を残す)
+    g.fillStyle(skin, 1);
+    g.fillCircle(x, baseY - 78, 12);
+    // サイドの髪
+    g.fillStyle(hair, 1);
+    g.fillRect(x - 16, baseY - 84, 5, 16);
+    g.fillRect(x + 11, baseY - 84, 5, 16);
+    // 目
+    g.fillStyle(0x2a1a10, 1);
+    g.fillCircle(x - 4, baseY - 78, 1.6);
+    g.fillCircle(x + 4, baseY - 78, 1.6);
   }
 
   private showLine(i: number): void {
