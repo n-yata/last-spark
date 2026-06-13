@@ -9,7 +9,6 @@ export const SCENE_KEYS = {
   gameOver: 'GameOverScene',
   clear: 'ClearScene',
   cutscene: 'CutsceneScene',
-  logViewer: 'LogViewerScene',
   orientation: 'OrientationScene',
 } as const;
 

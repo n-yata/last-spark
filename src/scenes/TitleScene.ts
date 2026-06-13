@@ -90,23 +90,6 @@ export class TitleScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
-    // 「記録ログ」導線。startZone より後に追加することで Phaser の topOnly(既定 true)で
-    // 前面となり、スタート判定に巻き込まれずに開ける(DEV MODE ボタンと同じ作法)。
-    const logBtn = this.add
-      .text(width - 20, 20, 'きろくログ', {
-        fontFamily: 'monospace',
-        fontSize: '16px',
-        color: '#ffcf8f',
-        backgroundColor: 'rgba(40,28,12,0.7)',
-        padding: { x: 12, y: 8 },
-      })
-      .setOrigin(1, 0)
-      .setInteractive({ useHandCursor: true });
-    logBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
-      getSound().playSe('uiTap');
-      transitionTo(this, SCENE_KEYS.logViewer);
-    });
-
     // 「DEV MODE」導線を追加する。有効化条件:
     //   - ローカル開発(import.meta.env.DEV)
     //   - ビルド時フラグ VITE_DEV_MODE='true'(GitHub Pages の確認用デプロイで指定)
