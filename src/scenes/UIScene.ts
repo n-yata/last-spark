@@ -7,7 +7,6 @@ import { ChargeGauge } from '../ui/ChargeGauge';
 import { TouchControls } from '../ui/TouchControls';
 import { MovePad } from '../ui/MovePad';
 import { StoryOverlay } from '../ui/StoryOverlay';
-import { Toast } from '../ui/Toast';
 import { createTouchLayout } from '../config/touchLayout';
 import { resolveControlBand } from '../config/controlBand';
 import { STORY } from '../config/storyEvents';
@@ -23,7 +22,6 @@ export class UIScene extends Phaser.Scene {
   private movePad!: MovePad;
   private touchControls!: TouchControls;
   private storyOverlay!: StoryOverlay;
-  private toast!: Toast;
   private bossShown = false;
 
   constructor() {
@@ -37,7 +35,6 @@ export class UIScene extends Phaser.Scene {
     this.movePad = new MovePad(this);
     this.touchControls = new TouchControls(this);
     this.storyOverlay = new StoryOverlay(this);
-    this.toast = new Toast(this);
     this.bossShown = false;
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -47,7 +44,6 @@ export class UIScene extends Phaser.Scene {
       this.movePad.destroy();
       this.touchControls.destroy();
       this.storyOverlay.destroy();
-      this.toast.destroy();
     });
   }
 
@@ -59,13 +55,6 @@ export class UIScene extends Phaser.Scene {
     if (pending && pending.length > 0) {
       reg.set(STORY.pending, []);
       this.storyOverlay.enqueue(pending);
-    }
-
-    // ログ取得トーストの drain。StoryOverlay とは独立した別系統で HUD 隅に表示する。
-    const toastMsg = reg.get(HUD.toast) as string | undefined;
-    if (toastMsg) {
-      reg.set(HUD.toast, undefined);
-      this.toast.show(toastMsg);
     }
 
     const band = resolveControlBand(this);

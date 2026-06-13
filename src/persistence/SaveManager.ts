@@ -15,7 +15,6 @@ export function defaultSaveData(): SaveData {
     version: SAVE_VERSION,
     clearedStages: [],
     bestTimeMs: undefined,
-    collectedLogs: [],
     settings: defaultSettings(),
   };
 }
@@ -57,22 +56,23 @@ export function isValidSaveData(value: unknown): value is SaveData {
   if (d.version !== SAVE_VERSION) return false;
   if (!isStringArray(d.clearedStages)) return false;
   if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return false;
-  if (!isStringArray(d.collectedLogs)) return false;
   if (!isValidSettings(d.settings)) return false;
   return true;
 }
 
 /**
  * 旧形式を現行形式へ移行する。
- * - v2 (clearedStages:string[] / bestTimeMs:Record): collectedLogs を欠くだけなので [] を補完する。
- * - v1 (cleared:boolean / bestTimeMs:number): clearedStages 配列化 + collectedLogs:[] を補完する。
+ * - v2 (clearedStages:string[] / bestTimeMs:Record): 構造は現行と同一のため version のみ引き上げる。
+ * - v1 (cleared:boolean / bestTimeMs:number): clearedStages を配列化して移行する。
  * 移行できない/不正な場合は undefined を返し、呼び出し側で既定値へフォールバックさせる。
+ * 注記: かつての v3 は collectedLogs を持っていたが撤去済み。当時の v3 セーブに残る余分な
+ * collectedLogs フィールドは isValidSaveData では無視され、そのまま読み込める。
  */
 function migrate(value: unknown): SaveData | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const d = value as Record<string, unknown>;
 
-  // v2 → v3: 既存の進捗(clearedStages / bestTimeMs / settings)を保持したまま collectedLogs:[] を補完。
+  // v2 → 現行: 構造が同一(collectedLogs 撤去後)なので進捗を保持したまま version だけ引き上げる。
   // これを欠くと既存プレイヤーの v2 セーブが既定値へ初期化され、クリア進捗が失われる。
   if (d.version === 2 && isStringArray(d.clearedStages) && isValidSettings(d.settings)) {
     if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return undefined;
@@ -80,7 +80,6 @@ function migrate(value: unknown): SaveData | undefined {
       version: SAVE_VERSION,
       clearedStages: [...(d.clearedStages as string[])],
       bestTimeMs: isValidBestTimes(d.bestTimeMs) ? { ...(d.bestTimeMs as Record<string, number>) } : undefined,
-      collectedLogs: [],
       settings: { ...(d.settings as GameSettings) },
     };
   }
@@ -99,7 +98,6 @@ function migrate(value: unknown): SaveData | undefined {
     version: SAVE_VERSION,
     clearedStages,
     bestTimeMs,
-    collectedLogs: [],
     settings: { ...(d.settings as GameSettings) },
   };
 }
@@ -117,7 +115,6 @@ export class SaveManager {
       ...this.data,
       clearedStages: [...this.data.clearedStages],
       bestTimeMs: this.data.bestTimeMs ? { ...this.data.bestTimeMs } : undefined,
-      collectedLogs: [...this.data.collectedLogs],
       settings: { ...this.data.settings },
     };
   }
@@ -156,7 +153,6 @@ export class SaveManager {
       ...data,
       clearedStages: [...data.clearedStages],
       bestTimeMs: data.bestTimeMs ? { ...data.bestTimeMs } : undefined,
-      collectedLogs: [...data.collectedLogs],
       settings: { ...data.settings },
     };
     try {
@@ -190,20 +186,6 @@ export class SaveManager {
   /** 指定ステージがクリア済みか。 */
   isStageCleared(stageId: string): boolean {
     return this.data.clearedStages.includes(stageId);
-  }
-
-  /** ログ取得を記録する。キーは "stageId:slot"。重複は追加しない。 */
-  markLogCollected(stageId: string, slot: string): void {
-    const key = `${stageId}:${slot}`;
-    if (this.data.collectedLogs.includes(key)) return;
-    const next = this.getData();
-    next.collectedLogs = [...next.collectedLogs, key];
-    this.save(next);
-  }
-
-  /** 取得済みログのキー配列("stageId:slot")を返す。 */
-  getCollectedLogs(): string[] {
-    return [...this.data.collectedLogs];
   }
 
   /** 設定を部分更新して保存する。 */
