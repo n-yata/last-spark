@@ -15,9 +15,13 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // 演出シーンの背景静止画(唯一の実ファイルアセット)。論理解像度で
-    // ラスタライズしておき、CutsceneScene が cover 配置で全画面に敷く。
+    // 演出シーンの背景静止画(実ファイルアセット)。論理解像度でラスタライズしておき、
+    // CutsceneScene が cover 配置で全画面に敷く。scriptKey ごとに 1 枚。
     // base:'./' のため index.html 相対の 'assets/...' で参照する。
+    this.load.svg(CUTSCENE_TEX.stage1Intro, 'assets/cutscenes/stage1-intro.svg', {
+      width: GAME_WIDTH,
+      height: GAME_HEIGHT,
+    });
     this.load.svg(CUTSCENE_TEX.stage3Rescue, 'assets/cutscenes/stage3-rescue.svg', {
       width: GAME_WIDTH,
       height: GAME_HEIGHT,

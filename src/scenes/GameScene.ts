@@ -110,10 +110,42 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch(SCENE_KEYS.ui);
     this.initHud();
     this.setupOrientationHandling();
-    fadeIn(this);
     getSound().playBgm('stage');
-    // 開始テキスト+開始内心。registry に積み、UIScene が drain する(起動順に依存しない)。
-    this.emitStory({ type: 'stageStart' });
+    this.startIntro();
+  }
+
+  /**
+   * ステージ開始ストーリーを再生する。introCutsceneKey を持つステージ(stage1)は背景画像つきの
+   * 専用シーン(CutsceneScene)で再生し、送り終えてからゲーム本編を開始する。持たないステージ
+   * (stage2-3)は従来どおりカメラをフェードインし、StoryOverlay の中央テキスト(stageIntro)で
+   * 開始する。開始テキスト+開始内心は registry に積み、UIScene が drain する(起動順非依存)。
+   */
+  private startIntro(): void {
+    const scriptKey = this.stage.introCutsceneKey;
+    if (!scriptKey) {
+      fadeIn(this);
+      this.emitStory({ type: 'stageStart' });
+      return;
+    }
+    // 専用シーン再生中は本編の操作・物理が動かないよう Game/UI を止め、完了で再開する。
+    // 演出が被さる前に本編の最初の 1 フレームがチラ見えしないよう、カメラを透過にして
+    // 隠しておく(一時停止中でも確実に効くよう alpha を直接 0 にする)。本編側のフェード
+    // インは再開時(finishIntro)に行う。
+    this.cameras.main.setAlpha(0);
+    this.scene.pause(SCENE_KEYS.ui);
+    this.scene.launch(SCENE_KEYS.cutscene, {
+      scriptKey,
+      onComplete: () => this.finishIntro(),
+    });
+    this.scene.pause();
+  }
+
+  /** 開始演出の完了。Game/UI の一時停止を解き、カメラを戻してフェードインで本編へ滑らかに入る。 */
+  private finishIntro(): void {
+    this.scene.resume();
+    if (this.scene.isPaused(SCENE_KEYS.ui)) this.scene.resume(SCENE_KEYS.ui);
+    this.cameras.main.setAlpha(1);
+    fadeIn(this);
   }
 
   /** ストーリーイベントを解決し、registry の表示キューへ積む(UIScene が drain)。 */

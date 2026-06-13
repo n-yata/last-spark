@@ -47,6 +47,13 @@ export interface LadderRect {
 
 export interface StageData {
   id: string;
+  /**
+   * ステージ開始時に再生する演出スクリプトキー(任意。config/story/cutscenes.ts)。
+   * 定義があるステージは GameScene 開始時に背景画像つきの専用シーン(CutsceneScene)で開始
+   * ストーリーを再生し、送り終えるとゲーム本編が始まる。未定義のステージは従来どおり
+   * StoryOverlay の中央テキスト(stageIntro)で開始する(stage2-3)。
+   */
+  introCutsceneKey?: string;
   /** プレイヤー初期位置(中心) */
   playerStart: { x: number; y: number };
   platforms: PlatformRect[];
@@ -100,6 +107,8 @@ const GROUND_THICK = STAGE.height - STAGE.groundY;
 // 地面は途中に奈落(ギャップ)を 1 箇所設け、落下死を成立させる。
 const STAGE1: StageData = {
   id: 'stage1',
+  // 開始演出を背景画像つきの専用シーンで再生する(stage3 救出演出と同方式)。
+  introCutsceneKey: 'stage1-intro',
   // 地面に接した状態で開始する(本体半身=PLAYER.height/2=20)。これより高く置くと
   // 開始時に落下して着地するため、ステージ開始テキストで一時停止した瞬間に
   // 「上から落ちてくる」不自然な演出になる。接地位置に置いて落下をなくす。
