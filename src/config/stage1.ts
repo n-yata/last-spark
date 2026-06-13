@@ -127,13 +127,16 @@ const STAGE1: StageData = {
   ],
   enemies: [
     { pattern: 'walker', x: 820, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 980, y: GROUND_TOP - 200 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 980, y: GROUND_TOP - 16 },
     { pattern: 'walker', x: 1800, y: GROUND_TOP - 60 },
     { pattern: 'walker', x: 2080, y: GROUND_TOP - 160 },
-    { pattern: 'turret', x: 2440, y: GROUND_TOP - 250 },
+    // 高台(top=GROUND_TOP-220)の上に接地。
+    { pattern: 'turret', x: 2440, y: GROUND_TOP - 236 },
     { pattern: 'walker', x: 2860, y: GROUND_TOP - 170 },
     { pattern: 'walker', x: 3200, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 3380, y: GROUND_TOP - 150 },
+    // 高台(top=GROUND_TOP-120)の上に接地。
+    { pattern: 'turret', x: 3380, y: GROUND_TOP - 136 },
   ],
   // 序盤=導入区間、ボス前=ボストリガー(4200)手前に配置。
   // postBoss はボス撃破後エリアの動線が必要なため block 2(ボス後フロー)で追加する。
@@ -186,15 +189,18 @@ const STAGE2: StageData = {
   ],
   enemies: [
     { pattern: 'walker', x: 900, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 1500, y: GROUND_TOP - 120 },
-    // 橋の上の砲台(渡る時に警戒。turret は重力なしでこの高さに留まる)
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 1500, y: GROUND_TOP - 16 },
+    // 橋(top=GROUND_TOP-220)の上に接地。渡る時に警戒させる。
     { pattern: 'turret', x: 2120, y: GROUND_TOP - 236 },
     { pattern: 'walker', x: 2600, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 2880, y: GROUND_TOP - 180 },
+    // 高台(top=GROUND_TOP-150)の上に接地。
+    { pattern: 'turret', x: 2880, y: GROUND_TOP - 166 },
     // 末尾の雑魚はボス出現位置(x=3950)と十分離す。ボス戦エリアに雑魚が
     // 残って重ならないよう、最後の敵を x=3350 までに収める(ボスまで約600px)。
     { pattern: 'walker', x: 3150, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 3350, y: GROUND_TOP - 120 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 3350, y: GROUND_TOP - 16 },
   ],
   logTriggers: [
     { slot: 'early', x: 360, y: GROUND_TOP - 40 },
@@ -235,14 +241,17 @@ const STAGE3: StageData = {
   ],
   enemies: [
     { pattern: 'walker', x: 760, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 1080, y: GROUND_TOP - 200 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 1080, y: GROUND_TOP - 16 },
     { pattern: 'walker', x: 1900, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 2240, y: GROUND_TOP - 170 },
+    // 高台(top=GROUND_TOP-130)の上に接地。
+    { pattern: 'turret', x: 2240, y: GROUND_TOP - 146 },
     { pattern: 'walker', x: 2640, y: GROUND_TOP - 250 },
     { pattern: 'walker', x: 3060, y: GROUND_TOP - 180 },
     // 末尾の雑魚はボス出現位置(x=4050)と十分離す(ボスまで約600px)。
     { pattern: 'walker', x: 3300, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 3480, y: GROUND_TOP - 150 },
+    // 足場なし=地面に接地(本体半身=16)。
+    { pattern: 'turret', x: 3480, y: GROUND_TOP - 16 },
   ],
   // 序盤=収容区画入口、ボス前=ボストリガー(3900)手前、ボス後=アリーナ内(ケージ手前・任意接触)。
   logTriggers: [

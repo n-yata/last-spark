@@ -56,22 +56,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
   }
 
   /**
-   * 系統別のボディ設定(重力/不動)を適用する。
-   * 注意: Arcade の `Group.add()` はグループ既定値(allowGravity=true ほか)を
-   * createCallback で上書きするため、コンストラクタだけで設定すると turret の
-   * 重力 OFF が打ち消される。turret は不動 × 重力 OFF だが、静止地面(同じく不動)
-   * とは衝突分離されないため、重力が残ると床をすり抜けて画面外へ落下する。
-   * これを防ぐため SpawnSystem はグループ追加後に本メソッドを再適用する。
+   * ボディ設定(重力/可動)を適用する。
+   * walker・turret とも重力 ON × 可動とし、既存の地面/足場 collider で接地させる。
+   * turret(砲台)も重力で落として地面・足場の上に乗せる。immovable にすると静止地面
+   * (同じく immovable)と衝突分離されず床をすり抜けて落下するため、必ず可動にすること。
+   * 砲台はプレイヤーとの物理 collider が無く(接触はダメージ用 overlap のみ)、被弾
+   * ノックバックも無いため、可動でも横へ押されて動くことはなく「固定砲台」として機能する。
+   * 注意: Arcade の `Group.add()` はグループ既定値でボディ設定を上書きするため、
+   * SpawnSystem はグループ追加後に本メソッドを再適用する。
    */
   configureBody(): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
-    if (this.pattern === 'turret') {
-      body.setAllowGravity(false);
-      body.setImmovable(true);
-    } else {
-      body.setAllowGravity(true);
-      body.setImmovable(false);
-    }
+    body.setAllowGravity(true);
+    body.setImmovable(false);
   }
 
   setProjectiles(group: Phaser.Physics.Arcade.Group): void {
