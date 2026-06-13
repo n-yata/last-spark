@@ -32,8 +32,22 @@ const STAGE3_RESCUE: Cutscene = {
   ],
 };
 
+// Stage 4「汚染地帯」ステージ開始演出シーン。TERRA 同行後の最初のステージで、汚染された空気に
+// TERRA が反応し、RAY が「人間が壊した場所」だと内心で受け止める。docs/story.md
+// 「TERRAのセリフ > Stage 4 — ステージ開始演出シーン」の確定スクリプトをそのまま転記する。
+const STAGE4_INTRO: Cutscene = {
+  key: 'stage4-intro',
+  lines: [
+    { kind: 'terraLine', text: 'ここ、空気が変。息が苦しい' },
+    { kind: 'rayInner', text: '人間が——壊した場所だ' },
+    { kind: 'terraLine', text: '誰がこんなにしたの？' },
+    { kind: 'rayInner', text: '……人間が。俺が守ろうとしている——人間が' },
+  ],
+};
+
 const CUTSCENES: Record<string, Cutscene> = {
   'stage3-rescue': STAGE3_RESCUE,
+  'stage4-intro': STAGE4_INTRO,
 };
 
 /** scriptKey に対応する演出スクリプトを返す。未登録なら undefined。 */
