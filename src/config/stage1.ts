@@ -169,12 +169,14 @@ const STAGE2: StageData = {
     { pattern: 'turret', x: 2120, y: GROUND_TOP - 236 },
     { pattern: 'walker', x: 2600, y: GROUND_TOP - 60 },
     { pattern: 'turret', x: 2880, y: GROUND_TOP - 180 },
-    { pattern: 'walker', x: 3400, y: GROUND_TOP - 60 },
-    { pattern: 'turret', x: 3700, y: GROUND_TOP - 120 },
+    // 末尾の雑魚はボス出現位置(x=3950)と十分離す。ボス戦エリアに雑魚が
+    // 残って重ならないよう、最後の敵を x=3350 までに収める(ボスまで約600px)。
+    { pattern: 'walker', x: 3150, y: GROUND_TOP - 60 },
+    { pattern: 'turret', x: 3350, y: GROUND_TOP - 120 },
   ],
   logTriggers: [
     { slot: 'early', x: 360, y: GROUND_TOP - 40 },
-    { slot: 'preBoss', x: 3520, y: GROUND_TOP - 40 },
+    { slot: 'preBoss', x: 3560, y: GROUND_TOP - 40 },
   ],
   bossTriggerX: 3700,
   // 飛行ボスは空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。

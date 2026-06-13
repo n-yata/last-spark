@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { resolveControlBand } from '../config/controlBand';
-import { TEXT_STYLES } from '../systems/storyDirector';
+import { TEXT_STYLES, readingDurationMs } from '../systems/storyDirector';
 import type { StoryTextKind, TextRequest } from '../types/story';
 
 // ストーリーテキストのオーバーレイ描画。UIScene 上に常駐し、TextRequest のキューを順に再生する。
@@ -31,7 +31,6 @@ const VISUALS: Record<StoryTextKind, KindVisual> = {
 };
 
 const DEPTH = 200;
-const INNER_AUTO_MS = 2600; // 非停止テキストの自動消去時間
 const FADE_MS = 220;
 
 export class StoryOverlay {
@@ -97,14 +96,10 @@ export class StoryOverlay {
     this.container.setVisible(true);
     this.scene.tweens.add({ targets: this.container, alpha: 1, duration: FADE_MS });
 
-    if (style.pauseGame) {
-      // タップで閉じる(一度きり)。
-      this.scene.input.once('pointerdown', () => this.dismiss());
-    } else {
-      // 自動消去。タップでも前倒しできる。
-      this.autoTimer = this.scene.time.delayedCall(INNER_AUTO_MS, () => this.dismiss());
-      this.scene.input.once('pointerdown', () => this.dismiss());
-    }
+    // すべてのテキストは本文の長さに応じた時間で自動的に次へ進む。タップでは閉じない。
+    // プレイ中のタップ(移動/ジャンプ/ショット)や、ボス出現時の連射で誤って閉じて
+    // しまい「読む前に消える」のを防ぐ。一時停止系はこの間ゲームを止める。
+    this.autoTimer = this.scene.time.delayedCall(readingDurationMs(next.text), () => this.dismiss());
   }
 
   private dismiss(): void {

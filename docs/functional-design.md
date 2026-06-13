@@ -225,7 +225,7 @@ class SpawnSystem {
 
 **StoryDirector(純粋ロジック)**: `resolveStoryEvent(story, event)` が `StoryEvent`(`stageStart` / `logFound` / `bossIntro` / `inner`)を表示要求 `TextRequest[]` に変換する。Phaser 非依存でユニットテスト可能(`bossAi.ts` 等と同方針)。確定テキストは `config/story/stageN.ts`(`StageStory`)に持ち、`getStageStory(stageId)` で引く。
 
-**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。一時停止系(科学者ログ/ECLIPSE/開始テキスト)は `GameScene` を `scene.pause` し、タップで次へ。非停止系(RAY内心/TERRAセリフ)はプレイ継続のまま画面下部に浮かべ一定時間で自動消去する。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
+**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。**すべてのテキストはタップでは閉じず、本文の長さに応じた読了時間(`readingDurationMs`)で自動的に次へ進む**。これはプレイ中のタップ(移動/ジャンプ/ショット)やボス出現時の連射で「読む前に消える」のを防ぐため。一時停止系(科学者ログ/ECLIPSE/開始テキスト)はこの表示時間中 `GameScene` を `scene.pause` し、終わると自動で再開する。非停止系(RAY内心/TERRAセリフ)はプレイ継続のまま画面下部・中央に浮かべる。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
 
 **ログトリガー**: `StageData.logTriggers?`(`slot` = `early` / `preBoss` / `postBoss`、位置)に基づき `GameScene` が `LogTrigger`(オーバーラップ判定のみ・衝突なし)を生成する。プレイヤーが重なると一度だけ(`tryConsume`)該当スロットの科学者ログを発火する。触れるかはプレイヤーの自由(任意接触・読み飛ばし可)。`postBoss` ログはボス撃破後の動線が必要なため、ボス後フロー実装(Stage 3 ブロック)で配置する。
 
