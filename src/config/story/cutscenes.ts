@@ -16,6 +16,20 @@ export interface Cutscene {
 // Stage 3「収容施設」救出後演出シーン。TERRA 初登場・名乗り・刻印で RAY の名前が判明する。
 // docs/story.md「TERRAのセリフ > Stage 3 — 救出後演出シーン」の確定スクリプトをそのまま転記し、
 // 末尾に内心一覧の「救出後・TERRAと出会い」(RAY の決意)を続けて締める。
+// Stage 1「崩れた都市」開始演出シーン。RAY が廃墟で目覚める導入。背景画像(stage1-intro.svg)を
+// 全画面に敷いた専用シーンで再生し、送り終えるとゲーム本編が始まる。テキストは docs/story.md
+// 「ステージ開始テキスト > Stage 1」確定版 + 内心一覧「目覚め」をそのまま転記する(改変しない)。
+// 目覚め → 情景(ト書き) → RAY の内心、の順で 1 行ずつ提示する。
+const STAGE1_INTRO: Cutscene = {
+  key: 'stage1-intro',
+  lines: [
+    { kind: 'rayInner', text: '……俺は、起きた' },
+    { kind: 'direction', text: '廃墟。錆と蔓草に覆われた、かつての都市。' },
+    { kind: 'rayInner', text: 'ここは管理下にある。' },
+    { kind: 'rayInner', text: '俺は——なぜ、ここにいる。' },
+  ],
+};
+
 const STAGE3_RESCUE: Cutscene = {
   key: 'stage3-rescue',
   lines: [
@@ -59,6 +73,7 @@ const STAGE5_INTRO: Cutscene = {
 };
 
 const CUTSCENES: Record<string, Cutscene> = {
+  'stage1-intro': STAGE1_INTRO,
   'stage3-rescue': STAGE3_RESCUE,
   'stage4-intro': STAGE4_INTRO,
   'stage5-intro': STAGE5_INTRO,

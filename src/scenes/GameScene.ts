@@ -113,14 +113,15 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch(SCENE_KEYS.ui);
     this.initHud();
     this.setupOrientationHandling();
-    fadeIn(this);
     getSound().playBgm('stage');
     this.startIntro();
   }
 
   /**
-   * ステージ開始の導入。開始演出(introCutsceneKey)を持つステージは演出を再生してから
-   * 開始テキストへ進む。持たないステージは従来どおり即座に開始テキストを出す。
+   * ステージ開始の導入。introCutsceneKey を持つステージ(stage1 など)は背景画像つきの専用シーン
+   * (CutsceneScene)で開始演出を再生し、送り終えてから開始テキストへ進む。持たないステージ
+   * (stage2-3)は従来どおり即座に開始テキストを出す。開始テキスト+開始内心は registry に積み、
+   * UIScene が drain する(起動順非依存)。
    */
   private startIntro(): void {
     const key = this.stage.introCutsceneKey;
@@ -128,7 +129,11 @@ export class GameScene extends Phaser.Scene {
       this.emitStageStart();
       return;
     }
-    // フェードインを少し見せてから演出へ。ゲーム/UI を止め、演出完了後に再開して開始テキストへ。
+    // 演出が被さる前に本編の最初の 1 フレームがチラ見えしないよう、カメラを透過にして隠す
+    // (一時停止中でも確実に効くよう alpha を直接 0 にする)。本編側のフェードインは再開時
+    // (finishIntro)に行う。
+    this.cameras.main.setAlpha(0);
+    // ゲーム/UI を止め、演出完了後に再開して開始テキストへ。
     // (救出演出と同じく、物理ステップ中の scene.pause() を避けるためタイマー経由で状態変更する)
     this.time.delayedCall(300, () => {
       this.scene.pause(SCENE_KEYS.ui);
@@ -140,10 +145,12 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** 開始演出の完了後: ゲーム/UI を再開し、開始テキスト+開始内心を出す。 */
+  /** 開始演出の完了後: Game/UI を再開し、カメラを戻してフェードインで本編へ滑らかに入り、開始テキストを出す。 */
   private finishIntro(): void {
     this.scene.resume();
     this.scene.resume(SCENE_KEYS.ui);
+    this.cameras.main.setAlpha(1);
+    fadeIn(this);
     this.emitStageStart();
   }
 
@@ -170,6 +177,9 @@ export class GameScene extends Phaser.Scene {
     for (const spec of this.stage.logTriggers ?? []) {
       const trigger = new LogTrigger(this, spec.x, spec.y, spec.slot);
       this.logTriggers.add(trigger);
+      // Group.add() がボディ設定をグループ既定値(重力ON)で上書きし、玉が床を
+      // すり抜けて落下するため、本来の静止設定を再適用する(Enemy と同様)。
+      trigger.configureBody();
     }
     this.physics.add.overlap(this.player, this.logTriggers, (_player, obj) => {
       this.onLogOverlap(obj as LogTrigger);

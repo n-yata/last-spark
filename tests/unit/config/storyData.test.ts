@@ -125,6 +125,18 @@ describe('ボス後演出フローのステージ条件', () => {
   });
 });
 
+describe('ステージ開始演出フローのステージ条件', () => {
+  it('stage1 は開始演出を専用シーンで再生する: introCutsceneKey が定義されている', () => {
+    expect(getStageData('stage1').introCutsceneKey).toBe('stage1-intro');
+  });
+
+  it('stage2 / stage3 は従来どおり開始テキスト(StoryOverlay)で開始する: introCutsceneKey 未定義', () => {
+    for (const id of ['stage2', 'stage3']) {
+      expect(getStageData(id).introCutsceneKey).toBeUndefined();
+    }
+  });
+});
+
 describe('ログトリガー配置', () => {
   it('stage1 / stage2 / stage3 / stage4 / stage5 に early・preBoss のトリガーが配置されている', () => {
     for (const id of ['stage1', 'stage2', 'stage3', 'stage4', 'stage5']) {

@@ -21,9 +21,8 @@ export class LogTrigger extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setAllowGravity(false);
-    body.setImmovable(true);
     body.setSize(WIDTH, HEIGHT);
+    this.configureBody();
 
     this.setDisplaySize(WIDTH, HEIGHT).setTint(GLOW_TINT).setDepth(6);
 
@@ -36,6 +35,17 @@ export class LogTrigger extends Phaser.Physics.Arcade.Sprite {
       repeat: -1,
       ease: 'Sine.InOut',
     });
+  }
+
+  /**
+   * 物理ボディを「重力を受けない静止オブジェクト」に設定する。
+   * 注意: Arcade の `Group.add()` はグループ既定値(重力ON/可動)でボディ設定を
+   * 上書きするため、GameScene はグループ追加後に本メソッドを再適用する(Enemy と同様)。
+   */
+  configureBody(): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.setImmovable(true);
   }
 
   /** 未解錠なら true を返し、自身を解錠済みにする(以降は false)。 */
