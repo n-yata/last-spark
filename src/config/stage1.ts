@@ -78,7 +78,10 @@ const GROUND_THICK = STAGE.height - STAGE.groundY;
 // 地面は途中に奈落(ギャップ)を 1 箇所設け、落下死を成立させる。
 const STAGE1: StageData = {
   id: 'stage1',
-  playerStart: { x: 120, y: GROUND_TOP - 60 },
+  // 地面に接した状態で開始する(本体半身=PLAYER.height/2=20)。これより高く置くと
+  // 開始時に落下して着地するため、ステージ開始テキストで一時停止した瞬間に
+  // 「上から落ちてくる」不自然な演出になる。接地位置に置いて落下をなくす。
+  playerStart: { x: 120, y: GROUND_TOP - 20 },
   platforms: [
     // 地面セグメント 1(スタート〜奈落手前)
     { x: 0, y: GROUND_TOP, width: 1400, height: GROUND_THICK },
@@ -133,7 +136,10 @@ const STAGE1: StageData = {
 const STAGE2_WIDTH = 4200;
 const STAGE2: StageData = {
   id: 'stage2',
-  playerStart: { x: 120, y: GROUND_TOP - 60 },
+  // 地面に接した状態で開始する(本体半身=PLAYER.height/2=20)。これより高く置くと
+  // 開始時に落下して着地するため、ステージ開始テキストで一時停止した瞬間に
+  // 「上から落ちてくる」不自然な演出になる。接地位置に置いて落下をなくす。
+  playerStart: { x: 120, y: GROUND_TOP - 20 },
   platforms: [
     // 地面セグメント A(スタート〜大奈落手前)。A は x=2000 で途切れる。
     { x: 0, y: GROUND_TOP, width: 2000, height: GROUND_THICK },

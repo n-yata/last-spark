@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { resolveControlBand } from '../config/controlBand';
 import { TEXT_STYLES } from '../systems/storyDirector';
@@ -99,11 +99,11 @@ export class StoryOverlay {
 
     if (style.pauseGame) {
       // タップで閉じる(一度きり)。
-      this.scene.input.once(Phaser.Input.Events.POINTER_DOWN, () => this.dismiss());
+      this.scene.input.once('pointerdown', () => this.dismiss());
     } else {
       // 自動消去。タップでも前倒しできる。
       this.autoTimer = this.scene.time.delayedCall(INNER_AUTO_MS, () => this.dismiss());
-      this.scene.input.once(Phaser.Input.Events.POINTER_DOWN, () => this.dismiss());
+      this.scene.input.once('pointerdown', () => this.dismiss());
     }
   }
 
@@ -139,6 +139,9 @@ export class StoryOverlay {
     this.text.setWordWrapWidth(maxWidth, true);
     this.text.setText(req.text);
     this.text.setAlpha(visual.backdrop ? 1 : 0.92);
+    // コンストラクタで非表示にしているテキスト本体を表示に戻す(これを忘れると
+    // パネルだけ出て文字が出ない)。
+    this.text.setVisible(true);
 
     const pos = TEXT_STYLES[req.kind].position;
     let y: number;
