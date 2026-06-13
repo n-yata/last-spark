@@ -42,7 +42,17 @@ export interface SeSpec {
 }
 
 /** BGM トラックキー(シーン連動)。 */
-export type BgmKey = 'title' | 'stage' | 'boss' | 'ending';
+export type BgmKey = 'title' | 'stage' | 'stageWarm' | 'boss' | 'ending';
+
+/**
+ * 持続する低音パッド(ドローン)。ループ全体の下に鳴り続け、アンビエントな「音の風景」の
+ * 土台を作る。semitone は A4=0 基準の半音オフセット(低音=負)、volume は bgm チャンネル内の
+ * 相対音量(0–1)。未指定のトラックはドローンなし。
+ */
+export interface BgmDrone {
+  semitone: number;
+  volume: number;
+}
 
 /** ノート 1 つ。semitone は A4=0 を基準とした半音オフセット。null は休符。 */
 export interface NoteToken {
@@ -60,6 +70,14 @@ export interface BgmTrack {
   baseVolume: number;
   /** ループするノート列。 */
   loop: NoteToken[];
+  /**
+   * 各ノートを「わずかにデチューンした 2 声」で鳴らすときのデチューン量(セント)。
+   * 0/未指定なら単声。10 前後で弦の合奏やパッドのような温かい揺らぎ(コーラス感)が出る。
+   * 「温もり(stageWarm)」「弦・ピアノ系(ending)」の質感づくりに使う。
+   */
+  detuneCents?: number;
+  /** 持続する低音パッド(ドローン)。未指定ならドローンなし。 */
+  drone?: BgmDrone;
 }
 
 // --- SE カタログ(13種) ---
@@ -85,10 +103,14 @@ export const SE: Record<SeKey, SeSpec> = {
   uiTap: { wave: 'square', freqStart: 600, freqEnd: 600, durationMs: 60, attackMs: 1, releaseMs: 40, volume: 0.35 },
 } as const;
 
-// --- BGM トラック(4種) ---
-// 半音オフセット(A4=0)で記述。暗め基調のミニマルなループ。
-// title: 静かな浮遊感 / stage: 推進力のあるアルペジオ / boss: 緊張感のある低音主体 /
-// ending: 苦い勝利と再生の希望(遅く荘重な、解決感のある長音主体)。
+// --- BGM トラック(5種) ---
+// 半音オフセット(A4=0)で記述。ビジュアルトーン(暗い廃墟＋発光アクセント)と一貫した方向性。
+// docs/story.md「BGM方針」の4シーンに対応:
+//   title       : 静かな浮遊感(導入)
+//   stage       : 探索=アンビエント・ドローン系。廃墟の静寂と不安感(「音の風景」)
+//   stageWarm   : TERRA同行後(Stage 3クリア以降)。探索にわずかな温もり(長3度＋デチューンの揺らぎ)
+//   boss        : 無機質な電子音楽。ECLIPSEの機械的な冷たさ(低音ドローン＋鋸波ビート)
+//   ending      : 静かで余韻を残す、人間的な弦・パッド系(遅い解決進行＋デチューン＋ドローン)
 export const BGM: Record<BgmKey, BgmTrack> = {
   title: {
     wave: 'triangle',
@@ -105,33 +127,48 @@ export const BGM: Record<BgmKey, BgmTrack> = {
       { semitone: null, beats: 1 }, // 休符
     ],
   },
+  // 探索: アンビエント・ドローン系。低音パッドの上に、間(休符)を取った疎なメロディを
+  // ゆっくり置く。短3度(C5)主体で廃墟の静寂と不安感を表す。三角波で角を丸める。
   stage: {
-    wave: 'square',
-    bpm: 132,
-    baseVolume: 0.28,
+    wave: 'triangle',
+    bpm: 96,
+    baseVolume: 0.24,
+    drone: { semitone: -24, volume: 0.5 }, // A2 の持続パッド(土台)
     loop: [
-      { semitone: -12, beats: 0.5 }, // A3
-      { semitone: 0, beats: 0.5 }, // A4
-      { semitone: 3, beats: 0.5 }, // C5
-      { semitone: 7, beats: 0.5 }, // E5
-      { semitone: 3, beats: 0.5 }, // C5
-      { semitone: 0, beats: 0.5 }, // A4
-      { semitone: -5, beats: 0.5 }, // E4
-      { semitone: -2, beats: 0.5 }, // G4
-      { semitone: -4, beats: 0.5 }, // F4
-      { semitone: 3, beats: 0.5 }, // C5
-      { semitone: 5, beats: 0.5 }, // D5
-      { semitone: 8, beats: 0.5 }, // F5
-      { semitone: 5, beats: 0.5 }, // D5
-      { semitone: 3, beats: 0.5 }, // C5
-      { semitone: 0, beats: 0.5 }, // A4
-      { semitone: -5, beats: 0.5 }, // E4
+      { semitone: 0, beats: 2 }, // A4
+      { semitone: 7, beats: 2 }, // E5(開いた5度)
+      { semitone: 3, beats: 2 }, // C5(短3度=陰り)
+      { semitone: -2, beats: 2 }, // G4
+      { semitone: 0, beats: 1 }, // A4
+      { semitone: -5, beats: 3 }, // E4(沈み込む)
+      { semitone: null, beats: 2 }, // 静寂(音の風景の「間」)
     ],
   },
+  // 温もり: 探索と同じ土台に、長3度(C#5)とデチューンの揺らぎを足して温度を上げる。
+  // TERRA同行後に切り替わり、探索の不安感に人肌の温もりが混じる。短3度→長3度の差が要。
+  stageWarm: {
+    wave: 'triangle',
+    bpm: 96,
+    baseVolume: 0.24,
+    detuneCents: 8, // わずかなコーラス感(温もり)
+    drone: { semitone: -24, volume: 0.45 },
+    loop: [
+      { semitone: 0, beats: 2 }, // A4
+      { semitone: 7, beats: 2 }, // E5
+      { semitone: 4, beats: 2 }, // C#5(長3度=温もり。stage の C5 との対比が肝)
+      { semitone: -2, beats: 2 }, // G4
+      { semitone: 2, beats: 1 }, // B4
+      { semitone: -5, beats: 3 }, // E4
+      { semitone: null, beats: 2 }, // 静寂
+    ],
+  },
+  // ボス: 無機質な機械の冷たさ。低音ドローンの上に鋸波の反復ビート。方針は現行を維持しつつ、
+  // ドローンを敷いて圧と冷たさを増す。
   boss: {
     wave: 'sawtooth',
     bpm: 150,
     baseVolume: 0.3,
+    drone: { semitone: -24, volume: 0.35 }, // A2 の機械的な低音ハム
     loop: [
       { semitone: -12, beats: 0.5 }, // A3
       { semitone: -12, beats: 0.5 }, // A3
@@ -147,11 +184,14 @@ export const BGM: Record<BgmKey, BgmTrack> = {
       { semitone: -12, beats: 1 }, // A3
     ],
   },
-  // エンディング: 遅く荘重に。短調から長3度を含む解決へ向かい、「終わりではなく始まり」を音で表す。
+  // エンディング: 静かで余韻を残す弦・パッド系。遅い解決進行に、デチューン(弦の合奏感)と
+  // 低音ドローン(余韻)を重ねる。短調から長3度を含む解決へ向かい「終わりではなく始まり」を表す。
   ending: {
     wave: 'triangle',
     bpm: 72,
     baseVolume: 0.3,
+    detuneCents: 10, // 弦セクションのような厚みと揺らぎ
+    drone: { semitone: -24, volume: 0.4 }, // 持続する余韻のパッド
     loop: [
       { semitone: -12, beats: 2 }, // A3(沈んだ始まり)
       { semitone: -5, beats: 1 }, // E4

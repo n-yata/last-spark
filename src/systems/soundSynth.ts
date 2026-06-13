@@ -18,6 +18,26 @@ export function noteToFrequency(semitoneFromA4: number): number {
   return 440 * Math.pow(2, semitoneFromA4 / 12);
 }
 
+/**
+ * セント(1半音=100セント)を周波数の倍率に変換する。デチューン 2 声の各声に掛ける。
+ * 例: 0→1, +1200→2(1オクターブ上), -1200→0.5。非有限値は安全側で 1(無変化)。
+ */
+export function centsToRatio(cents: number): number {
+  if (!Number.isFinite(cents)) return 1;
+  return Math.pow(2, cents / 1200);
+}
+
+/**
+ * 探索 BGM のトラックキーを進行状況から選ぶ。TERRA 同行後(Stage 3 クリア以降)は
+ * 温もりのある `stageWarm`、それ以前は通常の探索 `stage` を返す純粋関数。
+ * docs/story.md「Stage 3〜以降(TERRA登場後)は探索にわずかに温もりが混じる」に対応。
+ *
+ * @param clearedStages - クリア済みステージ ID の配列(SaveData.clearedStages)
+ */
+export function selectExplorationBgm(clearedStages: readonly string[]): 'stage' | 'stageWarm' {
+  return clearedStages.includes('stage3') ? 'stageWarm' : 'stage';
+}
+
 /** SE/BGM の役割。音量計算で参照する設定値が変わる。 */
 export type VolumeRole = 'bgm' | 'se';
 
