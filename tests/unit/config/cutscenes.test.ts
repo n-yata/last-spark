@@ -21,11 +21,11 @@ describe('getCutscene', () => {
     const cs = getCutscene('stage1-intro')!;
     const texts = cs.lines.map((l) => l.text);
     // 内心一覧「目覚め」。
-    expect(texts).toContain('……俺は、起きた');
+    expect(texts).toContain('……おれは、目をさました');
     // ステージ開始テキスト Stage 1 の確定3行。
-    expect(texts).toContain('廃墟。錆と蔓草に覆われた、かつての都市。');
-    expect(texts).toContain('ここは管理下にある。');
-    expect(texts).toContain('俺は——なぜ、ここにいる。');
+    expect(texts).toContain('こわれた町。さびと、つる草におおわれた、むかしの町。');
+    expect(texts).toContain('ここは、見はられている。');
+    expect(texts).toContain('おれは——どうして、ここにいるんだ。');
   });
 
   it('全カットシーンが専用背景テクスチャを持つ(動的描画フォールバックに依存しない)', () => {
@@ -60,11 +60,11 @@ describe('getCutscene', () => {
   it('刻印で名前が判明するト書きと RAY の名前確定セリフを含む', () => {
     const cs = getCutscene('stage3-rescue')!;
     const direction = cs.lines.find((l) => l.kind === 'direction');
-    expect(direction?.text).toContain('刻印');
+    expect(direction?.text).toContain('しるし');
     // TERRA が刻印を読んで「RAY」と名を呼ぶ確定セリフ。
     expect(cs.lines.some((l) => l.kind === 'terraLine' && l.text.includes('RAY'))).toBe(true);
     // RAY が自分の名前を受け取る内心。
-    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('それが、俺の名前'))).toBe(
+    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('それが、おれの名前'))).toBe(
       true,
     );
   });
@@ -85,7 +85,7 @@ describe('getCutscene', () => {
   it('stage4-intro は汚染された空気への TERRA の反応で始まる(確定版)', () => {
     const cs = getCutscene('stage4-intro')!;
     expect(cs.lines[0]).toEqual({ kind: 'terraLine', text: 'ここ、空気が変。息が苦しい' });
-    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('俺が守ろうとしている'))).toBe(
+    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('おれが守ろうとしている'))).toBe(
       true,
     );
   });
@@ -100,7 +100,7 @@ describe('getCutscene', () => {
 
   it('stage5-intro は ECLIPSE が近づく緊張への TERRA の怯えで始まる(確定版)', () => {
     const cs = getCutscene('stage5-intro')!;
-    expect(cs.lines[0]).toEqual({ kind: 'terraLine', text: 'ここ、怖い。ECLIPSEが近い' });
+    expect(cs.lines[0]).toEqual({ kind: 'terraLine', text: 'ここ、こわい。ECLIPSEが近い' });
     // 勝てる保証はないが止まれない——決意の入口を RAY の内心で締める。
     expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('止まれない'))).toBe(true);
   });
@@ -110,12 +110,12 @@ describe('getCutscene', () => {
     expect(cs).toBeDefined();
     const lines = cs!.lines;
     // ステップ1: 管理解除(ナレーション)で始まる。
-    expect(lines[0]).toEqual({ kind: 'narration', text: 'ECLIPSEの管理が、解除された' });
+    expect(lines[0]).toEqual({ kind: 'narration', text: 'ECLIPSEのかんりが、とけた' });
     // ステップ2: 人間を初めて直接描写するト書きを含む。
-    expect(lines.some((l) => l.kind === 'direction' && l.text.includes('人間たちが姿を見せる'))).toBe(true);
+    expect(lines.some((l) => l.kind === 'direction' && l.text.includes('人間たちがすがたを見せる'))).toBe(true);
     // ステップ3: TERRA とのセリフ交換(確定版)を含む。
     expect(lines.some((l) => l.kind === 'terraLine' && l.text.includes('次は何する'))).toBe(true);
-    expect(lines.some((l) => l.kind === 'rayInner' && l.text.includes('俺たちが、決める'))).toBe(true);
+    expect(lines.some((l) => l.kind === 'rayInner' && l.text.includes('おれたちが、決める'))).toBe(true);
     // ステップ4: エンディング本文(ナレーション)で締める。
     const last = lines[lines.length - 1];
     expect(last.kind).toBe('narration');
@@ -124,6 +124,6 @@ describe('getCutscene', () => {
 
   it('stage6-ending は苦い勝利(争いの痕跡)のト書きを含む', () => {
     const cs = getCutscene('stage6-ending')!;
-    expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('争った痕跡'))).toBe(true);
+    expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('あらそったあと'))).toBe(true);
   });
 });

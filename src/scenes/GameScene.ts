@@ -35,7 +35,7 @@ import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 const DEFAULT_STAGE_ID = 'stage1';
 const PROJECTILE_POOL = 32;
 /** ログ取得時に HUD 隅へ短時間表示するトーストの文言。 */
-const LOG_TOAST_MESSAGE = 'ログを取得';
+const LOG_TOAST_MESSAGE = 'ログをひろった';
 
 /** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
 export interface GameSceneData {
@@ -134,6 +134,12 @@ export class GameScene extends Phaser.Scene {
   private startIntro(): void {
     const key = this.stage.introCutsceneKey;
     if (!key || !getCutscene(key)) {
+      // 演出なしステージ(stage2/3/6)の入場。多重遷移ガード(transition.fading)は scene.data に
+      // 保持され scene.start をまたいで残るため、ここで fadeIn を呼んで必ずリセットする。
+      // これを怠ると、前ステージのクリア遷移で立ったガードが居残り、本ステージのクリア遷移が
+      // 早期 return で握り潰されて「クリア後に次へ進めない」状態になる(他シーンは create で
+      // fadeIn 済み。GameScene の演出ありステージは finishIntro で fadeIn する)。
+      fadeIn(this);
       this.emitStageStart();
       return;
     }

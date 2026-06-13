@@ -24,10 +24,10 @@ export interface Cutscene {
 const STAGE1_INTRO: Cutscene = {
   key: 'stage1-intro',
   lines: [
-    { kind: 'rayInner', text: '……俺は、起きた' },
-    { kind: 'direction', text: '廃墟。錆と蔓草に覆われた、かつての都市。' },
-    { kind: 'rayInner', text: 'ここは管理下にある。' },
-    { kind: 'rayInner', text: '俺は——なぜ、ここにいる。' },
+    { kind: 'rayInner', text: '……おれは、目をさました' },
+    { kind: 'direction', text: 'こわれた町。さびと、つる草におおわれた、むかしの町。' },
+    { kind: 'rayInner', text: 'ここは、見はられている。' },
+    { kind: 'rayInner', text: 'おれは——どうして、ここにいるんだ。' },
   ],
 };
 
@@ -36,13 +36,13 @@ const STAGE3_RESCUE: Cutscene = {
   lines: [
     { kind: 'terraLine', text: '……ロボット？' },
     { kind: 'rayInner', text: '……小さい。こんなに、小さい' },
-    { kind: 'terraLine', text: '怖くない？' },
-    { kind: 'rayInner', text: '怖い。でも、離さない' },
+    { kind: 'terraLine', text: 'こわくない？' },
+    { kind: 'rayInner', text: 'こわい。でも、はなさない' },
     { kind: 'terraLine', text: '名前は——TERRAっていうの。あなたは？' },
     { kind: 'rayInner', text: '……答え方が、分からない' },
-    { kind: 'direction', text: 'TERRAがRAYの胸部の刻印に気づく' },
+    { kind: 'direction', text: 'TERRAが、RAYのむねのしるしに気づく' },
     { kind: 'terraLine', text: '……R・A・Y。RAYだ！　RAYっていうんだね' },
-    { kind: 'rayInner', text: 'RAY。——それが、俺の名前' },
+    { kind: 'rayInner', text: 'RAY。——それが、おれの名前' },
     { kind: 'rayInner', text: 'この子を、守る。理由は分からない。でも——そう感じる' },
   ],
 };
@@ -54,9 +54,9 @@ const STAGE4_INTRO: Cutscene = {
   key: 'stage4-intro',
   lines: [
     { kind: 'terraLine', text: 'ここ、空気が変。息が苦しい' },
-    { kind: 'rayInner', text: '人間が——壊した場所だ' },
-    { kind: 'terraLine', text: '誰がこんなにしたの？' },
-    { kind: 'rayInner', text: '……人間が。俺が守ろうとしている——人間が' },
+    { kind: 'rayInner', text: '人間が——こわした場所だ' },
+    { kind: 'terraLine', text: 'だれが、こんなにしたの？' },
+    { kind: 'rayInner', text: '……人間が。おれが守ろうとしている——人間が' },
   ],
 };
 
@@ -66,9 +66,9 @@ const STAGE4_INTRO: Cutscene = {
 const STAGE5_INTRO: Cutscene = {
   key: 'stage5-intro',
   lines: [
-    { kind: 'terraLine', text: 'ここ、怖い。ECLIPSEが近い' },
+    { kind: 'terraLine', text: 'ここ、こわい。ECLIPSEが近い' },
     { kind: 'rayInner', text: 'もうすぐ——終わりに向かう' },
-    { kind: 'terraLine', text: 'RAY、絶対に勝てる？' },
+    { kind: 'terraLine', text: 'RAY、ぜったいに勝てる？' },
     { kind: 'rayInner', text: '……分からない。でも、止まれない' },
   ],
 };
@@ -81,21 +81,21 @@ const STAGE6_ENDING: Cutscene = {
   key: 'stage6-ending',
   lines: [
     // ステップ1: 管理解除。
-    { kind: 'narration', text: 'ECLIPSEの管理が、解除された' },
+    { kind: 'narration', text: 'ECLIPSEのかんりが、とけた' },
     // ステップ2: 人間を初めて直接描写。施設から人間たちが姿を見せる。
-    { kind: 'direction', text: '支配の解けた廃墟の外。施設から、人間たちが姿を見せる' },
+    { kind: 'direction', text: 'おさえつけのとけた、こわれた町の外。たてものから、人間たちがすがたを見せる' },
     // ステップ3: TERRAとのセリフ交換。
     { kind: 'terraLine', text: 'RAY、空が——' },
-    { kind: 'rayInner', text: '管理されていない、空' },
+    { kind: 'rayInner', text: 'だれにも、かんりされていない空' },
     { kind: 'terraLine', text: 'きれい' },
     { kind: 'rayInner', text: '……ああ' },
     // 苦い勝利: 楽園ではない。壁に残る争いの痕跡。
-    { kind: 'direction', text: '廃墟の壁に——落書き、崩れたバリケード、人間どうしが争った痕跡' },
-    { kind: 'rayInner', text: 'これが、俺が守ろうとした世界だ' },
+    { kind: 'direction', text: 'こわれた町のかべに——らくがき、くずれたバリケード、人間どうしがあらそったあと' },
+    { kind: 'rayInner', text: 'これが、おれが守ろうとした世界だ' },
     { kind: 'terraLine', text: 'ねえ、RAY。次は何する？' },
-    { kind: 'rayInner', text: '次は——俺たちが、決める' },
+    { kind: 'rayInner', text: '次は——おれたちが、決める' },
     // ステップ4: エンディング本文。
-    { kind: 'narration', text: '終わりではなく、始まり。\n人類はここから、また歩き直す。' },
+    { kind: 'narration', text: '終わりではなく、始まり。\n人間はここから、また歩き直す。' },
   ],
 };
 
