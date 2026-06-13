@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
-import { TEX } from '../config/assetKeys';
+import { TEX, CUTSCENE_TEX } from '../config/assetKeys';
 import { PLAYER, ENEMY, BOSS, SHOT } from '../config/balance';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/dimensions';
 import { allRigParts, type RigPartSpec } from '../config/characterRig';
 
 // アセットのロード。本 MVP は本番スプライト未用意のため、Graphics で
@@ -11,6 +12,16 @@ import { allRigParts, type RigPartSpec } from '../config/characterRig';
 export class PreloadScene extends Phaser.Scene {
   constructor() {
     super(SCENE_KEYS.preload);
+  }
+
+  preload(): void {
+    // 演出シーンの背景静止画(唯一の実ファイルアセット)。論理解像度で
+    // ラスタライズしておき、CutsceneScene が cover 配置で全画面に敷く。
+    // base:'./' のため index.html 相対の 'assets/...' で参照する。
+    this.load.svg(CUTSCENE_TEX.stage3Rescue, 'assets/cutscenes/stage3-rescue.svg', {
+      width: GAME_WIDTH,
+      height: GAME_HEIGHT,
+    });
   }
 
   create(): void {

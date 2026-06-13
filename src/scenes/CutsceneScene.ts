@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { getCutscene, type CutsceneLine } from '../config/story/cutscenes';
+import { CUTSCENE_BACKGROUND } from '../config/assetKeys';
 import type { CutsceneSceneData } from '../types/story';
 
 // 演出シーン: 静止画的な簡易演出の上に、TERRAのセリフ↔RAYの内心↔ト書きを 1 行ずつ表示する。
@@ -19,6 +20,7 @@ const INPUT_GUARD_MS = 350;
 
 export class CutsceneScene extends Phaser.Scene {
   private lines: CutsceneLine[] = [];
+  private scriptKey = '';
   private index = 0;
   private onComplete: () => void = () => {};
   private bodyText!: Phaser.GameObjects.Text;
@@ -31,6 +33,7 @@ export class CutsceneScene extends Phaser.Scene {
   }
 
   init(data: CutsceneSceneData): void {
+    this.scriptKey = data?.scriptKey ?? '';
     const script = getCutscene(data?.scriptKey);
     this.lines = script ? script.lines : [];
     this.onComplete = data?.onComplete ?? (() => {});
@@ -42,9 +45,9 @@ export class CutsceneScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
 
-    // 静止画的な簡易演出背景(アセット未調達でも成立するプレースホルダ)。
+    // 背景。実静止画があればそれを敷き、無ければ簡易シルエットへフォールバックする。
     this.add.rectangle(0, 0, width, height, 0x05080d, 1).setOrigin(0);
-    this.drawScene(width, height);
+    this.drawBackground(width, height);
 
     // 本文(1 行ずつ差し替え)。中央下寄りに大きく表示する。
     this.bodyText = this.add
@@ -89,7 +92,23 @@ export class CutsceneScene extends Phaser.Scene {
     });
   }
 
-  /** 簡易シルエット演出: 大きい冷色の影=RAY、小さい暖色の影=TERRA、奥に収容ケージの格子。 */
+  /**
+   * 背景を敷く。scriptKey に対応する静止画テクスチャがロード済みならそれを cover 配置
+   * (画面比が論理解像度と異なっても隙間を作らず、はみ出しはトリミング)。未ロード時は
+   * 従来の簡易シルエットへフォールバックして演出を成立させる。
+   */
+  private drawBackground(width: number, height: number): void {
+    const bgKey = CUTSCENE_BACKGROUND[this.scriptKey];
+    if (bgKey && this.textures.exists(bgKey)) {
+      const src = this.textures.get(bgKey).getSourceImage();
+      const scale = Math.max(width / src.width, height / src.height);
+      this.add.image(width / 2, height / 2, bgKey).setScale(scale);
+      return;
+    }
+    this.drawScene(width, height);
+  }
+
+  /** 簡易シルエット演出(フォールバック): 大きい冷色の影=RAY、小さい暖色の影=TERRA、奥に収容ケージの格子。 */
   private drawScene(width: number, height: number): void {
     const groundY = height * 0.82;
     // 収容ケージの格子(解錠済み=開いた状態の名残)。
