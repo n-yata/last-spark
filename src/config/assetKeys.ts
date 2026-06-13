@@ -10,6 +10,7 @@ export const TEX = {
   projectileNormal: 'tex-projectile-normal',
   projectileCharged: 'tex-projectile-charged',
   projectileEnemy: 'tex-projectile-enemy',
+  projectileMissile: 'tex-projectile-missile',
   ground: 'tex-ground',
   platform: 'tex-platform',
   ladder: 'tex-ladder',

@@ -36,6 +36,12 @@ export const SHOT = {
   chargedSize: 18,
   // 弾の寿命。射程 = speed × lifespan。ボス戦の間合い(アリーナ幅)で弾が届くよう確保する。
   lifespanMs: 2400,
+  // --- ミサイル(stage3 収容番人の放物線弾) ---
+  // 通常弾より重いダメージ・大きい見た目。launchSpeed は発射時の上向き初速(px/s)で、
+  // 重力(STAGE.gravityY)を受けて弧を描き、着弾点(水平速度)は WardenBoss が逆算する。
+  missileDamage: 2,
+  missileSize: 14,
+  missileLaunchSpeed: 520,
 } as const;
 
 export const ENEMY = {
@@ -126,9 +132,22 @@ export const BOSS = {
 } as const satisfies BossConfig;
 
 /**
- * stage3 専用・収容番人(重装型)の設定。接地型のまま、「遅いが重い単発攻撃」で差別化する。
- * bossAi の GROUND_WEIGHTS をそのまま流用し、行動間隔を長く・攻撃の威力を高く・移動を遅くする
- * ことで威圧感のある重装ボスを表現する(新アクションは追加しない)。
+ * stage3 専用・収容番人(重装ミサイル型)の固有設定。BossConfig を継承し、固有アクション
+ * 「missile」の本数(フェーズ別)・散布間隔を追加する。WardenBoss がこの型を介して参照する。
+ */
+export interface WardenBossConfig extends BossConfig {
+  /** phase1 で 1 回に発射するミサイル本数。 */
+  missileCountP1: number;
+  /** phase2 で 1 回に発射するミサイル本数(増量して攻勢を強める)。 */
+  missileCountP2: number;
+  /** ミサイル着弾点を散らす左右間隔(px)。プレイヤー X を中心に配る。 */
+  missileSpread: number;
+}
+
+/**
+ * stage3 専用・収容番人(重装ミサイル型)の設定。「遅いが重い」接地ボスをベースに、固有の
+ * ミサイル(放物線で降り注ぐアーティラリー)で stage1/2 と明確に差別化する。bossAi の
+ * WARDEN_WEIGHTS を使い、行動間隔を長く・威力を高く・移動を遅くしつつミサイルで圧をかける。
  */
 export const CONTAINMENT_WARDEN = {
   maxHp: 30, // 重装甲。stage1/2 ボス(24)より硬い
@@ -142,15 +161,21 @@ export const CONTAINMENT_WARDEN = {
   width: 92,
   height: 96, // 大柄
   // アクション継続時間を全体に長くして「遅い・溜めてから撃つ」リズムにする。
+  // missile は発射の溜めを感じさせるため長めに取る。
   actionDurationMs: {
     idle: 1000,
     move: 1200,
     shoot: 900,
     jump: 1000,
+    missile: 1100,
     stagger: 800,
   },
   phase2SpeedFactor: 0.75,
-} as const satisfies BossConfig;
+  // --- ミサイル固有 ---
+  missileCountP1: 2,
+  missileCountP2: 3,
+  missileSpread: 120,
+} as const satisfies WardenBossConfig;
 
 /**
  * stage2 専用・飛行/浮遊型ボスの設定。難易度は接地ボスと「同等〜やや強い」に収める
