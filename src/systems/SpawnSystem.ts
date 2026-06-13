@@ -4,6 +4,7 @@ import { getStageData, type StageData, type EnemySpawn } from '../config/stage1'
 import {
   BOSS,
   FLYING_BOSS,
+  CONTAINMENT_WARDEN,
   getStageTuning,
   NEUTRAL_STAGE_TUNING,
   type StageTuning,
@@ -51,8 +52,13 @@ export class SpawnSystem {
     // ボスが画面外のまま戦闘(BGM 切替・HP バー・アリーナ固定)が始まらないよう、
     // 「ボスの全身が画面内に見える位置」までトリガーを遅らせる。bossTriggerX は
     // 設計上の最短地点として尊重しつつ、可視位置との遅い方を採用する。
-    const bossHalfWidth =
-      (this.stage.bossKind === 'flying' ? FLYING_BOSS.width : BOSS.width) / 2;
+    const bossWidth =
+      this.stage.bossKind === 'flying'
+        ? FLYING_BOSS.width
+        : this.stage.bossKind === 'warden'
+          ? CONTAINMENT_WARDEN.width
+          : BOSS.width;
+    const bossHalfWidth = bossWidth / 2;
     this.bossTriggerX = Math.max(
       this.stage.bossTriggerX,
       this.stage.bossSpawn.x + bossHalfWidth + SpawnSystem.BOSS_VISIBLE_MARGIN_PX,

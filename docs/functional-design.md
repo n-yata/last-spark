@@ -128,9 +128,12 @@ interface BossState {
 
 type EnemyPattern = 'walker' | 'turret';      // MVP の雑魚2種(案)
 type BossPhase = 'phase1' | 'phase2';          // HP 50% で移行
-// 系統共通の行動。接地は idle/move/shoot/jump/stagger、飛行は hover/move/shoot/dive/stagger を使う
-type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover';
-type BossKind = 'ground' | 'flying';           // 接地型(stage1) / 飛行・浮遊型(stage2)
+// 系統共通の行動。接地は idle/move/shoot/jump/stagger、飛行は hover/move/shoot/dive/stagger、
+// 浄化型(stage4)は idle/move/shoot/spray/stagger を使う(spray=扇状の範囲攻撃。浄化型専用)
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'spray';
+type BossKind = 'ground' | 'flying';           // 接地型(stage1,3,4) / 飛行・浮遊型(stage2)
+// 接地型の種別(任意)。'purifier'=stage4 の環境管理機(浄化型・扇状の範囲攻撃)
+type BossVariant = 'purifier';
 ```
 
 ### パラメータ定義(チューニング値の集中管理)
@@ -236,7 +239,7 @@ class SpawnSystem {
 
 ### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
 
-**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、ボス固有チューニング `bossConfig?`、収容ケージ `cage?`、ボス後演出キー `postBossCutsceneKey?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → stage3 と続ける(`nextStageId` 無し=最終ステージ)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。`bossConfig` を持つステージ(stage3 の重装型 `CONTAINMENT_WARDEN`)は接地ボスの既定 `BOSS` に代えてその設定で生成する(`bossAi` の行動ロジックは共通のまま、行動間隔・威力・移動速度のパラメータだけで差別化)。
+**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、接地型の種別 `bossVariant?`、ボス固有チューニング `bossConfig?`、収容ケージ `cage?`、ボス後演出キー `postBossCutsceneKey?`、開始演出キー `introCutsceneKey?`、背景色 `backgroundColor?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → stage3 → stage4 と続ける(`nextStageId` 無し=最終ステージ。未実装の次ステージへは接続しない)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。`bossConfig` を持つステージ(stage3 の重装型 `CONTAINMENT_WARDEN`)は接地ボスの既定 `BOSS` に代えてその設定で生成する(`bossAi` の行動ロジックは共通のまま、行動間隔・威力・移動速度のパラメータだけで差別化)。接地型のうち `bossVariant='purifier'` のステージ(stage4)は `PurifierBoss`(浄化型・扇状の範囲攻撃 `spray`)を生成する。`introCutsceneKey` を持つステージ(stage4)はステージ開始時に `CutsceneScene` を再生してから開始テキストへ進む。`backgroundColor` は環境ストーリーテリングの簡易表現としてカメラ背景色をステージごとに変える(stage4=汚染の淀み)。
 
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
@@ -299,9 +302,11 @@ class Boss extends Phaser.Physics.Arcade.Sprite {
 
 // 飛行/浮遊型ボス(stage2)。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束を再利用する
 class FlyingBoss extends Boss {}
+// 浄化型ボス(stage4・環境管理機)。接地型のまま spray(扇状の範囲攻撃)を持つ
+class PurifierBoss extends Boss {}
 ```
 
-**ボス系統(接地 / 飛行)**: `Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。飛行ボス `FlyingBoss`(stage2)は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックをそのまま再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` のみを上書きする。飛行ボスは重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)に分離する。
+**ボス系統(接地 / 飛行 / 浄化型)**: `Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。飛行ボス `FlyingBoss`(stage2)は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックをそのまま再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` のみを上書きする。飛行ボスは重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。浄化型ボス `PurifierBoss`(stage4)は接地型(重力あり)のまま `Boss` を継承し、`beginNextAction` のみ上書きして浄化型専用の重みテーブル(`bossAi` の `PURIFIER_WEIGHTS`)で抽選する。`jump` を持たず、`spray`(プレイヤー方向の水平を中心に扇状へ複数弾を散布する範囲攻撃=毒霧スプレー)を主軸に `move`/`shoot` を織り交ぜる。`spray` の弾数・開き角・速度は `PurifierBossConfig.spray` でパラメータ化し、既存の弾プール/`Projectile` を流用する(発射後に鉛直速度を与えて扇形にする)。系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)/ `PURIFIER`(`PurifierBossConfig`)に分離する。
 
 ### SaveManager(Persistence)
 

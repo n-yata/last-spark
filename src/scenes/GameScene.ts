@@ -10,6 +10,8 @@ import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
+import { WardenBoss } from '../entities/WardenBoss';
+import { PurifierBoss } from '../entities/PurifierBoss';
 import { Projectile } from '../entities/Projectile';
 import { LogTrigger } from '../entities/LogTrigger';
 import { InputController } from '../systems/InputController';
@@ -17,11 +19,12 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { EffectsManager } from '../systems/EffectsManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
-import { resolveStoryEvent } from '../systems/storyDirector';
+import { resolveStoryEvent, readingDurationMs } from '../systems/storyDirector';
 import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
 import { getStageStory } from '../config/story';
+import { getCutscene } from '../config/story/cutscenes';
 import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 
 // ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括する。
@@ -115,37 +118,45 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * ステージ開始ストーリーを再生する。introCutsceneKey を持つステージ(stage1)は背景画像つきの
-   * 専用シーン(CutsceneScene)で再生し、送り終えてからゲーム本編を開始する。持たないステージ
-   * (stage2-3)は従来どおりカメラをフェードインし、StoryOverlay の中央テキスト(stageIntro)で
-   * 開始する。開始テキスト+開始内心は registry に積み、UIScene が drain する(起動順非依存)。
+   * ステージ開始の導入。introCutsceneKey を持つステージ(stage1 など)は背景画像つきの専用シーン
+   * (CutsceneScene)で開始演出を再生し、送り終えてから開始テキストへ進む。持たないステージ
+   * (stage2-3)は従来どおり即座に開始テキストを出す。開始テキスト+開始内心は registry に積み、
+   * UIScene が drain する(起動順非依存)。
    */
   private startIntro(): void {
-    const scriptKey = this.stage.introCutsceneKey;
-    if (!scriptKey) {
-      fadeIn(this);
-      this.emitStory({ type: 'stageStart' });
+    const key = this.stage.introCutsceneKey;
+    if (!key || !getCutscene(key)) {
+      this.emitStageStart();
       return;
     }
-    // 専用シーン再生中は本編の操作・物理が動かないよう Game/UI を止め、完了で再開する。
-    // 演出が被さる前に本編の最初の 1 フレームがチラ見えしないよう、カメラを透過にして
-    // 隠しておく(一時停止中でも確実に効くよう alpha を直接 0 にする)。本編側のフェード
-    // インは再開時(finishIntro)に行う。
+    // 演出が被さる前に本編の最初の 1 フレームがチラ見えしないよう、カメラを透過にして隠す
+    // (一時停止中でも確実に効くよう alpha を直接 0 にする)。本編側のフェードインは再開時
+    // (finishIntro)に行う。
     this.cameras.main.setAlpha(0);
-    this.scene.pause(SCENE_KEYS.ui);
-    this.scene.launch(SCENE_KEYS.cutscene, {
-      scriptKey,
-      onComplete: () => this.finishIntro(),
+    // ゲーム/UI を止め、演出完了後に再開して開始テキストへ。
+    // (救出演出と同じく、物理ステップ中の scene.pause() を避けるためタイマー経由で状態変更する)
+    this.time.delayedCall(300, () => {
+      this.scene.pause(SCENE_KEYS.ui);
+      this.scene.launch(SCENE_KEYS.cutscene, {
+        scriptKey: key,
+        onComplete: () => this.finishIntro(),
+      });
+      this.scene.pause();
     });
-    this.scene.pause();
   }
 
-  /** 開始演出の完了。Game/UI の一時停止を解き、カメラを戻してフェードインで本編へ滑らかに入る。 */
+  /** 開始演出の完了後: Game/UI を再開し、カメラを戻してフェードインで本編へ滑らかに入り、開始テキストを出す。 */
   private finishIntro(): void {
     this.scene.resume();
-    if (this.scene.isPaused(SCENE_KEYS.ui)) this.scene.resume(SCENE_KEYS.ui);
+    this.scene.resume(SCENE_KEYS.ui);
     this.cameras.main.setAlpha(1);
     fadeIn(this);
+    this.emitStageStart();
+  }
+
+  /** 開始テキスト+開始内心を registry の表示キューへ積む(UIScene が drain)。 */
+  private emitStageStart(): void {
+    this.emitStory({ type: 'stageStart' });
   }
 
   /** ストーリーイベントを解決し、registry の表示キューへ積む(UIScene が drain)。 */
@@ -383,6 +394,9 @@ export class GameScene extends Phaser.Scene {
       this.spawnBoss();
       this.emitStory({ type: 'inner', sceneKey: 'terraFound' });
       this.emitStory({ type: 'bossIntro' });
+      // ECLIPSE の語りかけを聞いた直後の内心(stage4 の「ECLIPSEは……正しいのか」など)。
+      // 該当キーを持たないステージでは空になり何も表示されない。
+      this.emitStory({ type: 'inner', sceneKey: 'eclipseReaction' });
     });
   }
 
@@ -390,7 +404,8 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, this.stage.width, STAGE.height);
     cam.startFollow(this.player, true, 0.12, 0.12);
-    cam.setBackgroundColor('#0a0e14');
+    // 環境ストーリーテリングの簡易表現として、ステージ指定の背景色があればそれを使う(stage4=汚染の淀み)。
+    cam.setBackgroundColor(this.stage.backgroundColor ?? '#0a0e14');
     this.applyCameraLayout();
     // RESIZE でキャンバスが伸縮しても、ワールドの縦の見え方(高さ540相当)を一定に保つ
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
@@ -423,14 +438,22 @@ export class GameScene extends Phaser.Scene {
     const arenaRight = this.stage.width;
 
     // ステージ系統に応じてボスを出し分ける。飛行型は重力なしで空中に滞空するため
-    // 地面コライダーを付けない(接地型のみ地面に乗りジャンプ着地する)。
+    // 地面コライダーを付けない(接地型・warden は地面に乗りジャンプ着地する)。
     const flying = this.stage.bossKind === 'flying';
-    this.boss = flying
-      ? new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
-      : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
-          config: this.stage.bossConfig,
-          rigFamily: this.stage.bossRig,
-        });
+    if (flying) {
+      this.boss = new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+    } else if (this.stage.bossKind === 'warden') {
+      // stage3: 収容番人(重装ミサイル型)。接地型なので地面コライダーを付ける。
+      this.boss = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+    } else if (this.stage.bossVariant === 'purifier') {
+      // stage4: 環境管理機(浄化型・扇状の範囲攻撃)。接地型なので地面コライダーを付ける。
+      this.boss = new PurifierBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+    } else {
+      this.boss = new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
+        config: this.stage.bossConfig,
+        rigFamily: this.stage.bossRig,
+      });
+    }
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
     if (!flying) {
@@ -549,10 +572,18 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // 従来(stage1-2): 撃破演出後に即クリアへ。
+    // 従来(stage1-2)/演出キーなし(stage4): 撃破演出後にクリアへ。
     // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に静止させる。
     this.ended = true;
-    this.effects.bossDeathSequence(boss.x, boss.y, () => {
+    this.effects.bossDeathSequence(boss.x, boss.y, () => this.finishStageClear(clearTimeMs));
+  }
+
+  /**
+   * ボス撃破後のクリア確定。撃破直後の内心(inner.bossDefeated)を持つステージ(stage4 など)は、
+   * それを見せてから遷移する。持たないステージは即座に遷移する。
+   */
+  private finishStageClear(clearTimeMs: number): void {
+    const go = (): void => {
       this.inputController.destroy();
       this.scene.stop(SCENE_KEYS.ui);
       // 次ステージがあれば中継して継続、なければ最終クリアとしてタイトルへ。
@@ -561,7 +592,19 @@ export class GameScene extends Phaser.Scene {
         stageId: this.stageId,
         nextStageId: this.stage.nextStageId,
       });
-    });
+    };
+
+    const reflection = this.story
+      ? resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'bossDefeated' })
+      : [];
+    if (reflection.length === 0) {
+      go();
+      return;
+    }
+    // 内心を表示してから、読み切れる時間だけ待って遷移する(UIScene は遷移時に停止する)。
+    this.pushStory(reflection);
+    const holdMs = readingDurationMs(reflection[0].text) + 400;
+    this.time.delayedCall(holdMs, go);
   }
 
   private handleGameOver(): void {

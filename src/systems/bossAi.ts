@@ -26,6 +26,26 @@ const FLYING_WEIGHTS: PhaseWeights = {
   phase2: { hover: 10, move: 25, shoot: 30, dive: 35 },
 };
 
+/**
+ * 収容番人(stage3)のフェーズ別重み(相対値)。接地アクション(move/shoot/idle/jump)に
+ * 固有の missile(放物線ミサイル)を加える。missile は両フェーズで主力級、phase2 で増量して
+ * 「降り注ぐミサイル」で stage1/2 と明確に差別化する。
+ */
+const WARDEN_WEIGHTS: PhaseWeights = {
+  phase1: { move: 25, shoot: 25, missile: 25, idle: 10, jump: 15 },
+  phase2: { move: 20, shoot: 25, missile: 35, idle: 5, jump: 15 },
+};
+
+/**
+ * 浄化型ボス(stage4・環境管理機)のフェーズ別重み(相対値)。接地型と同じく地上で戦うが、
+ * jump を持たず spray(扇状の範囲攻撃)を主軸にする。phase2 で spray を増量し、毒霧の圧を強める。
+ * spray は浄化型専用のため、このテーブルにのみ含め、接地/飛行/収容番人の抽選には混入させない。
+ */
+const PURIFIER_WEIGHTS: PhaseWeights = {
+  phase1: { move: 30, shoot: 25, spray: 30, idle: 15 },
+  phase2: { move: 25, shoot: 25, spray: 40, idle: 10 },
+};
+
 /** 直前と同一アクションに掛ける重み係数(連続抑制)。 */
 const REPEAT_PENALTY = 0.5;
 
@@ -100,9 +120,51 @@ export function pickNextFlyingBossAction(
   return pickWeightedAction(FLYING_WEIGHTS[phase], last, rng);
 }
 
+/**
+ * 収容番人(stage3)の次アクションを重み付き抽選で決定する。
+ *
+ * @param phase - 現在のボスフェーズ
+ * @param last - 直前に実行したアクション
+ * @param rng - 乱数源(テスト用に注入可能)
+ * @returns 次に実行するアクション
+ */
+export function pickNextWardenBossAction(
+  phase: BossPhase,
+  last: BossAction,
+  rng: Rng = Math.random,
+): BossAction {
+  return pickWeightedAction(WARDEN_WEIGHTS[phase], last, rng);
+}
+
+/**
+ * 浄化型ボス(stage4)の次アクションを重み付き抽選で決定する。
+ *
+ * @param phase - 現在のボスフェーズ
+ * @param last - 直前に実行したアクション
+ * @param rng - 乱数源(テスト用に注入可能)
+ * @returns 次に実行するアクション
+ */
+export function pickNextPurifierBossAction(
+  phase: BossPhase,
+  last: BossAction,
+  rng: Rng = Math.random,
+): BossAction {
+  return pickWeightedAction(PURIFIER_WEIGHTS[phase], last, rng);
+}
+
 /** 接地ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */
 export function allowedActions(phase: BossPhase): BossAction[] {
   return Object.keys(GROUND_WEIGHTS[phase]) as BossAction[];
+}
+
+/** 収容番人のフェーズで許可されるアクション一覧(テスト/UI 用)。 */
+export function allowedWardenActions(phase: BossPhase): BossAction[] {
+  return Object.keys(WARDEN_WEIGHTS[phase]) as BossAction[];
+}
+
+/** 浄化型ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */
+export function allowedPurifierActions(phase: BossPhase): BossAction[] {
+  return Object.keys(PURIFIER_WEIGHTS[phase]) as BossAction[];
 }
 
 /** 飛行ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */

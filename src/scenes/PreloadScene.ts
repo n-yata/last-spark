@@ -79,6 +79,8 @@ export class PreloadScene extends Phaser.Scene {
     this.makeOrb(TEX.projectileNormal, SHOT.normalSize, 0x9fffe8);
     this.makeOrb(TEX.projectileCharged, SHOT.chargedSize, 0xfff27a);
     this.makeOrb(TEX.projectileEnemy, SHOT.normalSize + 2, 0xff7a90);
+    // ミサイル(stage3 収容番人): 弾頭 + 噴射炎の縦長シルエットで通常弾と区別する。
+    this.makeMissile(TEX.projectileMissile, SHOT.missileSize, 0xffb347, 0xff5a3c);
 
     // 地形
     this.makeGround(TEX.ground, 64, 60, 0x10171d, 0x37f7d8);
@@ -317,6 +319,31 @@ export class PreloadScene extends Phaser.Scene {
     g.fillCircle(r, r, r);
     g.fillStyle(color, 1);
     g.fillCircle(r, r, Math.max(1, r - 2));
+    g.generateTexture(key, size, size);
+    g.destroy();
+  }
+
+  /**
+   * ミサイル弾: 正方テクスチャ内に弾頭(上)+ 機体 + 噴射炎(下)の縦長シルエットを描く。
+   * 放物線で降り注ぐ見た目を、丸い通常弾と一目で区別させる。body/flame は機体色/炎色。
+   */
+  private makeMissile(key: string, size: number, body: number, flame: number): void {
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    const w = size * 0.5; // 機体幅(縦長にするため横は細い)
+    const cx = size / 2;
+    const left = cx - w / 2;
+    // 噴射炎のハロ(下半分)
+    g.fillStyle(flame, 0.3);
+    g.fillCircle(cx, size * 0.82, w * 0.9);
+    // 機体(角丸の縦長ボディ)
+    g.fillStyle(body, 1);
+    g.fillRoundedRect(left, size * 0.18, w, size * 0.62, w * 0.4);
+    // 弾頭(上端の三角)
+    g.fillStyle(this.shade(body, 0.3), 1);
+    g.fillTriangle(left, size * 0.3, left + w, size * 0.3, cx, size * 0.02);
+    // 噴射炎(下端のコア)
+    g.fillStyle(flame, 1);
+    g.fillTriangle(left + w * 0.15, size * 0.74, left + w * 0.85, size * 0.74, cx, size * 0.98);
     g.generateTexture(key, size, size);
     g.destroy();
   }

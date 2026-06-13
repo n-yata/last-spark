@@ -58,4 +58,20 @@ describe('getCutscene', () => {
     const cs = getCutscene('stage3-rescue')!;
     expect(cs.lines.some((l) => l.text.includes('TERRAっていうの'))).toBe(true);
   });
+
+  it('stage4-intro が登録され、TERRA と RAY の交互セリフを含む', () => {
+    const cs = getCutscene('stage4-intro');
+    expect(cs).toBeDefined();
+    const kinds = new Set(cs!.lines.map((l) => l.kind));
+    expect(kinds.has('terraLine')).toBe(true);
+    expect(kinds.has('rayInner')).toBe(true);
+  });
+
+  it('stage4-intro は汚染された空気への TERRA の反応で始まる(確定版)', () => {
+    const cs = getCutscene('stage4-intro')!;
+    expect(cs.lines[0]).toEqual({ kind: 'terraLine', text: 'ここ、空気が変。息が苦しい' });
+    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('俺が守ろうとしている'))).toBe(
+      true,
+    );
+  });
 });

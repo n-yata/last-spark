@@ -11,6 +11,11 @@ describe('getStageStory', () => {
     expect(getStageStory('stage2')).toBeDefined();
   });
 
+  it('stage3 / stage4 のストーリーが登録されている', () => {
+    expect(getStageStory('stage3')).toBeDefined();
+    expect(getStageStory('stage4')).toBeDefined();
+  });
+
   it('未登録ステージは undefined', () => {
     expect(getStageStory('stageX')).toBeUndefined();
   });
@@ -49,8 +54,20 @@ describe('getStageStory', () => {
     expect(s.inner.terraFound).toBe('……この子が、囚われている');
   });
 
+  it('stage4 の確定テキストが story.md と一致する', () => {
+    const s = getStageStory('stage4')!;
+    expect(s.intro).toContain('汚染地帯。大地は朽ち、空気は淀んでいる。');
+    expect(s.eclipseVoice).toBe('お前も機械だ。なぜ非効率を選ぶ');
+    expect(s.logs.early).toContain('環境データ記録');
+    expect(s.logs.preBoss).toContain('自由を奪う権利が、機械にあるか。');
+    expect(s.logs.postBoss).toContain('両方できる存在が、必ずいると俺は信じた。');
+    expect(s.inner.stageStart).toBe('……これが、人間のしたことか');
+    expect(s.inner.eclipseReaction).toBe('ECLIPSEは……正しいのか');
+    expect(s.inner.bossDefeated).toBe('それでも——TERRAの顔が、浮かぶ');
+  });
+
   it('全3スロットのログ本文が確定版として存在する', () => {
-    for (const id of ['stage1', 'stage2', 'stage3']) {
+    for (const id of ['stage1', 'stage2', 'stage3', 'stage4']) {
       const s = getStageStory(id)!;
       expect(s.logs.early).toBeTruthy();
       expect(s.logs.preBoss).toBeTruthy();
@@ -64,19 +81,31 @@ describe('ボス後演出フローのステージ条件', () => {
     const s = getStageData('stage3');
     expect(s.postBossCutsceneKey).toBe('stage3-rescue');
     expect(s.cage).toBeDefined();
-    expect(s.bossConfig).toBeDefined();
+    // stage3 は重装ミサイル型(warden)。固有設定・リグは WardenBoss が内包するため、
+    // bossConfig ではなく系統(bossKind)で識別する。
+    expect(s.bossKind).toBe('warden');
   });
 
-  it('stage1 / stage2 はボス後演出を持たない(従来どおり撃破→即クリア)', () => {
-    for (const id of ['stage1', 'stage2']) {
+  it('stage1 / stage2 / stage4 はボス後演出を持たない(撃破→(ボス後ログ)→クリア)', () => {
+    for (const id of ['stage1', 'stage2', 'stage4']) {
       const s = getStageData(id);
       expect(s.postBossCutsceneKey).toBeUndefined();
       expect(s.cage).toBeUndefined();
     }
   });
 
-  it('stage2 は stage3 へ連結している', () => {
+  it('stage2 は stage3 へ、stage3 は stage4 へ連結している', () => {
     expect(getStageData('stage2').nextStageId).toBe('stage3');
+    expect(getStageData('stage3').nextStageId).toBe('stage4');
+  });
+
+  it('stage4 は浄化型ボス・開始演出を持ち、現状は最終ステージ(stage5 未実装のため nextStageId なし)', () => {
+    const s = getStageData('stage4');
+    expect(s.bossKind).toBe('ground');
+    expect(s.bossVariant).toBe('purifier');
+    expect(s.introCutsceneKey).toBe('stage4-intro');
+    // stage5 の実体ができるまで未接続にして、未実装ステージへの遷移(stage1 フォールバック)を防ぐ。
+    expect(s.nextStageId).toBeUndefined();
   });
 });
 
@@ -93,8 +122,8 @@ describe('ステージ開始演出フローのステージ条件', () => {
 });
 
 describe('ログトリガー配置', () => {
-  it('stage1 / stage2 / stage3 に early・preBoss のトリガーが配置されている', () => {
-    for (const id of ['stage1', 'stage2', 'stage3']) {
+  it('stage1 / stage2 / stage3 / stage4 に early・preBoss のトリガーが配置されている', () => {
+    for (const id of ['stage1', 'stage2', 'stage3', 'stage4']) {
       const slots = (getStageData(id).logTriggers ?? []).map((t) => t.slot);
       expect(slots).toContain('early');
       expect(slots).toContain('preBoss');
@@ -102,12 +131,19 @@ describe('ログトリガー配置', () => {
   });
 
   it('preBoss トリガーはボストリガー手前に置かれている', () => {
-    for (const id of ['stage1', 'stage2', 'stage3']) {
+    for (const id of ['stage1', 'stage2', 'stage3', 'stage4']) {
       const stage = getStageData(id);
       const preBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'preBoss');
       expect(preBoss).toBeDefined();
       expect(preBoss!.x).toBeLessThan(stage.bossTriggerX);
     }
+  });
+
+  it('stage4 はボス後演出を持たないため、postBoss ログもボストリガー手前(走行中に拾える位置)に置かれている', () => {
+    const stage = getStageData('stage4');
+    const postBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'postBoss');
+    expect(postBoss).toBeDefined();
+    expect(postBoss!.x).toBeLessThan(stage.bossTriggerX);
   });
 
   it('stage3 の postBoss ログはアリーナ内(ボストリガーより後ろ)に置かれている', () => {
