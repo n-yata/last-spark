@@ -166,6 +166,9 @@ export class GameScene extends Phaser.Scene {
     for (const spec of this.stage.logTriggers ?? []) {
       const trigger = new LogTrigger(this, spec.x, spec.y, spec.slot);
       this.logTriggers.add(trigger);
+      // Group.add() がボディ設定をグループ既定値(重力ON)で上書きし、玉が床を
+      // すり抜けて落下するため、本来の静止設定を再適用する(Enemy と同様)。
+      trigger.configureBody();
     }
     this.physics.add.overlap(this.player, this.logTriggers, (_player, obj) => {
       this.onLogOverlap(obj as LogTrigger);
