@@ -34,6 +34,8 @@ import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 
 const DEFAULT_STAGE_ID = 'stage1';
 const PROJECTILE_POOL = 32;
+/** ログ取得時に HUD 隅へ短時間表示するトーストの文言。 */
+const LOG_TOAST_MESSAGE = 'ログを取得';
 
 /** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
 export interface GameSceneData {
@@ -71,6 +73,8 @@ export class GameScene extends Phaser.Scene {
   /** 内心トリガの一度きり発火フラグ。 */
   private firstEnemyInnerDone = false;
   private firstLogDone = false;
+  /** セーブ管理(ログ収集・クリア記録)。取得ごとの再生成を避け単一インスタンスで保持する。 */
+  private saveManager = new SaveManager();
   // --- ボス後・救出フロー(stage3 など postBossCutsceneKey を持つステージ) ---
   /** 収容ケージの格子(撃破後に解錠アニメで開く)。 */
   private cageBars?: Phaser.GameObjects.Graphics;
@@ -202,20 +206,26 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** ログトリガー接触: 該当ログを表示。最初のログだけは前後に内心を添える。 */
+  /**
+   * ログトリガー接触: ログを収集する。科学者ログ本文はその場では流さず、
+   * LogViewerScene で後からまとめて読む(拾得時のテキスト渋滞を解消)。
+   * 最初のログだけは RAY の内心(発見→読了)を従来どおり添える。
+   * 注記: 最初のログの「読了後」内心(firstLogRead)は story.inner に定義があるステージのみ表示される。
+   */
   private onLogOverlap(trigger: LogTrigger): void {
     if (!trigger.tryConsume()) return;
-    const requests: TextRequest[] = [];
+    // 取得済みログを保存する(LogViewerScene で閲覧する)。saveManager はフィールドで単一保持。
+    this.saveManager.markLogCollected(this.stageId, trigger.slot);
+    // 取得フィードバックの軽量トースト。StoryOverlay のキューには乗せず、UIScene の HUD 隅に表示する。
+    this.registry.set(HUD.toast, LOG_TOAST_MESSAGE);
     if (!this.firstLogDone && this.story) {
       this.firstLogDone = true;
-      // 「誰かがいた/これを書いた」(発見) → ログ本文 → 「読んだ後」の内心、の順。
+      // 「誰かがいた/これを書いた」(発見) → 「読んだ後」の内心。科学者ログ本文は流さない。
+      const requests: TextRequest[] = [];
       requests.push(...resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'firstLogFound' }));
-      requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
       requests.push(...resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'firstLogRead' }));
-    } else if (this.story) {
-      requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
+      this.pushStory(requests);
     }
-    this.pushStory(requests);
   }
 
   /** 収容ケージ(stage3 など)の見た目を作る。撃破後に解錠アニメを再生する。 */
@@ -662,7 +672,7 @@ export class GameScene extends Phaser.Scene {
   private finalizeEnding(clearTimeMs: number): void {
     this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
     this.scene.stop(SCENE_KEYS.ui);
-    new SaveManager().markStageCleared(this.stageId, clearTimeMs);
+    this.saveManager.markStageCleared(this.stageId, clearTimeMs);
     transitionTo(this, SCENE_KEYS.title);
   }
 

@@ -7,4 +7,5 @@ export const STORAGE_KEYS = {
 /** 現在のセーブ構造バージョン。構造変更時にインクリメントする。 */
 // v1: cleared:boolean / bestTimeMs:number(単一ステージ)
 // v2: clearedStages:string[] / bestTimeMs:Record<string,number>(全6ステージ対応)
-export const SAVE_VERSION = 2;
+// v3: collectedLogs:string[] 追加(取得済みログの閲覧用)。v2 からは collectedLogs:[] を補完して移行。
+export const SAVE_VERSION = 3;
