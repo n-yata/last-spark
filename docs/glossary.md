@@ -80,7 +80,21 @@
 
 **名前**: ゲーム内では名前を出さず「科学者」として存在を示す（固有名は未決事項）。
 
-**関連用語**: [RAY](#ray), [環境ストーリーテリング](#環境ストーリーテリング)
+**関連用語**: [RAY](#ray), [TERRA](#terra), [環境ストーリーテリング](#環境ストーリーテリング)
+
+**参照ドキュメント**: `docs/story.md`
+
+---
+
+### TERRA
+
+**定義**: ストーリー中盤にRAYが救出し、その後行動をともにする少女。
+
+**説明**: ECLIPSEに管理・収容されていた生存者の少女。RAYに救出された後、行動をともにする仲間となる。名前の由来は terra（地球・大地）。ECLIPSEが「守ろうとした地球」そのものの名を持ち、「RAYがTERRAを守る」ことは「RAYが地球を守る」ことと二重に重なる。ECLIPSEには「管理対象」として、RAYには「守るべき存在」として見られ、同じ少女を巡る「論理 vs 感情」の対立を体現する。
+
+**名前の由来**: terra（ラテン語: 地球・大地）
+
+**関連用語**: [RAY](#ray), [ECLIPSE](#eclipse), [科学者（RAYの創造者）](#科学者rayの創造者)
 
 **参照ドキュメント**: `docs/story.md`
 
@@ -605,6 +619,7 @@ isChargedShot(elapsedMs) = (elapsedMs >= SHOT.chargeThresholdMs)
 - [LAST SPARK](#last-sparkラストスパーク) - ドメイン用語
 - [localStorage](#localstorage) - 技術用語
 - [RAY](#ray) - ドメイン用語
+- [TERRA](#terra) - ドメイン用語
 - [MotionState](#motionstateモーション状態) - アーキテクチャ用語
 - [MVP](#mvp) - 略語
 - [SoundManager](#soundmanager) - コンポーネント用語
