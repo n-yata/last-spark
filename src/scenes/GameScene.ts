@@ -10,6 +10,7 @@ import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
+import { WardenBoss } from '../entities/WardenBoss';
 import { Projectile } from '../entities/Projectile';
 import { LogTrigger } from '../entities/LogTrigger';
 import { InputController } from '../systems/InputController';
@@ -388,14 +389,17 @@ export class GameScene extends Phaser.Scene {
     const arenaRight = this.stage.width;
 
     // ステージ系統に応じてボスを出し分ける。飛行型は重力なしで空中に滞空するため
-    // 地面コライダーを付けない(接地型のみ地面に乗りジャンプ着地する)。
+    // 地面コライダーを付けない(接地型・warden は地面に乗りジャンプ着地する)。
     const flying = this.stage.bossKind === 'flying';
+    const warden = this.stage.bossKind === 'warden';
     this.boss = flying
       ? new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
-      : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
-          config: this.stage.bossConfig,
-          rigFamily: this.stage.bossRig,
-        });
+      : warden
+        ? new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
+        : new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
+            config: this.stage.bossConfig,
+            rigFamily: this.stage.bossRig,
+          });
     this.boss.setProjectiles(this.enemyShots);
     this.boss.setArenaBounds(arenaLeft, arenaRight);
     if (!flying) {

@@ -26,6 +26,16 @@ const FLYING_WEIGHTS: PhaseWeights = {
   phase2: { hover: 10, move: 25, shoot: 30, dive: 35 },
 };
 
+/**
+ * 収容番人(stage3)のフェーズ別重み(相対値)。接地アクション(move/shoot/idle/jump)に
+ * 固有の missile(放物線ミサイル)を加える。missile は両フェーズで主力級、phase2 で増量して
+ * 「降り注ぐミサイル」で stage1/2 と明確に差別化する。
+ */
+const WARDEN_WEIGHTS: PhaseWeights = {
+  phase1: { move: 25, shoot: 25, missile: 25, idle: 10, jump: 15 },
+  phase2: { move: 20, shoot: 25, missile: 35, idle: 5, jump: 15 },
+};
+
 /** 直前と同一アクションに掛ける重み係数(連続抑制)。 */
 const REPEAT_PENALTY = 0.5;
 
@@ -100,9 +110,30 @@ export function pickNextFlyingBossAction(
   return pickWeightedAction(FLYING_WEIGHTS[phase], last, rng);
 }
 
+/**
+ * 収容番人(stage3)の次アクションを重み付き抽選で決定する。
+ *
+ * @param phase - 現在のボスフェーズ
+ * @param last - 直前に実行したアクション
+ * @param rng - 乱数源(テスト用に注入可能)
+ * @returns 次に実行するアクション
+ */
+export function pickNextWardenBossAction(
+  phase: BossPhase,
+  last: BossAction,
+  rng: Rng = Math.random,
+): BossAction {
+  return pickWeightedAction(WARDEN_WEIGHTS[phase], last, rng);
+}
+
 /** 接地ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */
 export function allowedActions(phase: BossPhase): BossAction[] {
   return Object.keys(GROUND_WEIGHTS[phase]) as BossAction[];
+}
+
+/** 収容番人のフェーズで許可されるアクション一覧(テスト/UI 用)。 */
+export function allowedWardenActions(phase: BossPhase): BossAction[] {
+  return Object.keys(WARDEN_WEIGHTS[phase]) as BossAction[];
 }
 
 /** 飛行ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */

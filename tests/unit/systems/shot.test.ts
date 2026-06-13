@@ -4,6 +4,7 @@ import {
   createProjectileSpec,
   canFire,
   chargeRatio,
+  computeLobVelocity,
 } from '../../../src/systems/shot';
 import { SHOT } from '../../../src/config/balance';
 
@@ -38,6 +39,68 @@ describe('createProjectileSpec', () => {
       speed: SHOT.normalSpeed,
       size: SHOT.normalSize,
     });
+  });
+
+  it('missile は config のミサイル値を反映する(通常より重い)', () => {
+    const spec = createProjectileSpec('missile');
+    expect(spec).toEqual({
+      kind: 'missile',
+      damage: SHOT.missileDamage,
+      speed: SHOT.missileLaunchSpeed,
+      size: SHOT.missileSize,
+    });
+    expect(spec.damage).toBeGreaterThan(createProjectileSpec('normal').damage);
+  });
+});
+
+describe('computeLobVelocity', () => {
+  const gravity = 1200;
+
+  // 与えた初速で放物線を時間 t まで積分し、到達点(x, y)を求めるヘルパ。
+  const positionAt = (
+    startX: number,
+    startY: number,
+    vx: number,
+    vy: number,
+    t: number,
+  ): { x: number; y: number } => ({
+    x: startX + vx * t,
+    y: startY + vy * t + 0.5 * gravity * t * t,
+  });
+
+  // y(t) = landY を満たす落下到達時刻(正の根)を解いて返す。
+  const timeToLand = (startY: number, vy: number, landY: number): number =>
+    (-vy + Math.sqrt(vy * vy - 2 * gravity * (startY - landY))) / gravity;
+
+  it('逆算した初速で着弾点(targetX, landY)にほぼ到達する', () => {
+    const startX = 4050;
+    const startY = 380;
+    const targetX = 4300;
+    const landY = 473;
+    const { velocityX, velocityY } = computeLobVelocity(
+      startX,
+      startY,
+      targetX,
+      landY,
+      520,
+      gravity,
+    );
+    const t = timeToLand(startY, velocityY, landY);
+    const pos = positionAt(startX, startY, velocityX, velocityY, t);
+    expect(pos.x).toBeCloseTo(targetX, 3);
+    expect(pos.y).toBeCloseTo(landY, 3);
+  });
+
+  it('初速は上向き(velocityY が負)で放物線を描く', () => {
+    const { velocityY } = computeLobVelocity(0, 380, 200, 473, 520, gravity);
+    expect(velocityY).toBe(-520);
+  });
+
+  it('着弾点が発射点より右なら velocityX は正、左なら負', () => {
+    const right = computeLobVelocity(100, 380, 400, 473, 520, gravity);
+    const left = computeLobVelocity(100, 380, -200, 473, 520, gravity);
+    expect(right.velocityX).toBeGreaterThan(0);
+    expect(left.velocityX).toBeLessThan(0);
   });
 });
 

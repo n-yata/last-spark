@@ -260,11 +260,11 @@ const STAGE3: StageData = {
     { slot: 'postBoss', x: 4300, y: GROUND_TOP - 40 },
   ],
   bossTriggerX: 3900,
-  // 収容番人は重装の接地型。本体下端=地面で接地させる。
+  // 収容番人は重装ミサイル型(接地)。本体下端=地面で接地させる。系統 'warden' に対し
+  // WardenBoss が固有設定(CONTAINMENT_WARDEN)・リグ('bossWarden')を内包するため、
+  // bossConfig/bossRig は指定不要(stage2 の 'flying' と同じ扱い)。
   bossSpawn: { x: 4050, y: GROUND_TOP - CONTAINMENT_WARDEN.height / 2 },
-  bossKind: 'ground',
-  bossConfig: CONTAINMENT_WARDEN,
-  bossRig: 'bossWarden',
+  bossKind: 'warden',
   bossArenaMinX: 4100,
   // 収容ケージはアリーナ右端付近。撃破後にここへ接触して救出演出へ。
   cage: { x: 4480, y: GROUND_TOP - 70 },
