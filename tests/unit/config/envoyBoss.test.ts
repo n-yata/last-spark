@@ -8,8 +8,12 @@ import { getStageData } from '../../../src/config/stages';
 // 固有アクション(lance/blink)の値が破綻しないことを守る。
 
 describe('ENVOY(ECLIPSEの使者)のチューニング', () => {
-  it('飛行ボスより高速に移動・急降下する(ヒット&アウェイの速さ)', () => {
-    expect(ENVOY.moveSpeed).toBeGreaterThan(FLYING_BOSS.moveSpeed);
+  it('飛行ボスより高速に急降下する(ヒット&アウェイの速さ)', () => {
+    // ENVOY は move アクションを持たず、moveSpeed は dive 中の水平追尾だけに使う。
+    // 「プレイヤー真上への寄り・居座り」を緩和するため水平追尾は意図的に抑え(飛行ボス以下)、
+    // 「高速の刺客」らしさは急降下(diveSpeed)・高度復帰(climbSpeed)・短い行動間隔で担保する。
+    expect(ENVOY.moveSpeed).toBeLessThan(FLYING_BOSS.moveSpeed);
+    expect(ENVOY.moveSpeed).toBeGreaterThan(0);
     expect(ENVOY.diveSpeed).toBeGreaterThan(FLYING_BOSS.diveSpeed);
     // 急降下後すぐ高度へ戻る(「アウェイ」)ため復帰速度も速い。
     expect(ENVOY.climbSpeed).toBeGreaterThan(FLYING_BOSS.climbSpeed);

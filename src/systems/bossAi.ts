@@ -60,10 +60,14 @@ const PURIFIER_WEIGHTS: PhaseWeights = {
  * 追加調整: 移動頻度が高すぎたため、移動の主因である blink(瞬間移動)の重みを下げ、
  * その分を hover(滞空=休み)に回す。dive(攻撃急降下)は攻撃なので維持する。
  * blink は phase2 で phase1 より出やすい(瞬間移動で挟む攻勢的な性格)は維持する。
+ * 追加調整2: 「プレイヤーに寄ってきすぎ・真上に居座る」対策。位置移動のもう一つの主因 dive
+ * (水平追尾しつつ降下)を下げ、その分を静止系(hover=休み・shoot=その場攻撃)へ回して
+ * 移動頻度を更に下げる。blink も僅かに下げる(phase2 > phase1 の関係は維持)。
+ * lance(主力攻撃の個性)は据え置き。
  */
 const ENVOY_WEIGHTS: PhaseWeights = {
-  phase1: { hover: 25, dive: 20, lance: 30, blink: 15, shoot: 10 },
-  phase2: { hover: 23, dive: 20, lance: 30, blink: 22, shoot: 5 },
+  phase1: { hover: 33, dive: 12, lance: 30, blink: 12, shoot: 13 },
+  phase2: { hover: 30, dive: 15, lance: 30, blink: 15, shoot: 10 },
 };
 
 /**
