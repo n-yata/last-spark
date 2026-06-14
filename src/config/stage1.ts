@@ -288,8 +288,11 @@ const STAGE3: StageData = {
   bossSpawn: { x: 4050, y: GROUND_TOP - CONTAINMENT_WARDEN.height / 2 },
   bossKind: 'warden',
   bossArenaMinX: 4100,
-  // 収容ケージはアリーナ右端付近。撃破後にここへ接触して救出演出へ。
-  cage: { x: 4480, y: GROUND_TOP - 70 },
+  // 収容ケージは番人(ボス x=4050)のすぐ奥に配置する。ボス戦中のカメラ可視域(プレイヤー追従・
+  // 右端は arenaRight=4600 で制限、displayWidth≈960)に確実に収め、ボス出現時から檻が見えるようにする。
+  // 以前は x=4480 で画面右端外へ切れ、檻の存在に気付けなかった。ケージ座標は描画専用(救出演出は
+  // 撃破の瞬間に起動し接触判定は無い)ため、位置変更は当たり判定・クリア処理に影響しない。
+  cage: { x: 4280, y: GROUND_TOP - 70 },
   postBossCutsceneKey: 'stage3-rescue',
   width: STAGE3_WIDTH,
   // stage3 救出(TERRA同行)後は stage4(汚染地帯)へ続く。
