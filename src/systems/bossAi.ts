@@ -41,10 +41,12 @@ const WARDEN_WEIGHTS: PhaseWeights = {
  * jump を持たず spray(扇状の範囲攻撃)/bloom(時限式の汚染床設置)を主軸にする。phase2 で
  * spray・bloom を増量し、毒霧と足元の汚染床で安全地帯を奪う(揺らぎ・疑いのテーマ)。
  * spray/bloom は浄化型専用のため、このテーブルにのみ含め、他系統の抽選には混入させない。
+ * 難易度調整: phase2 は攻撃(spray/bloom)偏重で息継ぎが無く頻度が高すぎたため、phase1 より
+ * 控えめな idle を戻して「攻勢の中の僅かな息継ぎ」を作る(phase1 より攻勢的な性格は維持)。
  */
 const PURIFIER_WEIGHTS: PhaseWeights = {
   phase1: { move: 25, shoot: 20, spray: 25, bloom: 25, idle: 5 },
-  phase2: { move: 20, shoot: 15, spray: 30, bloom: 35 },
+  phase2: { move: 20, shoot: 15, spray: 28, bloom: 32, idle: 8 },
 };
 
 /**
@@ -53,10 +55,12 @@ const PURIFIER_WEIGHTS: PhaseWeights = {
  * 位置取りは blink に置き換える。phase2 で blink を増量し、瞬間移動で挟む圧を強める
  * (RAY に「読み(選択)」を強いる刺客)。lance/blink は使者専用のため、このテーブルにのみ含め、
  * 接地/飛行/収容番人/浄化/コアの抽選には混入させない。
+ * 難易度調整: 攻撃(lance/blink)偏重で滞空(hover=休み)が少なく手数が多すぎたため、
+ * hover の比率を上げて息継ぎを増やす(phase2 で hover が減り攻勢的になる性格は維持)。
  */
 const ENVOY_WEIGHTS: PhaseWeights = {
-  phase1: { hover: 10, dive: 20, lance: 35, blink: 25, shoot: 10 },
-  phase2: { hover: 5, dive: 20, lance: 35, blink: 35, shoot: 5 },
+  phase1: { hover: 20, dive: 20, lance: 30, blink: 20, shoot: 10 },
+  phase2: { hover: 15, dive: 20, lance: 30, blink: 30, shoot: 5 },
 };
 
 /**
