@@ -6,9 +6,21 @@ import { scaled, scaledFontPx } from '../config/uiScale';
 
 // ゲームオーバー表示とリトライ/タイトル導線。
 
+/** GameOverScene 起動データ。やり直し先ステージを GameScene から引き継ぐ。 */
+export interface GameOverSceneData {
+  stageId?: string;
+}
+
 export class GameOverScene extends Phaser.Scene {
+  /** やり直し対象のステージ(GameScene から引き継ぐ。未指定なら GameScene 側の既定=stage1)。 */
+  private stageId?: string;
+
   constructor() {
     super(SCENE_KEYS.gameOver);
+  }
+
+  init(data: GameOverSceneData): void {
+    this.stageId = data?.stageId;
   }
 
   create(): void {
@@ -31,8 +43,9 @@ export class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setShadow(0, 0, '#ff2d55', scaled(16), true, true);
 
+    // やり直しは同じステージから。開始演出はゲームオーバー後は冗長なのでスキップする。
     this.makeButton(width / 2, height * 0.58, 'RETRY', '#fff27a', () =>
-      transitionTo(this, SCENE_KEYS.game),
+      transitionTo(this, SCENE_KEYS.game, { stageId: this.stageId, skipCutscene: true }),
     );
     this.makeButton(width / 2, height * 0.74, 'TITLE', '#7fe9dd', () =>
       transitionTo(this, SCENE_KEYS.title),
