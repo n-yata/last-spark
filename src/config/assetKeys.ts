@@ -34,7 +34,7 @@ export const CUTSCENE_TEX = {
   stage3Rescue: 'tex-cutscene-stage3-rescue',
   stage4Intro: 'tex-cutscene-stage4-intro',
   stage5Intro: 'tex-cutscene-stage5-intro',
-  stage5Awakening: 'tex-cutscene-stage5-awakening',
+  stage6Awakening: 'tex-cutscene-stage6-awakening',
   stage6Ending: 'tex-cutscene-stage6-ending',
 } as const;
 
@@ -44,7 +44,7 @@ export const CUTSCENE_BACKGROUND: Record<string, string> = {
   'stage3-rescue': CUTSCENE_TEX.stage3Rescue,
   'stage4-intro': CUTSCENE_TEX.stage4Intro,
   'stage5-intro': CUTSCENE_TEX.stage5Intro,
-  'stage5-awakening': CUTSCENE_TEX.stage5Awakening,
+  'stage6-awakening': CUTSCENE_TEX.stage6Awakening,
   'stage6-ending': CUTSCENE_TEX.stage6Ending,
 };
 

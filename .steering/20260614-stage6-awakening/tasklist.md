@@ -23,7 +23,13 @@
 ## docs
 - [x] `story.md`: Stage6 開始ビートに覚醒（強化獲得）演出を明記。Stage5 撃破内心を src と同期
 
+## マージ整合（別フィーチャー 20260614-awakening-cutscene-bg との衝突解消）
+- [x] master 取り込みで判明: 覚醒カットシーン背景SVGが `stage5-awakening` キーで追加済み（TERRA登場・外縁部の休眠コア＝Stage5舞台で描画）
+- [x] 背景SVGを Stage6 向けに描き直し: `stage6-awakening.svg` 新規（TERRA除去・支配中枢の脈打つ無傷核・暗藍パレット）。旧 `stage5-awakening.svg` 削除
+- [x] `assetKeys.ts` / `PreloadScene.ts`: 背景登録・loadパスを `stage6-awakening` へ付け替え
+- [x] `cutscenes.test.ts`: 背景配線テストに stage6-awakening を追加
+
 ## 検証
-- [x] lint / typecheck / test(460 passed) / build 全green
-- [x] セキュリティレビュー（クルトワ）: Critical/High ゼロ・コミット可
-- [ ] 実機 Playwright 検証（Stage6 強化・覚醒演出・リトライ維持・Stage5 撃破内心）: 共有ブラウザが並行セッションで占有中のため保留
+- [x] lint / typecheck / test(464 passed) / build 全green
+- [x] セキュリティレビュー（クルトワ）: 本体分・追補分とも Critical/High ゼロ・コミット可
+- [ ] 実機 Playwright 検証（Stage6 強化・覚醒演出・リトライ維持・Stage5 撃破内心）: 共有ブラウザが並行セッションで占有中のため保留（背景SVGはプレビューパネルで描画確認済み）

@@ -36,6 +36,7 @@ describe('getCutscene', () => {
       'stage3-rescue',
       'stage4-intro',
       'stage5-intro',
+      'stage6-awakening',
       'stage6-ending',
     ];
     for (const key of imageBackedKeys) {
@@ -44,9 +45,10 @@ describe('getCutscene', () => {
     }
   });
 
-  it('追加3カットシーンの背景キーが CUTSCENE_TEX と一致する', () => {
+  it('追加カットシーンの背景キーが CUTSCENE_TEX と一致する', () => {
     expect(CUTSCENE_BACKGROUND['stage4-intro']).toBe(CUTSCENE_TEX.stage4Intro);
     expect(CUTSCENE_BACKGROUND['stage5-intro']).toBe(CUTSCENE_TEX.stage5Intro);
+    expect(CUTSCENE_BACKGROUND['stage6-awakening']).toBe(CUTSCENE_TEX.stage6Awakening);
     expect(CUTSCENE_BACKGROUND['stage6-ending']).toBe(CUTSCENE_TEX.stage6Ending);
   });
 

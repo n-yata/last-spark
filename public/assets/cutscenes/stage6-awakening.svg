@@ -1,0 +1,199 @@
+<svg width="960" height="540" viewBox="0 0 960 540" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>LAST SPARK ステージ6 — 支配中枢の最奥で脈打つ核がRAYに最後の光を渡す</title>
+<desc>ECLIPSE支配中枢の最奥。太陽を遮る「影」の核を抱く、暗い藍色の閉ざされた大空間。中央に通電した無傷の円環状の中枢核が脈打ち、その中心がRAYと同じシアンの光で応える。一筋の光の糸となってロボットRAYの胸のコアへ流れ込み、RAYは右手を核へ差し伸べて最後の力を受け取る。テラはこの場にいない、RAY単独の一枚絵。</desc>
+
+<defs>
+<linearGradient id="awSky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#07060e"/>
+<stop offset="0.5" stop-color="#0e0c18"/>
+<stop offset="1" stop-color="#120e1f"/>
+</linearGradient>
+<radialGradient id="awCoreAura" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#37f7d8" stop-opacity="0.42"/>
+<stop offset="0.55" stop-color="#2f9fd0" stop-opacity="0.14"/>
+<stop offset="1" stop-color="#2f9fd0" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="awRayGlow" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#37f7d8" stop-opacity="0.5"/>
+<stop offset="0.6" stop-color="#37f7d8" stop-opacity="0.12"/>
+<stop offset="1" stop-color="#37f7d8" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="awCoreHeart" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#d9fff7"/>
+<stop offset="0.45" stop-color="#37f7d8"/>
+<stop offset="1" stop-color="#1c6f86" stop-opacity="0.2"/>
+</radialGradient>
+<linearGradient id="awStream" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#9ffff0" stop-opacity="0.9"/>
+<stop offset="1" stop-color="#37f7d8" stop-opacity="0.25"/>
+</linearGradient>
+<linearGradient id="awFloor" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#120e1f"/>
+<stop offset="1" stop-color="#08060f"/>
+</linearGradient>
+<!-- 中枢の縦シーム(壁を貫く管理光の筋。暗藍に走る冷たいライン) -->
+<linearGradient id="awSeam" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#2a3a72" stop-opacity="0"/>
+<stop offset="0.5" stop-color="#3550a0" stop-opacity="0.5"/>
+<stop offset="1" stop-color="#2a3a72" stop-opacity="0"/>
+</linearGradient>
+<!-- 視認性のためのシャドウ持ち上げ(全体を明度UP・色相維持)。load.svg はブラウザで
+     ラスタライズされ defs 参照(グラデーション同様)が描画されるため、このフィルタも適用される。
+     sRGB 空間で線形変換(slope=ゲイン, intercept=黒の持ち上げ)。stage5-intro と同値で統一する。 -->
+<filter id="lift" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feComponentTransfer>
+<feFuncR type="linear" slope="1.32" intercept="0.075"/>
+<feFuncG type="linear" slope="1.32" intercept="0.075"/>
+<feFuncB type="linear" slope="1.32" intercept="0.075"/>
+</feComponentTransfer>
+</filter>
+</defs>
+
+<g filter="url(#lift)">
+<!-- 空間(暗い藍の閉ざされた中枢) -->
+<rect x="0" y="0" width="960" height="540" fill="url(#awSky)"/>
+
+<!-- 中枢核の放つ環境光(中央やや右奥・応える冷光) -->
+<circle cx="640" cy="300" r="290" fill="url(#awCoreAura)"/>
+
+<!-- 遠景: 支配中枢の内壁。左右対称に切り立つ巨大な柱(閉ざされた大空間の奥行き) -->
+<g fill="#0a0814">
+<polygon points="0,60 120,96 132,430 0,430"/>
+<polygon points="960,60 840,96 828,430 960,430"/>
+<rect x="150" y="120" width="40" height="300"/>
+<rect x="770" y="120" width="40" height="300"/>
+</g>
+<!-- 柱を貫く管理光の縦シーム(中枢の冷たい脈絡) -->
+<g opacity="0.8">
+<rect x="166" y="120" width="6" height="300" fill="url(#awSeam)"/>
+<rect x="788" y="120" width="6" height="300" fill="url(#awSeam)"/>
+<rect x="60" y="96" width="5" height="320" fill="url(#awSeam)" opacity="0.7"/>
+<rect x="900" y="96" width="5" height="320" fill="url(#awSeam)" opacity="0.7"/>
+</g>
+
+<!-- 中景: 核へ収束する導管・梁(暗藍の鋼。奥の壁から中央へ向かう) -->
+<g stroke="#15111f" stroke-width="13" fill="none" opacity="0.92" stroke-linecap="round">
+<path d="M120 384 L 300 384 L 360 340 L 470 332"/>
+<path d="M840 396 L 700 396 L 660 356 L 560 344"/>
+</g>
+<g stroke="#34306a" stroke-width="2" fill="none" opacity="0.45">
+<path d="M120 378 L 300 378 L 360 334 L 470 326"/>
+<path d="M840 390 L 700 390 L 660 350 L 560 338"/>
+</g>
+<!-- 中景: 核を囲む祭壇状の段(支配中枢の中央構造) -->
+<g fill="#0c0a18" stroke="#241f44" stroke-width="2">
+<polygon points="520,432 540,372 740,372 760,432"/>
+</g>
+<line x1="540" y1="372" x2="740" y2="372" stroke="#3a3470" stroke-width="2" opacity="0.5"/>
+
+<!-- 中枢核: 通電した無傷の円環機械。脈打ち、中心が RAY と同じ"何か"として応える——説明はしない。 -->
+<g transform="translate(640 300)">
+<!-- 接地影 -->
+<ellipse cx="0" cy="116" rx="150" ry="22" fill="#040310" opacity="0.6"/>
+<!-- 外環(通電した装甲リング・無傷で閉じる) -->
+<circle cx="0" cy="0" r="120" fill="none" stroke="#1a1530" stroke-width="26"/>
+<circle cx="0" cy="0" r="120" fill="none" stroke="#3a4f8e" stroke-width="6" opacity="0.7"/>
+<!-- 外環に走る通電ノード(等間隔の冷光点) -->
+<g fill="#6f8cff" opacity="0.8">
+<circle cx="0" cy="-120" r="4.5"/>
+<circle cx="104" cy="60" r="4.5"/>
+<circle cx="-104" cy="60" r="4.5"/>
+<circle cx="120" cy="0" r="3.5" opacity="0.6"/>
+<circle cx="-120" cy="0" r="3.5" opacity="0.6"/>
+</g>
+<!-- 内環(継ぎ目から冷光が脈打つ) -->
+<circle cx="0" cy="0" r="78" fill="#0a0819" stroke="#241f44" stroke-width="3"/>
+<g stroke="#9fb0ff" stroke-width="2" opacity="0.55">
+<line x1="-78" y1="0" x2="-58" y2="0"/>
+<line x1="78" y1="0" x2="58" y2="0"/>
+<line x1="0" y1="-78" x2="0" y2="-58"/>
+<line x1="0" y1="78" x2="0" y2="58"/>
+</g>
+<!-- 走査の環状ライン(回転する管理の名残) -->
+<circle cx="0" cy="0" r="54" fill="none" stroke="#3551a0" stroke-width="2" opacity="0.6"/>
+<circle cx="0" cy="0" r="64" fill="none" stroke="#27407a" stroke-width="1.5" opacity="0.4" stroke-dasharray="10 14"/>
+<!-- 中心のコア(RAY の胸と同じ造形・最後の光が脈打つ) -->
+<circle cx="0" cy="0" r="40" fill="url(#awCoreHeart)" opacity="0.6"/>
+<circle cx="0" cy="0" r="20" fill="#37f7d8" opacity="0.6"/>
+<circle cx="0" cy="0" r="11" fill="#d9fff7"/>
+</g>
+
+<!-- 床(暗藍の金属格子) -->
+<rect x="0" y="430" width="960" height="110" fill="url(#awFloor)"/>
+<rect x="0" y="430" width="960" height="3" fill="#352d58" opacity="0.7"/>
+<g stroke="#060410" stroke-width="2" opacity="0.8">
+<line x1="0" y1="470" x2="960" y2="470"/>
+<line x1="0" y1="505" x2="960" y2="505"/>
+<line x1="170" y1="430" x2="130" y2="540"/>
+<line x1="380" y1="430" x2="360" y2="540"/>
+<line x1="600" y1="430" x2="620" y2="540"/>
+<line x1="800" y1="430" x2="840" y2="540"/>
+</g>
+<!-- 床に映る核の冷光 -->
+<ellipse cx="640" cy="446" rx="230" ry="14" fill="#37f7d8" opacity="0.08"/>
+
+<!-- 最後の光: 中枢核中心 → RAY の胸のコアへ流れ込む一筋の光の糸 -->
+<g opacity="0.92">
+<path d="M626 296 Q536 300 432 338" fill="none" stroke="url(#awStream)" stroke-width="7" stroke-linecap="round" opacity="0.35"/>
+<path d="M626 296 Q536 300 432 338" fill="none" stroke="#d9fff7" stroke-width="2.4" stroke-linecap="round"/>
+<!-- 光の粒(核からレイへ向かう流れ) -->
+<g fill="#d9fff7">
+<circle cx="592" cy="298" r="2.6"/>
+<circle cx="540" cy="304" r="2.2"/>
+<circle cx="492" cy="318" r="2.4"/>
+<circle cx="452" cy="330" r="2"/>
+</g>
+</g>
+
+<!-- RAY: 右手を核へ差し伸べ、最後の光を受け取る。胸のコアが強く灯る。 -->
+<g transform="translate(430 430)">
+<!-- 発光ハロ(受光で強まる) -->
+<ellipse cx="0" cy="-64" rx="124" ry="138" fill="url(#awRayGlow)"/>
+<!-- 接地影 -->
+<ellipse cx="0" cy="6" rx="56" ry="12" fill="#050310" opacity="0.6"/>
+<!-- 脚 -->
+<path d="M-22 -52 L -6 -52 L -8 4 L -28 4 Z" fill="#161528"/>
+<path d="M4 -52 L 22 -52 L 26 4 L 8 4 Z" fill="#1b1b32"/>
+<!-- 胴 -->
+<path d="M-26 -118 L 24 -118 L 18 -50 L -20 -50 Z" fill="#1d1d38"/>
+<!-- 胸のコア(受光で強く発光) -->
+<circle cx="-2" cy="-92" r="15" fill="#37f7d8" opacity="0.4"/>
+<circle cx="-2" cy="-92" r="8" fill="#9ffff0"/>
+<circle cx="-2" cy="-92" r="3.6" fill="#ffffff"/>
+<!-- 左腕(脇に下ろす) -->
+<path d="M-26 -112 L -16 -110 L -26 -64 L -38 -66 Z" fill="#161528"/>
+<circle cx="-32" cy="-64" r="6" fill="#161528"/>
+<!-- 右腕(核へ差し伸べる・手のひらに光) -->
+<path d="M22 -110 L 34 -104 L 60 -92 L 58 -82 L 34 -90 Z" fill="#222240"/>
+<circle cx="62" cy="-88" r="7" fill="#37f7d8" opacity="0.5"/>
+<circle cx="62" cy="-88" r="4" fill="#d9fff7"/>
+<!-- 頭(右=核を見つめる) -->
+<path d="M-14 -150 L 22 -150 L 18 -120 L -10 -120 Z" fill="#242444"/>
+<rect x="-2" y="-142" width="22" height="9" rx="4" fill="#37f7d8"/>
+<rect x="-4" y="-144" width="26" height="13" rx="6" fill="#37f7d8" opacity="0.25"/>
+<!-- 縁の発光ライン -->
+<path d="M-26 -118 L 24 -118 L 18 -50 L -20 -50 Z" fill="none" stroke="#37f7d8" stroke-width="1.2" opacity="0.5"/>
+</g>
+
+<!-- 応えの塵・火花(核周りは暖かいシアン、奥は冷たい藍) -->
+<g opacity="0.85">
+<g fill="#9ffff0">
+<circle cx="600" cy="250" r="1.8"/>
+<circle cx="690" cy="300" r="1.6"/>
+<circle cx="650" cy="360" r="1.5"/>
+<circle cx="560" cy="270" r="1.4"/>
+</g>
+<g fill="#8f9cff" opacity="0.4">
+<circle cx="300" cy="300" r="1.5"/>
+<circle cx="820" cy="280" r="1.4"/>
+<circle cx="200" cy="240" r="1.3"/>
+</g>
+</g>
+
+<!-- ビネット -->
+<rect x="0" y="0" width="960" height="120" fill="#030208" opacity="0.5"/>
+<rect x="0" y="470" width="960" height="70" fill="#030208" opacity="0.45"/>
+<rect x="0" y="0" width="70" height="540" fill="#030208" opacity="0.32"/>
+<rect x="890" y="0" width="70" height="540" fill="#030208" opacity="0.32"/>
+</g>
+</svg>
