@@ -1,17 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { SHOT, PLAYER } from '../../../src/config/balance';
+import { SHOT, PLAYER, ENEMY } from '../../../src/config/balance';
 
 // RAY 強化時のビーム(チャージ攻撃強化版)の威力設計検証。
-// 設計原則: 総威力をチャージ弾(chargedDamage=3)と同等に収める。
-// 実現方法: beamLifespanMs=800 / beamTickMs=300 → 最大 3 ヒット × beamDamage=1 = 3。
+// 設計原則: 終盤の決戦兵器として明確に強い。1 tick で雑魚を触れただけで撃破でき、
+// ボスへは最大 3 ヒット(t=0/300/600ms)で総威力がチャージ弾(3)を上回る。
+// 実現方法: beamLifespanMs=800 / beamTickMs=300 → 最大 3 ヒット × beamDamage=3。
 
-describe('ビーム威力設計: チャージ弾と同等の総威力', () => {
-  it('最大ヒット回数 × beamDamage がチャージ弾と同等に収まる', () => {
+describe('ビーム威力設計: 雑魚を1撃・ボスへ高火力の決戦兵器', () => {
+  it('1 tick の beamDamage が雑魚の最大HP以上(触れただけで撃破できる)', () => {
+    // walker(hp2)/turret(hp3) のうち最も硬い個体でも 1 ヒットで倒せること。
+    const maxZakoHp = Math.max(ENEMY.walker.hp, ENEMY.turret.hp);
+    expect(SHOT.beamDamage).toBeGreaterThanOrEqual(maxZakoHp);
+  });
+
+  it('総威力(最大ヒット回数 × beamDamage)がチャージ弾を上回る', () => {
     // t=0, 300, 600ms の 3 タイミングがビーム持続(800ms)に収まる。
     // Math.floor(beamLifespanMs / beamTickMs) は「0ms 発動後に何回 tick できるか」の上限。
     const maxHits = Math.floor(SHOT.beamLifespanMs / SHOT.beamTickMs) + 1; // t=0 の初撃 + 以降の tick
     const totalDamage = maxHits * SHOT.beamDamage;
-    expect(totalDamage).toBe(SHOT.chargedDamage);
+    expect(totalDamage).toBeGreaterThan(SHOT.chargedDamage);
   });
 
   it('beamLifespanMs と beamTickMs の比から最大 3 ヒットが得られる', () => {
@@ -20,8 +27,8 @@ describe('ビーム威力設計: チャージ弾と同等の総威力', () => {
     expect(ticksAfterFirst).toBe(2); // 300ms 間隔で 2 回追加 → 合計 3 ヒット
   });
 
-  it('beamDamage は 1(1 tick あたりの被ダメを適切な低さに保つ)', () => {
-    expect(SHOT.beamDamage).toBe(1);
+  it('beamDamage は 3(雑魚の最大HP=turret3 を 1 撃で削る決戦火力)', () => {
+    expect(SHOT.beamDamage).toBe(3);
   });
 
   it('beamLifespanMs は 800ms(チャージ弾の爽快感と近い持続時間)', () => {

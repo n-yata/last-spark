@@ -56,12 +56,14 @@ export const SHOT = {
   splitOffsetPx: 10,
   // --- RAY 強化(stage6)の持続レーザービーム(チャージ攻撃の強化版) ---
   // 値はワールド座標の生px・画面端非依存(scaled() は通さない。詳細は Beam.ts)。
-  // 総威力はチャージ弾(3)と同等に収める: 持続中 t=0/300/600ms の最大 3 ヒット × beamDamage=1 = 3。
-  beamDamage: 1, // 1 tick(per-target)あたりのダメージ
+  // 設計: 終盤の決戦兵器として明確に強くする。1 tick で雑魚(walker hp2 / turret hp3)を
+  // 触れただけで撃破できる威力(beamDamage=3)。ボスへは最大 3 ヒット(t=0/300/600ms)で
+  // 計 9 ダメージとなり、チャージ弾(3)より大きい「強化レーザー」として機能する。
+  beamDamage: 3, // 1 tick(per-target)あたりのダメージ。雑魚の最大HP(turret=3)を1撃で削る
   beamTickMs: 300, // 同一対象への多重ヒットを間引く間隔(overlap は毎フレーム発火するため)
   beamLifespanMs: 800, // ビームの持続時間
   beamThickness: 22, // 帯の太さ(ワールドpx)
-  beamLength: 720, // 射程(ワールドpx・画面端非依存でアスペクト比に左右されない)
+  beamLength: 900, // 射程(ワールドpx・画面端非依存でアスペクト比に左右されない)
 } as const;
 
 export const ENEMY = {
