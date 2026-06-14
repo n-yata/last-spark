@@ -6,18 +6,18 @@ import { isAllStagesCleared } from '../systems/progress';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { scaled, scaledFontPx } from '../config/uiScale';
-// 型のみの import はビルド時に消去されるため本番バンドルには含まれない。
-import type { DevMode } from '../devMode/stageSelect';
+// 型のみの import はビルド時に消去される。
+import type { StageSelect } from '../stageSelect/stageSelect';
 
 // タイトル画面。ロゴ + スタート導線。クリア済みフラグと最速タイムを表示する。
-// 開発ビルド(import.meta.env.DEV)では「DEV MODE」導線を動的 import で追加し、任意ステージから
-// 開始できる。本番ビルドでは下記ガードが除去され、開発モードのコード/文字列は同梱されない。
+// 「STAGE SELECT」導線を動的 import で追加し、任意のステージから始められる(一般向け機能)。
+// UI は表示確定後に遅延ロードして初期表示を軽く保つ。
 
 export class TitleScene extends Phaser.Scene {
-  // スタート用の全画面入力ゾーン。開発モードのステージ選択を開いている間は無効化する。
+  // スタート用の全画面入力ゾーン。ステージ選択を開いている間は無効化する。
   private startZone?: Phaser.GameObjects.Zone;
-  // 開発モードのコントローラ(開発ビルドでのみ生成)。
-  private devMode?: DevMode;
+  // ステージ選択のコントローラ。
+  private stageSelect?: StageSelect;
 
   constructor() {
     super(SCENE_KEYS.title);
@@ -28,13 +28,13 @@ export class TitleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0a0e14');
     fadeIn(this);
     // シーン再入(クリア→タイトル復帰など)に備えて状態を初期化する。
-    this.devMode = undefined;
+    this.stageSelect = undefined;
 
     // 背景: 暗め基調 + 発光アクセント(廃墟のシルエット風グラデーション)
     this.drawBackdrop(width, height);
 
     // スタート判定は全画面ゾーンで受ける。最背面(最初に追加)に置くことで、後から重ねる
-    // DEV MODE ボタンが Phaser の topOnly(既定 true)で前面となり、スタートに巻き込まれない。
+    // STAGE SELECT ボタンが Phaser の topOnly(既定 true)で前面となり、スタートに巻き込まれない。
     this.startZone = this.add.zone(0, 0, width, height).setOrigin(0).setInteractive();
     this.startZone.on(Phaser.Input.Events.POINTER_DOWN, () => this.startGame());
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
@@ -91,28 +91,25 @@ export class TitleScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
-    // 「DEV MODE」導線を追加する。有効化条件:
-    //   - ローカル開発(import.meta.env.DEV)
-    //   - ビルド時フラグ VITE_DEV_MODE='true'(GitHub Pages の確認用デプロイで指定)
-    // どちらでもないビルド(素の本番リリース)では下記ガードが false に畳まれ、動的 import の
-    // モジュールごと本番バンドルから切り離される(コードも文字列も含まれない)。
+    // 「STAGE SELECT」導線を追加する。UI は表示確定後に動的 import で遅延ロードし、
+    // 初期表示を軽く保つ(導線をタップして初めて使うため別チャンクに分けても体験を損なわない)。
     // import 解決は非同期のため、遷移で既にシーンが停止していたら何もしない。
-    if (import.meta.env.DEV || import.meta.env.VITE_DEV_MODE === 'true') {
-      void import('../devMode/stageSelect').then(({ createDevMode }) => {
-        if (!this.scene.isActive() || !this.startZone) {
-          return;
-        }
-        this.devMode = createDevMode(this, this.startZone, (stageId) => this.startGame(stageId));
-      });
-    }
+    void import('../stageSelect/stageSelect').then(({ createStageSelect }) => {
+      if (!this.scene.isActive() || !this.startZone) {
+        return;
+      }
+      this.stageSelect = createStageSelect(this, this.startZone, (stageId) =>
+        this.startGame(stageId),
+      );
+    });
 
     // タイトル BGM(初回タップで AudioContext が解放されると鳴り出す)
     getSound().playBgm('title');
   }
 
-  // キーボード操作: 開発モードのステージ選択を開いている間は開始を抑止する(誤発進防止)。
+  // キーボード操作: ステージ選択を開いている間は開始を抑止する(誤発進防止)。
   private onKeyDown(): void {
-    if (this.devMode?.isOverlayOpen()) {
+    if (this.stageSelect?.isOverlayOpen()) {
       return;
     }
     this.startGame();
@@ -120,7 +117,7 @@ export class TitleScene extends Phaser.Scene {
 
   private startGame(stageId = 'stage1'): void {
     getSound().playSe('uiTap');
-    // タイトルからの開始は既定で stage1 から(最初から)。開発モードでは選択した stageId。
+    // タイトルからの開始は既定で stage1 から(最初から)。ステージ選択では選んだ stageId。
     // scene.start に data を渡さないと Phaser は前回の data(継続時の stageId)を
     // 保持して init に渡すため、明示的に stageId を指定してクリア後の引き継ぎを断つ。
     transitionTo(this, SCENE_KEYS.game, { stageId });
