@@ -41,6 +41,11 @@ const PROJECTILE_POOL = 32;
 /** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
 export interface GameSceneData {
   stageId?: string;
+  /**
+   * 開始演出(CutsceneScene)を飛ばすか。ゲームオーバーからの同ステージやり直し時に true を渡す。
+   * 物語は初回に見せれば十分で、リトライのたびに長尺の演出を強いると再挑戦のテンポを損なうため。
+   */
+  skipCutscene?: boolean;
 }
 
 /** collider の processCallback が受け取りうるオブジェクト型(Phaser の ArcadePhysicsCallback 準拠)。 */
@@ -53,6 +58,8 @@ type ArcadeColliderObject =
 export class GameScene extends Phaser.Scene {
   private stage!: StageData;
   private stageId = DEFAULT_STAGE_ID;
+  /** 開始演出を飛ばすか(ゲームオーバーからのやり直し時のみ true)。startIntro で参照する。 */
+  private skipCutscene = false;
   /** 現在ステージの背景テーマ。buildBackground で確定し、setupCamera のベース色にも使う。 */
   private bgTheme!: StageBackgroundTheme;
   private player!: Player;
@@ -93,6 +100,7 @@ export class GameScene extends Phaser.Scene {
   /** 起動データから開始ステージを決める(stage1→stage2 の遷移で stageId を渡す)。 */
   init(data: GameSceneData): void {
     this.stageId = data?.stageId ?? DEFAULT_STAGE_ID;
+    this.skipCutscene = data?.skipCutscene ?? false;
   }
 
   create(): void {
@@ -136,7 +144,9 @@ export class GameScene extends Phaser.Scene {
    */
   private startIntro(): void {
     const key = this.stage.introCutsceneKey;
-    if (!key || !getCutscene(key)) {
+    // skipCutscene(ゲームオーバーからのやり直し)では演出を飛ばし、演出なしステージと同じ
+    // 入場経路(フェードイン+開始テキスト)に合流させる。開始テキストは残し、最低限の文脈は保つ。
+    if (!key || !getCutscene(key) || this.skipCutscene) {
       // 演出なしステージ(stage2/3/6)の入場。多重遷移ガード(transition.fading)は scene.data に
       // 保持され scene.start をまたいで残るため、ここで fadeIn を呼んで必ずリセットする。
       // これを怠ると、前ステージのクリア遷移で立ったガードが居残り、本ステージのクリア遷移が
@@ -714,7 +724,8 @@ export class GameScene extends Phaser.Scene {
     this.ended = true;
     this.inputController.destroy();
     this.scene.stop(SCENE_KEYS.ui);
-    transitionTo(this, SCENE_KEYS.gameOver);
+    // やり直しで同じステージへ戻れるよう、現在の stageId を GameOverScene へ引き継ぐ。
+    transitionTo(this, SCENE_KEYS.gameOver, { stageId: this.stageId });
   }
 
   private setupOrientationHandling(): void {
