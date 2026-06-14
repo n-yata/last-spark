@@ -64,6 +64,24 @@ export const ENEMY = {
 } as const;
 
 /**
+ * ダメージ床(stage4 汚染地帯の汚染溜まり)のチューニング。これは「人間の環境破壊が残した荒廃=
+ * 死んだ世界」そのものであって、誰かが人間を殺すために仕掛けた罠ではない(人類はほぼ絶滅して
+ * いる)。腐食性の汚染が、機械である RAY も蝕む。落下死の奈落と異なり、触れていても即死しない
+ * スリップダメージで「人間が星をこうした」を足元で体感させる(揺らぎ)。歩いて渡れば痛い・
+ * ジャンプで越えれば無傷、という選択を足元に作る。
+ * 浄化型ボス(stage4)の bloom(動的汚染床)もこの値を正本として共有する。
+ */
+export const HAZARD = {
+  /** 汚染床 1 ヒットの腐食ダメージ。即死させない小さめの値(maxHp=16 に対し控えめ)。 */
+  pollutionDamage: 2,
+  /**
+   * 多重ヒット防止のクールダウン(ms)。overlap は毎フレーム発火するため、この間隔で間引く。
+   * 実際の被弾は Player の無敵時間(invincibleMs)にも従う(環境ダメージも被弾扱い)。
+   */
+  pollutionTickMs: 600,
+} as const;
+
+/**
  * ボス共通のチューニング設定。接地(BOSS)・飛行(FLYING_BOSS)が共有する型。
  * Boss エンティティはこの型を介して設定値を参照し、系統ごとに差し替え可能にする。
  * actionDurationMs は系統で使うアクションのみ持つため Partial とする。
@@ -190,6 +208,26 @@ export interface PurifierBossConfig extends BossConfig {
     /** スプレー弾の速度(px/s)。単発弾より遅く、毒霧らしくまとわせる。 */
     speed: number;
   };
+  /**
+   * bloom(汚染床設置): プレイヤー足元〜周辺の地面に時限式の汚染パッチ(動的 HAZARD)を生成する。
+   * phase2 で設置枚数・存続時間が増え、安全地帯がじわじわ縮小する(揺らぎ・疑いのテーマ)。
+   */
+  bloom: {
+    /** phase1 で 1 回に設置する汚染床の枚数。 */
+    countP1: number;
+    /** phase2 で 1 回に設置する汚染床の枚数(増量して安全地帯を奪う)。 */
+    countP2: number;
+    /** phase1 の 1 枚あたりの横幅(px)。 */
+    patchWidthP1: number;
+    /** phase2 の 1 枚あたりの横幅(px、拡大して回避を難しくする)。 */
+    patchWidthP2: number;
+    /** phase1 の存続時間(ms)。経過後に汚染床を破棄する。 */
+    lifespanMsP1: number;
+    /** phase2 の存続時間(ms、延長して床をほぼ常設化する)。 */
+    lifespanMsP2: number;
+    /** 汚染床 1 ヒットの腐食ダメージ。スリップダメージ床(HAZARD)と地続きにする。 */
+    damage: number;
+  };
 }
 
 /**
@@ -198,21 +236,23 @@ export interface PurifierBossConfig extends BossConfig {
  * jump は持たず(重い浄化タンク搭載機)、spray を主軸に move/shoot を織り交ぜる。
  */
 export const PURIFIER = {
-  maxHp: 28, // stage1/2 ボス(24)より硬く、収容番人(30)より柔らかい中間
+  maxHp: 28, // stage1/2 ボス(24)より硬く、収容番人(30)より柔らかい中間(使者26<浄化28<番人30<コア40)
   phase2HpRatio: 0.5,
   contactDamage: 2,
   bulletDamage: 1,
   bulletSpeed: 240,
   moveSpeed: 48, // やや遅い前後ペース(タンクを背負った機械の重さ)
   staggerDamageThreshold: 9,
-  width: 88,
-  height: 84,
-  // アクション継続時間(ms)。浄化型は idle/move/shoot/spray/stagger を使う(jump なし)。
+  width: 96, // 背面に巨大な汚染タンクを背負う大型機(従来 88 から拡大)
+  height: 92, // タンク搭載で背が高い(従来 84 から拡大)
+  // アクション継続時間(ms)。浄化型は idle/move/shoot/spray/bloom/stagger を使う(jump なし)。
+  // bloom は床設置の溜めを感じさせるため長めに取る。
   actionDurationMs: {
     idle: 800,
     move: 1000,
     shoot: 700,
     spray: 900,
+    bloom: 1100,
     stagger: 750,
   },
   phase2SpeedFactor: 0.72,
@@ -221,6 +261,16 @@ export const PURIFIER = {
     count: 5,
     spreadRad: Math.PI * 0.5,
     speed: 200,
+  },
+  // 汚染床設置(bloom): phase2 で枚数増・存続延長し、足元の安全地帯をじわじわ奪う。
+  bloom: {
+    countP1: 1,
+    countP2: 2,
+    patchWidthP1: 90,
+    patchWidthP2: 130,
+    lifespanMsP1: 3500,
+    lifespanMsP2: 5000,
+    damage: HAZARD.pollutionDamage, // 既存スリップダメージ床と地続きの腐食ダメージ
   },
 } as const satisfies PurifierBossConfig;
 
@@ -257,10 +307,42 @@ export const FLYING_BOSS = {
 } as const satisfies FlyingBossConfig;
 
 /**
- * stage5 専用・ECLIPSEの使者(高速型)の設定。飛行型(FlyingBoss)を流用しつつ、
- * 「スリムで流線型・高速移動・連続攻撃のヒット&アウェイ」を、より小さい機体・速い移動と急降下・
- * 短い行動間隔・速い弾で表現する。アクション集合と重み(FLYING_WEIGHTS)は stage2 飛行ボスと共有し、
- * パラメータ(速度・継続時間)の調整のみで「予測しにくい速さ」を出す(BossAction の追加はしない)。
+ * 使者(stage5・ENVOY)固有の設定。FlyingBossConfig を継承し、固有アクション lance(高速槍弾)と
+ * blink(瞬間移動)のパラメータを追加する。EnvoyBoss がこの型を介して参照する。
+ * 飛行の滞空・急降下は再利用しつつ、lance/blink で「読み(選択)を強いる刺客」を固有化する。
+ */
+export interface EnvoyBossConfig extends FlyingBossConfig {
+  /**
+   * lance(高速槍弾): 滞空位置からプレイヤー狙いの高速槍弾を時間差で複数発射する。初版は非貫通。
+   * phase2 で本数が増え、弾幕の密度が上がる。
+   */
+  lance: {
+    /** phase1 で 1 回に発射する槍弾の本数。 */
+    countP1: number;
+    /** phase2 で 1 回に発射する槍弾の本数(増量して圧を強める)。 */
+    countP2: number;
+    /** 槍弾の速度(px/s)。通常弾より速く、回避に「読み」を要求する。 */
+    speed: number;
+    /** 連射の発射間隔(ms)。時間差で撃ち、軌道を読ませる。 */
+    intervalMs: number;
+  };
+  /**
+   * blink(瞬間移動): プレイヤーの逆サイドへ短距離ダッシュして挟む。移動中は残像を出す。
+   * phase2 では blink から即 lance へ繋ぐ連携が増える(重みテーブル側で表現)。
+   */
+  blink: {
+    /** ダッシュ速度(px/s)。瞬間移動らしい鋭い水平移動。 */
+    dashSpeed: number;
+    /** 残像の存続時間(ms)。短命の表現に留めて生成過多を避ける。 */
+    afterimageMs: number;
+  };
+}
+
+/**
+ * stage5 専用・ECLIPSEの使者(高速型)の設定。飛行型(FlyingBoss)を継承しつつ、固有アクション
+ * lance(任意角度の高速槍弾)/blink(逆サイドへの瞬間移動)で「論理を突きつける高速の刺客」を
+ * 固有化する。スリムで流線型・高速移動・短い行動間隔で「予測しにくい速さ」を出す。
+ * アクション集合と重みは ENVOY_WEIGHTS(bossAi)に独立させ、stage2 飛行ボスとは共有しない。
  */
 export const ENVOY = {
   maxHp: 26, // 飛行ボス(24)よりやや硬く、浄化型(28)より柔らかい終盤手前の硬さ
@@ -268,16 +350,18 @@ export const ENVOY = {
   contactDamage: 2,
   bulletDamage: 1,
   bulletSpeed: 320, // 速い弾(飛行ボス280より速く、ヒット&アウェイの圧を上げる)
-  moveSpeed: 130, // 高速移動(飛行ボス90より速い。dive/move ともこの速度で水平接近する)
+  moveSpeed: 130, // 高速移動(飛行ボス90より速い。dive はこの速度で水平接近する)
   staggerDamageThreshold: 7, // 軽量機体ゆえのけぞりやすい(高速な分、反撃の隙を作る)
   width: 60, // スリムな流線型(飛行ボス76より細い)
   height: 52, // 平たく小さい空中機体
   // アクション継続時間(ms)。全体に短くして手数の多いヒット&アウェイのリズムにする。
+  // lance/blink は固有アクションで、blink は瞬間移動の鋭さを出すため最も短い。
   actionDurationMs: {
     hover: 700,
-    move: 600,
     shoot: 500,
     dive: 600,
+    lance: 550,
+    blink: 450,
     stagger: 650,
   },
   phase2SpeedFactor: 0.65, // phase2 で行動間隔をさらに詰めて攻勢を強める
@@ -288,7 +372,18 @@ export const ENVOY = {
   diveSpeed: 460, // 鋭い急降下(飛行ボス360より速い)
   climbSpeed: 320, // 急降下後すぐ高度復帰する(ヒット&アウェイの「アウェイ」)
   diveBottomMargin: 12, // より地面近くまで降りて圧をかける
-} as const satisfies FlyingBossConfig;
+  // --- 使者固有 ---
+  lance: {
+    countP1: 2,
+    countP2: 3,
+    speed: 420,
+    intervalMs: 110,
+  },
+  blink: {
+    dashSpeed: 520,
+    afterimageMs: 200,
+  },
+} as const satisfies EnvoyBossConfig;
 
 /**
  * stage6 専用・ECLIPSE本体(ラスボス)固有の設定。BossConfig を継承し、固有アクション
@@ -387,23 +482,6 @@ export const STAGE = {
   groundY: 480, // 地面の上端 Y
   deathY: 600, // この Y を超えたら落下死
   gravityY: 1200,
-} as const;
-
-/**
- * ダメージ床(stage4 汚染地帯の汚染溜まり)のチューニング。これは「人間の環境破壊が残した荒廃=
- * 死んだ世界」そのものであって、誰かが人間を殺すために仕掛けた罠ではない(人類はほぼ絶滅して
- * いる)。腐食性の汚染が、機械である RAY も蝕む。落下死の奈落と異なり、触れていても即死しない
- * スリップダメージで「人間が星をこうした」を足元で体感させる(揺らぎ)。歩いて渡れば痛い・
- * ジャンプで越えれば無傷、という選択を足元に作る。
- */
-export const HAZARD = {
-  /** 汚染床 1 ヒットの腐食ダメージ。即死させない小さめの値(maxHp=16 に対し控えめ)。 */
-  pollutionDamage: 2,
-  /**
-   * 多重ヒット防止のクールダウン(ms)。overlap は毎フレーム発火するため、この間隔で間引く。
-   * 実際の被弾は Player の無敵時間(invincibleMs)にも従う(環境ダメージも被弾扱い)。
-   */
-  pollutionTickMs: 600,
 } as const;
 
 export const LADDER = {
