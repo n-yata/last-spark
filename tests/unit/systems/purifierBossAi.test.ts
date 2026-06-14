@@ -3,13 +3,16 @@ import {
   pickNextBossAction,
   pickNextPurifierBossAction,
   pickNextFlyingBossAction,
+  pickNextWardenBossAction,
+  pickNextCoreBossAction,
+  pickNextEnvoyBossAction,
   allowedPurifierActions,
 } from '../../../src/systems/bossAi';
 import type { BossAction } from '../../../src/types/boss';
 
 // 浄化型ボス(stage4・環境管理機)の行動抽選(Phaser 非依存の純粋ロジック)の検証。
-// spray を持つこと、jump を持たないこと、spray が phase2 で増えること、
-// spray が接地/飛行の抽選に混入しないこと、連続抑制が効くことを確認する。
+// spray/bloom を持つこと、jump を持たないこと、spray/bloom が phase2 で増えること、
+// 固有アクション(spray/bloom)が他系統の抽選に混入しないこと、連続抑制が効くことを確認する。
 
 describe('pickNextPurifierBossAction', () => {
   // 一様走査で出現しうるアクション集合を集める。
@@ -82,5 +85,40 @@ describe('pickNextPurifierBossAction', () => {
       return c;
     };
     expect(countSprayWith('spray')).toBeLessThan(countSprayWith('shoot'));
+  });
+
+  it('浄化型の重みには固有の bloom(汚染床設置)が含まれる', () => {
+    expect(collect('phase1', 'shoot').has('bloom')).toBe(true);
+    expect(collect('phase2', 'shoot').has('bloom')).toBe(true);
+  });
+
+  it('bloom は phase2 でより出やすい(安全地帯を奪う圧を強める)', () => {
+    const countBloom = (phase: 'phase1' | 'phase2'): number => {
+      const n = 3000;
+      let c = 0;
+      for (let i = 0; i < n; i++) {
+        // last は bloom 以外にして連続抑制の影響を排除する。
+        if (pickNextPurifierBossAction(phase, 'shoot', () => (i + 0.5) / n) === 'bloom') c++;
+      }
+      return c;
+    };
+    expect(countBloom('phase2')).toBeGreaterThan(countBloom('phase1'));
+  });
+
+  it('bloom は他系統(接地/飛行/番人/コア/使者)の抽選に混入しない', () => {
+    const others: Array<(p: 'phase1' | 'phase2', last: BossAction, rng: () => number) => BossAction> = [
+      pickNextBossAction,
+      pickNextFlyingBossAction,
+      pickNextWardenBossAction,
+      pickNextCoreBossAction,
+      pickNextEnvoyBossAction,
+    ];
+    for (const pick of others) {
+      const all = new Set<BossAction>([
+        ...Array.from({ length: 400 }, (_, i) => pick('phase1', 'shoot', () => (i + 0.5) / 400)),
+        ...Array.from({ length: 400 }, (_, i) => pick('phase2', 'shoot', () => (i + 0.5) / 400)),
+      ]);
+      expect(all.has('bloom')).toBe(false);
+    }
   });
 });

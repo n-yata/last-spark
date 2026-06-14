@@ -13,6 +13,8 @@ export const TEX = {
   // stage4 環境管理機(浄化型)が「浄化」の名目で撒く汚染霧スプレー専用。汚染トーン(背景 #151a0c)と地続き。
   projectilePollution: 'tex-projectile-pollution',
   projectileMissile: 'tex-projectile-missile',
+  // stage5 使者(ENVOY)が放つ高速槍弾。冷たい白青の鋭い槍シルエットで通常弾と差別化する。
+  projectileLance: 'tex-projectile-lance',
   ground: 'tex-ground',
   platform: 'tex-platform',
   ladder: 'tex-ladder',
@@ -90,5 +92,24 @@ export const PART = {
     armFront: 'part-bosswarden-clamp',
     legBack: 'part-bosswarden-legback',
     legFront: 'part-bosswarden-legfront',
+  },
+  // stage5 使者(ENVOY): スリムな槍/矢じり型の流線機体。後退翼 + 紡錘形コア +
+  // 前方へ突き出た槍(barrel) + 鋭い単眼(cyclops)。飛行ボス(単眼+ウィング)と別シルエット。
+  bossEnvoy: {
+    wingBack: 'part-bossenvoy-wingback',
+    wingFront: 'part-bossenvoy-wingfront',
+    core: 'part-bossenvoy-core',
+    spear: 'part-bossenvoy-spear',
+    head: 'part-bossenvoy-head',
+  },
+  // stage4 環境管理機(PURIFIER): 背中に巨大な汚染タンクを背負った接地機。幅広胴 + 太短脚 +
+  // 低い作業頭(sensor) + 散布ノズル(cannon)。戦闘用ヘルメット+キャノンの 'boss' とは別人格。
+  bossPurifier: {
+    tank: 'part-bosspurifier-tank',
+    torso: 'part-bosspurifier-torso',
+    head: 'part-bosspurifier-head',
+    nozzle: 'part-bosspurifier-nozzle',
+    legBack: 'part-bosspurifier-legback',
+    legFront: 'part-bosspurifier-legfront',
   },
 } as const;

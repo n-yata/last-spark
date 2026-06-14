@@ -38,12 +38,25 @@ const WARDEN_WEIGHTS: PhaseWeights = {
 
 /**
  * 浄化型ボス(stage4・環境管理機)のフェーズ別重み(相対値)。接地型と同じく地上で戦うが、
- * jump を持たず spray(扇状の範囲攻撃)を主軸にする。phase2 で spray を増量し、毒霧の圧を強める。
- * spray は浄化型専用のため、このテーブルにのみ含め、接地/飛行/収容番人の抽選には混入させない。
+ * jump を持たず spray(扇状の範囲攻撃)/bloom(時限式の汚染床設置)を主軸にする。phase2 で
+ * spray・bloom を増量し、毒霧と足元の汚染床で安全地帯を奪う(揺らぎ・疑いのテーマ)。
+ * spray/bloom は浄化型専用のため、このテーブルにのみ含め、他系統の抽選には混入させない。
  */
 const PURIFIER_WEIGHTS: PhaseWeights = {
-  phase1: { move: 30, shoot: 25, spray: 30, idle: 15 },
-  phase2: { move: 25, shoot: 25, spray: 40, idle: 10 },
+  phase1: { move: 25, shoot: 20, spray: 25, bloom: 25, idle: 5 },
+  phase2: { move: 20, shoot: 15, spray: 30, bloom: 35 },
+};
+
+/**
+ * 使者(stage5・ENVOY)のフェーズ別重み(相対値)。飛行型を継承し滞空(hover)/急降下(dive)を
+ * 再利用しつつ、固有の lance(高速槍弾)/blink(瞬間移動)を主軸にする。move は持たず、
+ * 位置取りは blink に置き換える。phase2 で blink を増量し、瞬間移動で挟む圧を強める
+ * (RAY に「読み(選択)」を強いる刺客)。lance/blink は使者専用のため、このテーブルにのみ含め、
+ * 接地/飛行/収容番人/浄化/コアの抽選には混入させない。
+ */
+const ENVOY_WEIGHTS: PhaseWeights = {
+  phase1: { hover: 10, dive: 20, lance: 35, blink: 25, shoot: 10 },
+  phase2: { hover: 5, dive: 20, lance: 35, blink: 35, shoot: 5 },
 };
 
 /**
@@ -164,6 +177,23 @@ export function pickNextPurifierBossAction(
 }
 
 /**
+ * 使者(stage5・ENVOY)の次アクションを重み付き抽選で決定する。
+ * lance/blink を含む ENVOY 専用テーブルを使い、他系統には混入させない。
+ *
+ * @param phase - 現在のボスフェーズ
+ * @param last - 直前に実行したアクション
+ * @param rng - 乱数源(テスト用に注入可能)
+ * @returns 次に実行するアクション
+ */
+export function pickNextEnvoyBossAction(
+  phase: BossPhase,
+  last: BossAction,
+  rng: Rng = Math.random,
+): BossAction {
+  return pickWeightedAction(ENVOY_WEIGHTS[phase], last, rng);
+}
+
+/**
  * ECLIPSE本体(stage6 ラスボス)の次アクションを重み付き抽選で決定する。
  * phase1 は summon を含み、phase2 は summon を含まない(フェーズで攻撃様式が変わる)。
  *
@@ -193,6 +223,11 @@ export function allowedWardenActions(phase: BossPhase): BossAction[] {
 /** 浄化型ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */
 export function allowedPurifierActions(phase: BossPhase): BossAction[] {
   return Object.keys(PURIFIER_WEIGHTS[phase]) as BossAction[];
+}
+
+/** 使者(stage5)のフェーズで許可されるアクション一覧(テスト/UI 用)。 */
+export function allowedEnvoyActions(phase: BossPhase): BossAction[] {
+  return Object.keys(ENVOY_WEIGHTS[phase]) as BossAction[];
 }
 
 /** 飛行ボスのフェーズで許可されるアクション一覧(テスト/UI 用)。 */

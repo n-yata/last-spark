@@ -37,6 +37,16 @@ export function createProjectileSpec(kind: ProjectileKind): ProjectileSpec {
       size: SHOT.missileSize,
     };
   }
+  if (kind === 'lance') {
+    // 槍弾。実際の速度・向きは EnvoyBoss が ENVOY.lance.speed で制御する(spray と同様、
+    // 発射側が velocity を与える)。ここでは spec の speed は使われないため通常弾速を置く。
+    return {
+      kind,
+      damage: SHOT.lanceDamage,
+      speed: SHOT.normalSpeed,
+      size: SHOT.lanceSize,
+    };
+  }
   return {
     kind: 'normal',
     damage: SHOT.normalDamage,
