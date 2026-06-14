@@ -37,7 +37,7 @@ interface SaveData { }
 interface InputState { }
 
 // 型エイリアス: PascalCase
-type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger';
+type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'missile' | 'spray' | 'summon';
 ```
 
 ファイル命名はリポジトリ構造定義書に従う(シーン=PascalCase+`Scene`、定数=camelCase 等)。
@@ -118,19 +118,24 @@ load(): SaveData {
 
 ### ブランチ戦略
 
-- `main`: 本番(公開)にデプロイ可能な状態。
-- `develop`: 開発の最新統合状態。
-- `feature/[機能名]`: 新機能(例: `feature/charge-shot`)。
-- `fix/[修正内容]`: バグ修正(例: `fix/touch-multitouch`)。
-- `refactor/[対象]`: リファクタリング。
+プロジェクト `CLAUDE.md` の Git 運用ルールを正とする。**`master` への直接コミットは禁止**し、実装・修正はすべて `feature` ブランチ + **専用の `git worktree`** で隔離して行う(複数セッションの並行作業による競合・変更の混在を防ぐ)。
+
+- `master`: 本番(公開)にデプロイ可能な唯一の統合ブランチ(旧 `main` / `develop` は廃止)。
+- `feature/<説明>`: 新機能・修正・リファクタリングすべてに用いる作業ブランチ(例: `feature/charge-shot`, `feature/stage3-cutscene`)。軽微な修正でも原則 `feature` を切る。
 
 ```
-main
-  └─ develop
-      ├─ feature/title-scene
-      ├─ feature/boss-ai
-      └─ fix/orientation-prompt
+master
+  ├─ feature/title-scene      (worktree: ../last-spark-title-scene)
+  ├─ feature/boss-ai          (worktree: ../last-spark-boss-ai)
+  └─ feature/orientation-prompt (worktree: ../last-spark-orientation-prompt)
 ```
+
+#### ワークフロー
+
+1. **作業開始**: 先に `master` を `git pull` で最新化し、その最新 `master` から `git worktree` で専用ディレクトリを作成して作業する。`master` 本体ツリーで直接実装しない。
+   - 作成例: `git worktree add ../last-spark-<説明> -b feature/<説明> master`
+2. **作業完了**: ① `master` を pull → ② `feature` に最新 `master` を取り込み(コンフリクト解消)→ ③ コミット前にセキュリティレビュー(security-engineer)→ ④ `feature` を push → ⑤ `gh pr create` で PR 作成 → ⑥ **Merge commit 方式**で `master` へマージ。
+3. **マージ後**: `feature` ブランチを削除(ローカル/リモート両方)し、**作業に使った worktree も必ず削除**する(`git worktree remove ../last-spark-<説明>`)。マージ完了と worktree 削除はワンセット。`--force` は使わない。
 
 ### コミットメッセージ規約(Conventional Commits)
 

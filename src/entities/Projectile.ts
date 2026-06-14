@@ -45,12 +45,17 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const texture =
       kind === 'missile'
         ? TEX.projectileMissile
-        : owner === 'enemy'
-          ? TEX.projectileEnemy
-          : kind === 'charged'
-            ? TEX.projectileCharged
-            : TEX.projectileNormal;
+        : kind === 'lance'
+          ? TEX.projectileLance
+          : owner === 'enemy'
+            ? TEX.projectileEnemy
+            : kind === 'charged'
+              ? TEX.projectileCharged
+              : TEX.projectileNormal;
     this.setTexture(texture);
+    // プールから再利用するため回転を毎回リセットする。lance は EnvoyBoss が進行方向へ
+    // 回転させるため、他用途(直進弾)で再利用される際に前回の角度が残らないようにする。
+    this.setRotation(0);
 
     this.enableBody(true, x, y, true, true);
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -69,9 +74,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   override preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
     if (!this.active) return;
-    // ミサイルは敵弾グループ(地面コライダーなし)で放物線を描くため、地面をすり抜けて
-    // 落ち続ける。下端が地面上端に達したら着弾とみなして回収する。
-    if (this.kind === 'missile') {
+    // ミサイル/槍弾は敵弾グループ(地面コライダーなし)を進むため、地面をすり抜けて飛び続ける。
+    // 下端が地面上端に達したら着弾とみなして回収する(地中に潜って見えるのを防ぐ)。
+    if (this.kind === 'missile' || this.kind === 'lance') {
       const body = this.body as Phaser.Physics.Arcade.Body;
       if (body.bottom >= STAGE.groundY) {
         this.deactivate();

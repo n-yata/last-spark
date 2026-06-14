@@ -8,12 +8,11 @@
 last-spark/
 ├── public/                     # 静的配信ファイル(Vite がそのまま配信)
 │   ├── manifest.webmanifest    # PWA マニフェスト(vite-plugin-pwa 管理の場合あり)
-│   ├── icons/                  # PWA アイコン各サイズ
+│   ├── icons/                  # PWA アイコン各サイズ(icon-192/512/512-maskable.png)
 │   └── assets/                 # ゲームアセット(ランタイム読み込み)
-│       ├── sprites/            # スプライトシート/アトラス
-│       ├── tilemaps/           # ステージのタイルマップ(Tiled JSON)+ タイルセット
-│       ├── ui/                 # ロゴ・仮想ボタン・HUD 画像
-│       └── audio/              # BGM / SE
+│       └── cutscenes/          # カットシーン背景の SVG(stageN-intro/rescue/ending)
+│                               # ※ スプライト/タイルマップ/HUD/BGM・SE は外部素材を持たず、
+│                               #    キャラ・敵・地形・背景・音は実行時に手続き生成する(知財方針)
 ├── src/                        # ソースコード(TypeScript)
 │   ├── main.ts                 # エントリポイント(Phaser.Game 生成、シーン登録)
 │   ├── scenes/                 # Scene レイヤー(画面・状態)
@@ -51,12 +50,13 @@ last-spark/
 
 **役割**: 画面/ゲーム状態の管理とシーン遷移。Phaser の `Scene` を1ファイル1シーンで配置する。
 
-**配置ファイル**:
+**配置ファイル**(現行の全シーン):
 - `BootScene.ts`: 初期化・表示スケール/向き設定
 - `PreloadScene.ts`: アセット一括ロード + ローディング表示
 - `TitleScene.ts`: タイトル画面(`LAST SPARK` ロゴ + スタート導線)
 - `GameScene.ts`: ステージ本体(プレイヤー/敵/ボス/カメラ/物理を統括)
-- `UIScene.ts`: HUD(ライフ/ボスHP/チャージゲージ)
+- `UIScene.ts`: HUD(ライフ/ボスHP/チャージゲージ)。`GameScene` と並行起動
+- `CutsceneScene.ts`: 演出シーン(オーバーレイ)。静止画的演出 + 交互テキスト(TERRA/RAY)+ト書きをタップ送りで再生し完了後に指定遷移を呼ぶ。Stage 1 開始・Stage 3 救出後・Stage 4-5 開始・Stage 6 エンディングで使用
 - `GameOverScene.ts`: ゲームオーバーとリトライ
 - `ClearScene.ts`: クリア演出 + クリア状況保存
 - `OrientationScene.ts`: 縦持ち時の横向き案内オーバーレイ
@@ -74,8 +74,14 @@ last-spark/
 **配置ファイル**:
 - `Player.ts`: プレイヤー(移動/ジャンプ/発射/被弾)
 - `Enemy.ts`: 雑魚敵(パターン別の振る舞い)
-- `Boss.ts`: ボス(フェーズ/アクション)
 - `Projectile.ts`: 弾(通常/チャージ共通)
+- `Hazard.ts`: ダメージ床(毒だまり等。重なり判定のみ・物理衝突なし)
+- `CharacterRig.ts`: キャラ見た目の関節リグ(物理 `Arcade.Sprite` から表示を分離する表示専用コンポーネント)
+- `Boss.ts`: 接地型ボス基底(フェーズ/アクション)。各系統はこれを継承する:
+  - `FlyingBoss.ts`: 飛行/浮遊型(stage2/5)
+  - `WardenBoss.ts`: 収容番人・重装ミサイル型(stage3)
+  - `PurifierBoss.ts`: 浄化型・扇状の範囲攻撃(stage4)
+  - `CoreBoss.ts`: ECLIPSE 本体・非人型コア(stage6 ラスボス)
 
 **命名規則**: PascalCase(エンティティ名)。
 
@@ -87,16 +93,29 @@ last-spark/
 
 **役割**: Entity をまたぐ横断ロジック。
 
-**配置ファイル**:
+**配置ファイル**(状態を持つ System クラスと、Phaser 非依存の純粋ロジック関数群が同居する):
+
+State を持つ System クラス:
 - `InputController.ts`: タッチ/キーボード入力を抽象操作(`InputState`)に変換
 - `CombatSystem.ts`: 衝突登録・ダメージ適用・撃破処理
 - `SpawnSystem.ts`: 敵出現・ボストリガ(ボス全身が画面内に見える位置まで発火を遅らせる)
 - `SoundManager.ts`: サウンド出力サービス(Web Audio で BGM/SE を合成。`getSound()` シングルトンで全シーン横断。外部音源ファイルは使わない)
 - `EffectsManager.ts`: 戦闘演出(パーティクル爆発・カメラシェイク・ボス撃破シーケンス)の統括。チューニング値は `config/effects.ts` に集約
+
+純粋ロジック関数群(camelCase。Phaser/Web Audio 非依存・テスト可能):
+- `bossAi.ts`: ボス行動抽選(`pickNext*BossAction` 等。系統別の重みテーブル)
+- `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュール・探索 BGM 選択
+- `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(ui からも参照可)
+- `shot.ts` / `shotControl.ts`: ショット仕様の生成と、タップ/チャージ/連射の状態機械(`stepShot`)
+- `playerMovement.ts`: 着地判定・梯子把持/昇降の純粋関数(`shouldLandOnOneWay` / `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity`)
+- `combatRules.ts` / `hazardRules.ts`: ダメージ・無敵・ハザード(スリップダメージ)判定の純粋ロジック
+- `rigAnimation.ts`: `CharacterRig` のパーツ変位算出(歩行スイング・反動・けぞり等)
+- `storyDirector.ts`: `StoryEvent`→`TextRequest[]` 変換と `TEXT_STYLES`(`StoryTextKind`→スタイル)
+- `backgroundPainter.ts`: ステージ背景(パララックス)の描画(`paintStageBackground`)
 - `sceneTransition.ts`: フェード付きシーン遷移(`transitionTo` / `fadeIn`、多重発火ガード)
-- `bossAi.ts`: ボス行動抽選(`pickNextAction` 等の純粋関数。Phaser 非依存でテスト可能に)
-- `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュールの純粋関数(Phaser/Web Audio 非依存)
-- `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(Phaser 非依存。ui からも参照可)
+- `dprScaling.ts`: 高 DPI(デバイスピクセル比)対応のスケーリング補助
+
+> 上記は主要ファイルの一覧。System レイヤーは機能追加で増えるため網羅を保証せず、新規ファイルは本節の分類(State を持つ System クラス / 純粋ロジック関数群)に従って配置する。
 
 **命名規則**: System クラスは PascalCase + `System`/`Controller`/`Manager`。純粋ロジック関数群は camelCase(例: `bossAi.ts` / `soundSynth.ts`)。
 
@@ -121,13 +140,21 @@ last-spark/
 
 **役割**: チューニング値・ゲーム定数・Phaser 設定を集約(マジックナンバーの一元管理)。
 
-**配置ファイル**:
-- `balance.ts`: プレイヤー/ショット/ボスのパラメータ(`PLAYER`, `SHOT`, `BOSS` 等)
+**配置ファイル**(主要。バランス・演出・ステージ・ストーリー等のデータを集約する):
+- `balance.ts`: プレイヤー/ショット/各系統ボスのパラメータ(`PLAYER`, `SHOT`, `BOSS`, `FLYING_BOSS`, `CONTAINMENT_WARDEN`, `PURIFIER`, `ENVOY`, `ECLIPSE_CORE` 等)
 - `effects.ts`: 演出のチューニング値(爆発・シェイク・ヒットストップ・フェード・HUD・タッチ押下フィードバック)
-- `audio.ts`: サウンド定義(`SE` 13種の合成仕様 + `BGM` 3トラックのノート列。Phaser/Web Audio 非依存のデータ)
+- `audio.ts`: サウンド定義(`SE` 13種の合成仕様 + `BGM` 5トラック `title`/`stage`/`stageWarm`/`boss`/`ending` のノート列。Phaser/Web Audio 非依存のデータ)
 - `gameConfig.ts`: `Phaser.Types.Core.GameConfig`(解像度/スケール/物理設定)
-- `sceneKeys.ts`: シーンキー定数(文字列の重複防止)
-- `storageKeys.ts`: localStorage キー定数(`lastspark:save`)
+- `dimensions.ts` / `uiScale.ts`: ゲーム論理サイズ、高 DPI 対応の UI スケール係数
+- `sceneKeys.ts` / `registryKeys.ts` / `assetKeys.ts` / `storageKeys.ts`: シーンキー / registry キー / アセットキー / localStorage キー(`lastspark:save`)の定数
+- `controlBand.ts` / `touchLayout.ts`: 下部コントロール帯・仮想ボタンのレイアウト定数
+- `characterRig.ts`: キャラ見た目リグの系統別構成データ
+- `stage1.ts`: `StageData` 型と全ステージ定義(`STAGES` / `getStageData` / `nextStageId`)
+- `stageBackground.ts`: ステージ背景テーマ(`getStageBackground`、純データ+決定論ロジック)
+- `storyEvents.ts`: ステージ進行とストーリーイベントの対応データ
+- `story/`: ステージ別の確定テキスト(`stage1.ts`〜`stage6.ts`、`cutscenes.ts`、`index.ts` の `getStageStory`)
+
+> 上記は主要ファイルの一覧。ステージ・ストーリーの追加で増えるため網羅は保証しない。新規の定数/データは本ディレクトリへ camelCase ファイルで追加する。
 
 **命名規則**: 定数モジュールは camelCase ファイル名、エクスポートする定数は UPPER_SNAKE_CASE もしくは `as const` オブジェクト。
 
@@ -140,7 +167,7 @@ last-spark/
 **役割**: HUD・仮想ボタンなど、見た目に関する再利用コンポーネント。
 
 **配置ファイル**:
-- `LifeBar.ts`, `BossHpBar.ts`, `ChargeGauge.ts`, `TouchControls.ts` 等
+- `LifeBar.ts`, `BossHpBar.ts`, `ChargeGauge.ts`, `TouchControls.ts`, `MovePad.ts`(左手の追従パッド), `StoryOverlay.ts`(ストーリーテキストのキュー再生) 等
 
 **依存関係**:
 - 依存可能: `config/`, `types/`、および `systems/` 内の **Phaser 非依存の純粋関数モジュール**(camelCase ファイル: `hudFx.ts` 等。entities と同じく最下位ロジック扱い)
@@ -211,7 +238,7 @@ tests/e2e/
 
 **役割**: Vite がそのまま配信する静的ファイル。ゲームアセットと PWA リソースを配置。
 
-- `assets/`: 実行時にロードするスプライト/タイルマップ/UI/オーディオ。
+- `assets/cutscenes/`: カットシーン背景の SVG。これ以外のスプライト/地形/HUD/BGM・SE は外部素材を持たず実行時に手続き生成する(`PreloadScene` がテクスチャ生成、`SoundManager` が Web Audio で音を合成)。Tiled タイルマップも使わず、ステージ地形は `config/stage1.ts` の `StageData` から構築する。
 - `icons/`: PWA アイコン各サイズ。
 - マニフェスト/Service Worker は `vite-plugin-pwa` が生成・管理する。
 

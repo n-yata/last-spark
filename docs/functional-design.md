@@ -69,7 +69,7 @@ Phaser の Scene を画面/状態の単位とする。
 
 ```typescript
 interface SaveData {
-  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 2)
+  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 3)
   clearedStages: string[];          // クリア済みステージID(全6ステージ対応)
   bestTimeMs?: Record<string, number>; // ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーなし
   settings: GameSettings;           // ユーザー設定
@@ -85,8 +85,9 @@ interface GameSettings {
 **制約**:
 - 保存キーは `lastspark:save`(名前空間付き)。
 - `localStorage` 利用不可・破損時は既定値で起動し、ゲーム自体は継続可能(進捗が無いだけ)。
-- `version` 不一致時は、旧形式(v1: `cleared:boolean` / `bestTimeMs:number`)からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。
-  - v1→v2 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。
+- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 3`(`clearedStages` / `bestTimeMs:Record`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、現行構造は v2 と同一だが、過去の v3 セーブとの互換のため version 番号は 3 に据え置く(余分な `collectedLogs` は読み込み時に無視)。
+  - v1(`cleared:boolean` / `bestTimeMs:number`)→現行 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。
+  - v2 / v3(構造同一)→現行 移行: 進捗を保持したまま version のみ引き上げる。
 - API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。
 
 ### 実行時モデル: 主要 Entity
@@ -227,23 +228,56 @@ class SpawnSystem {
 
 **ボス戦突入の条件**: ボス戦(出現・BGM切替・HPバー表示・アリーナ固定)は、**ボスの全身が画面内に見える位置までカメラが進んでから**開始する。`StageData.bossTriggerX` は設計上の最短地点として尊重しつつ、`bossSpawn.x + ボス半幅 + 余白` との遅い方を採用する(ボスが画面外のまま戦闘が始まる体験を防ぐ。ボス系統ごとの幅は `BOSS` / `FLYING_BOSS` から引くため、ステージ追加時も自動で成立する)。
 
-### ストーリーテリング基盤(テキスト表示 / ログトリガー)
+### ストーリーテリング基盤(テキスト表示)
 
 > ストーリー本文は `docs/story.md`(北極星)を正本とし、ゲーム内表示はその確定テキストを反映する。設計の責務分割は「ジオメトリ(`config/stage1.ts`)とテキスト(`config/story/`)を混ぜない」。
 
-**テキスト種別(5種)**: ゲーム内テキストは `StoryTextKind`(`scientistLog` / `eclipseVoice` / `rayInner` / `stageIntro` / `terraLine`)で区別し、種別ごとに表示位置・色・フォント・一時停止要否を変える(話者ラベルは出さず、見た目だけで「誰の言葉か」を判別させる)。kind→スタイルのマップ `TEXT_STYLES` は純粋ロジック(`systems/storyDirector.ts`)に置き、描画(`ui/StoryOverlay.ts`)と共有する。
+**テキスト種別(4種)**: ゲーム内テキストは `StoryTextKind`(`eclipseVoice` / `rayInner` / `stageIntro` / `terraLine`)で区別し、種別ごとに表示位置・色・フォント・一時停止要否を変える(話者ラベルは出さず、見た目だけで「誰の言葉か」を判別させる)。kind→スタイルのマップ `TEXT_STYLES` は純粋ロジック(`systems/storyDirector.ts`)に置き、描画(`ui/StoryOverlay.ts`)と共有する。「物語を語る口は4つ」という `docs/story.md`(2026-06-14 再設計)の方針に対応する(旧 `scientistLog`=科学者ログは全廃済み。型・セーブ・トリガー機構いずれも実装から撤去済み)。
 
-**StoryDirector(純粋ロジック)**: `resolveStoryEvent(story, event)` が `StoryEvent`(`stageStart` / `logFound` / `bossIntro` / `inner`)を表示要求 `TextRequest[]` に変換する。Phaser 非依存でユニットテスト可能(`bossAi.ts` 等と同方針)。確定テキストは `config/story/stageN.ts`(`StageStory`)に持ち、`getStageStory(stageId)` で引く。
+**StoryDirector(純粋ロジック)**: `resolveStoryEvent(story, event)` が `StoryEvent`(`stageStart` / `bossIntro` / `inner`)を表示要求 `TextRequest[]` に変換する。Phaser 非依存でユニットテスト可能(`bossAi.ts` 等と同方針)。確定テキストは `config/story/stageN.ts`(`StageStory`)に持ち、`getStageStory(stageId)` で引く。
 
-**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。表示挙動は2段構成: **(1) ステージ開始テキスト(`stageIntro`)のみ**画面中央に出して `GameScene` を `scene.pause` し、**タップで進む**(ステージ開始の合図。止まっている間は移動/ショットの誤タップが起きないので安全)。**(2) それ以外のステージ中テキスト(科学者ログ/ECLIPSE/RAY内心/TERRA)**は動きを止めず画面上部に出し、本文の長さに応じた読了時間(`readingDurationMs`)で自動的に次へ進む(タップでは閉じない=プレイ中の移動/ジャンプ/ショットやボス出現時の連射で「読む前に消える」のを防ぐ)。kind→位置/一時停止要否は `TEXT_STYLES` が持つ。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
+**StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。表示挙動は2段構成: **(1) ステージ開始テキスト(`stageIntro`)のみ**画面中央に出して `GameScene` を `scene.pause` し、**タップで進む**(ステージ開始の合図。止まっている間は移動/ショットの誤タップが起きないので安全)。**(2) それ以外のステージ中テキスト(ECLIPSE の語りかけ/RAY内心/TERRA)**は動きを止めず画面上部に出し、本文の長さに応じた読了時間(`readingDurationMs`)で自動的に次へ進む(タップでは閉じない=プレイ中の移動/ジャンプ/ショットやボス出現時の連射で「読む前に消える」のを防ぐ)。kind→位置/一時停止要否は `TEXT_STYLES` が持つ。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
 
-**ログトリガー**: `StageData.logTriggers?`(`slot` = `early` / `preBoss` / `postBoss`、位置)に基づき `GameScene` が `LogTrigger`(オーバーラップ判定のみ・衝突なし)を生成する。プレイヤーが重なると一度だけ(`tryConsume`)該当スロットの科学者ログを発火する。触れるかはプレイヤーの自由(任意接触・読み飛ばし可)。`postBoss` ログはボス撃破後の動線(ボス後フロー)で拾えるよう、アリーナ内(ケージへ向かう動線上)に配置する(Stage 3)。
+> **補足(科学者ログ機構は撤去済み)**: 旧版には `StageData.logTriggers?` に基づく `LogTrigger`(任意接触で科学者ログ断片を発火するオーバーラップ判定)があったが、`docs/story.md`(2026-06-14 再設計)の「ログ全廃」に伴い、型・セーブ(`collectedLogs`)・トリガー機構ともに実装から撤去済み。現行の物語伝達は前述4種のテキスト + カットシーンのみ。
 
-**演出シーン(CutsceneScene)とボス後フロー**: ボス撃破後に物語の転換(Stage 3 の TERRA 救出など)を見せるための独立シーン。`StageData.postBossCutsceneKey?` と `cage?` を持つステージは、ボス撃破→撃破演出→**ケージ解錠→自由移動(ボス後ログを任意接触)→ケージ接触で `CutsceneScene` 起動→クリア処理**の順で流れる(`GameScene.handleClear` が分岐)。`postBossCutsceneKey` を持たない Stage 1-2 は従来どおり撃破→即クリア(後方互換)。`CutsceneScene` は `scriptKey`(`config/story/cutscenes.ts` の `Cutscene`)を受け取り、TERRA のセリフ↔RAY の内心↔ト書き(`direction`)をタップ送りで 1 行ずつ再生し、`onComplete` で完了後の遷移を呼ぶ。scriptKey 差し替えで Stage 4-6 の演出にも再利用する。
+**演出シーン(CutsceneScene)とボス後フロー**: ボス撃破後に物語の転換(Stage 3 の TERRA 救出など)を見せるための独立シーン。`StageData.postBossCutsceneKey?` と `cage?` を持つステージは、ボス撃破→撃破演出→**ケージ解錠→自由移動→ケージ接触で `CutsceneScene` 起動→クリア処理**の順で流れる(`GameScene.handleClear` が分岐)。`postBossCutsceneKey` を持たない Stage 1-2 は従来どおり撃破→即クリア(後方互換)。`CutsceneScene` は `scriptKey`(`config/story/cutscenes.ts` の `Cutscene`)を受け取り、TERRA のセリフ↔RAY の内心↔ト書き(`direction`)をタップ送りで 1 行ずつ再生し、`onComplete` で完了後の遷移を呼ぶ。scriptKey 差し替えで Stage 4-6 の演出にも再利用する。
 
 ### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
 
-**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、接地型の種別 `bossVariant?`、ボス固有チューニング `bossConfig?`、収容ケージ `cage?`、ボス後演出キー `postBossCutsceneKey?`、開始演出キー `introCutsceneKey?`、背景色 `backgroundColor?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → stage3 → stage4 と続ける(`nextStageId` 無し=最終ステージ。未実装の次ステージへは接続しない)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。`bossConfig` を持つステージ(stage3 の重装型 `CONTAINMENT_WARDEN`)は接地ボスの既定 `BOSS` に代えてその設定で生成する(`bossAi` の行動ロジックは共通のまま、行動間隔・威力・移動速度のパラメータだけで差別化)。接地型のうち `bossVariant='purifier'` のステージ(stage4)は `PurifierBoss`(浄化型・扇状の範囲攻撃 `spray`)を生成する。`introCutsceneKey` を持つステージ(stage4)はステージ開始時に `CutsceneScene` を再生してから開始テキストへ進む。ステージ背景はストーリー世界観に連動した手続き生成のパララックス背景(空グラデーション + 多層シルエット)で表現する。テーマ(空色・アクセント色・シルエット種別・パララックス係数)は `src/config/stageBackground.ts` が `stageId` から引き(`getStageBackground`、純データ+決定論ロジックで Phaser 非依存)、`src/systems/backgroundPainter.ts` が `paintStageBackground` で描画する(アセット追加なし、既存のプレースホルダ手続き生成を踏襲)。背景は depth 負値でゲームプレイ要素より背面に置き、全幅描画 + `setScrollFactor<1` でカメラ追従・ボス戦の bounds 縮約・RESIZE に追随する(`GameScene.buildBackground` が `create` で一度だけ構築)。`backgroundColor` はカメラのベース塗り(地面下/奈落の保険)で、未指定時はテーマの地平線色(`skyBottom`)を使う。
+#### StageData(ステージ定義)
+
+各ステージは `StageData` としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → … → stage6 と続ける(`nextStageId` 無し=最終ステージ。未実装の次ステージへは接続しない)。主なフィールドは次のとおり。
+
+| フィールド | 役割 |
+|-----------|------|
+| `id` / `width` | ステージ ID / ステージ全幅 |
+| `playerStart` | プレイヤー初期位置(中心) |
+| `platforms` | 地形(地面/浮遊足場) |
+| `ladders?` | 梯子(任意。未定義なら梯子なし) |
+| `hazards?` | ダメージ床(任意。stage4 の毒だまり。重なり判定のみ・物理衝突なし) |
+| `enemies` | 雑魚敵の配置 |
+| `bossTriggerX` / `bossSpawn` / `bossArenaMinX` | ボス戦突入の最短地点 / ボス出現位置 / アリーナ左端 |
+| `bossKind?` | ボス系統。未定義=接地型(`ground`)、stage2=`flying` |
+| `bossVariant?` | 系統内の種別。`purifier`(stage4)/ `envoy`(stage5) |
+| `bossConfig?` / `bossRig?` | ボス固有チューニング / 描画リグ系統(任意) |
+| `cage?` | 収容ケージ(任意・中心座標)。stage3 のみ。撃破後に解錠し接触で救出演出 |
+| `introCutsceneKey?` | ステージ開始時に再生する演出スクリプトキー(任意) |
+| `introCutsceneCoversStartText?` | 開始演出が開始テキスト(stageIntro+開始内心)を兼ねるか(任意。stage1=true) |
+| `postBossCutsceneKey?` | ボス撃破後に再生する演出キー(任意。stage3 の救出など) |
+| `endingCutsceneKey?` | 撃破後のエンディング演出キー(任意。stage6=最終。ClearScene を経由せず全クリア保存→タイトル) |
+| `backgroundColor?` | カメラ背景色(任意・CSS 色)。未定義時はテーマの地平線色(`skyBottom`) |
+| `nextStageId?` | クリア後に続けて開始する次ステージ ID(任意) |
+
+**ボス生成の出し分け**: `GameScene.spawnBoss` が `bossKind` / `bossVariant` に応じて Entity を生成する。飛行型・コア型は重力なしで空中に滞空するため地面コライダを付けず、接地型・warden は地面コライダを付ける。
+
+- `bossKind='flying'`(stage2, stage5)→ `FlyingBoss`。`bossVariant='envoy'`(stage5)は高速型 `ENVOY`、それ以外(stage2)は既定 `FLYING_BOSS`。
+- `bossKind='core'`(stage6)→ `CoreBoss`(配下召喚のため敵グループ等のコンテキストを注入)。
+- `bossKind='warden'`(stage3)→ `WardenBoss`(重装ミサイル型 `CONTAINMENT_WARDEN`)。接地型なので地面コライダを付ける。
+- `bossVariant='purifier'`(stage4・接地型)→ `PurifierBoss`(浄化型・扇状の範囲攻撃 `spray`)。
+- 上記いずれにも該当しない(stage1 など)→ 既定の接地ボス `Boss`(`bossConfig` / `bossRig` を反映)。
+- `introCutsceneKey` を持つステージ(stage4 等)はステージ開始時に `CutsceneScene` を再生してから開始テキストへ進む。
+
+**ステージ背景**: ストーリー世界観に連動した手続き生成のパララックス背景(空グラデーション + 多層シルエット)で表現する。テーマ(空色・アクセント色・シルエット種別・パララックス係数)は `src/config/stageBackground.ts` が `stageId` から引き(`getStageBackground`、純データ+決定論ロジックで Phaser 非依存)、`src/systems/backgroundPainter.ts` が `paintStageBackground` で描画する(アセット追加なし、既存のプレースホルダ手続き生成を踏襲)。背景は depth 負値でゲームプレイ要素より背面に置き、全幅描画 + `setScrollFactor<1` でカメラ追従・ボス戦の bounds 縮約・RESIZE に追随する(`GameScene.buildBackground` が `create` で一度だけ構築)。`backgroundColor` はカメラのベース塗り(地面下/奈落の保険)。
 
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
@@ -311,6 +345,8 @@ class Boss extends Phaser.Physics.Arcade.Sprite {
 // 飛行固有値(滞空高度・バブ・急降下)をコンストラクタで差し替え、stage2(既定 FLYING_BOSS)と
 // stage5 の使者(高速型 ENVOY・bossVariant='envoy')で同一ロジックを共有する
 class FlyingBoss extends Boss {}
+// 収容番人(stage3・重装ミサイル型)。接地型のまま固有アクション missile(放物線アーティラリー)を持つ
+class WardenBoss extends Boss {}
 // 浄化型ボス(stage4・環境管理機)。接地型のまま spray(扇状の範囲攻撃)を持つ
 class PurifierBoss extends Boss {}
 // ECLIPSE本体(stage6 ラスボス)。非人型の巨大コア。重力なしで浮遊・静止し、
@@ -318,7 +354,25 @@ class PurifierBoss extends Boss {}
 class CoreBoss extends Boss {}
 ```
 
-**ボス系統(接地 / 飛行 / 浄化型)**: `Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。飛行ボス `FlyingBoss`(stage2)は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックをそのまま再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` のみを上書きする。飛行ボスは重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。浄化型ボス `PurifierBoss`(stage4)は接地型(重力あり)のまま `Boss` を継承し、`beginNextAction` のみ上書きして浄化型専用の重みテーブル(`bossAi` の `PURIFIER_WEIGHTS`)で抽選する。`jump` を持たず、`spray`(プレイヤー方向の水平を中心に扇状へ複数弾を散布する範囲攻撃=毒霧スプレー)を主軸に `move`/`shoot` を織り交ぜる。`spray` の弾数・開き角・速度は `PurifierBossConfig.spray` でパラメータ化し、既存の弾プール/`Projectile` を流用する(発射後に鉛直速度を与えて扇形にする)。系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)/ `PURIFIER`(`PurifierBossConfig`)に分離する。最終ステージ stage6 のラスボス `CoreBoss`(`ECLIPSE_CORE` / `CoreBossConfig`)は非人型の巨大コアで、重力を切って空中に静止し(移動なし)、人型リグの代わりに専用ビジュアル(八角形の装甲+発光する眼)を描く。`beginNextAction` を上書きして `CORE_WEIGHTS` で抽選し、phase1 は固有アクション `summon`(既存 Enemy/敵グループを流用して配下を動的生成。場の上限 `summonMaxActive` を超えない)で支援型、phase2 は `summon` を止めて `shoot` に集中する直接攻撃型へ切り替わる。
+#### ボス系統(コンフィグ駆動 + 継承)
+
+`Boss` は設定オブジェクト(`BossConfig`)・リグ系統・重力有無をコンストラクタで受け取るコンフィグ駆動とし、既定引数では従来どおりの接地ボス(stage1)になる。各系統は `Boss` を継承し、被弾・けぞり・フェーズ・撃破・HUD 連動・アリーナ拘束といった共通ロジックを再利用しつつ、`beginNextAction / executeAction / clampToArena / updateRig` の一部のみを上書きする。
+
+```
+Boss(接地型・stage1 / 既定 BOSS)
+ ├─ FlyingBoss   ← 飛行/浮遊型(stage2 既定 FLYING_BOSS、stage5 使者 ENVOY)
+ ├─ WardenBoss   ← 収容番人(stage3・重装ミサイル型 CONTAINMENT_WARDEN)
+ ├─ PurifierBoss ← 浄化型(stage4・接地のまま spray)
+ └─ CoreBoss     ← ECLIPSE 本体(stage6 ラスボス・非人型コア)
+```
+
+- **接地型 `Boss`(stage1)**: 既定 `BOSS`。`idle/move/shoot/jump/stagger` で戦う標準系統。
+- **飛行型 `FlyingBoss`(stage2, stage5)**: 重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。飛行固有値(滞空高度・バブ・急降下)をコンストラクタで差し替え、stage2(既定 `FLYING_BOSS`)と stage5 の使者(高速型 `ENVOY`・`bossVariant='envoy'`)で同一ロジックを共有する。
+- **重装型 `WardenBoss`(stage3)**: 接地型(重力あり)のまま `CONTAINMENT_WARDEN` で生成し、接地移動・ジャンプ・通常射撃を再利用しつつ固有アクション `missile`(プレイヤー周辺へ放物線で降り注ぐアーティラリー)を足す。`beginNextAction` を上書きし、専用の重みテーブル(`bossAi` の `WARDEN_WEIGHTS`)で抽選する。水平に飛ぶ stage1 の通常弾とは軌道・脅威が異なり、移動による回避を強制する。
+- **浄化型 `PurifierBoss`(stage4)**: 接地型(重力あり)のまま `beginNextAction` のみ上書きし、浄化型専用の重みテーブル(`bossAi` の `PURIFIER_WEIGHTS`)で抽選する。`jump` を持たず、`spray`(プレイヤー方向の水平を中心に扇状へ複数弾を散布する範囲攻撃=毒霧スプレー)を主軸に `move`/`shoot` を織り交ぜる。`spray` の弾数・開き角・速度は `PurifierBossConfig.spray` でパラメータ化し、既存の弾プール/`Projectile` を流用する(発射後に鉛直速度を与えて扇形にする)。
+- **コア型 `CoreBoss`(stage6 ラスボス)**: `ECLIPSE_CORE` / `CoreBossConfig`。非人型の巨大コアで、重力を切って空中に静止し(移動なし)、人型リグの代わりに専用ビジュアル(八角形の装甲+発光する眼)を描く。`beginNextAction` を上書きして `CORE_WEIGHTS` で抽選し、phase1 は固有アクション `summon`(既存 Enemy/敵グループを流用して配下を動的生成。場の上限 `summonMaxActive` を超えない)で支援型、phase2 は `summon` を止めて `shoot` に集中する直接攻撃型へ切り替わる。
+
+系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)/ `CONTAINMENT_WARDEN`(`WardenBossConfig`)/ `PURIFIER`(`PurifierBossConfig`)/ `ECLIPSE_CORE`(`CoreBossConfig`)に分離する。
 
 ### SaveManager(Persistence)
 
