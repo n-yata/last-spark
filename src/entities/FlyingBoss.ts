@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FLYING_BOSS, STAGE, type FlyingBossConfig } from '../config/balance';
+import type { RigFamily } from '../config/characterRig';
 import type { MotionState } from '../systems/rigAnimation';
 import { pickNextFlyingBossAction, bossActionDuration } from '../systems/bossAi';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
@@ -20,8 +21,15 @@ export class FlyingBoss extends Boss {
   /** 急降下の最下点(本体下端が地面近くに来る中心 Y)。 */
   private readonly diveBottomY: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, config: FlyingBossConfig = FLYING_BOSS) {
-    super(scene, x, y, { config, rigFamily: 'bossFlying', gravity: false });
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    config: FlyingBossConfig = FLYING_BOSS,
+    rigFamily: RigFamily = 'bossFlying',
+  ) {
+    // 系統リグは差し替え可能(既定=飛行ボス bossFlying。使者は bossEnvoy を渡す)。
+    super(scene, x, y, { config, rigFamily, gravity: false });
     this.fcfg = config;
     this.hoverCenterY = STAGE.groundY - config.hoverAltitude;
     this.topY = this.hoverCenterY - config.hoverAmplitude;

@@ -65,12 +65,16 @@
 
 ## フェーズ C: ENVOY ビジュアル実装
 
-- [ ] `characterRig.ts` に `bossEnvoy` リグを追加
-  - [ ] `RigSpec.family` 型・`PALETTE`・`RIGS`・`RIG_BODY_SIZE` に追加
-  - [ ] 既存 shape の組み合わせで槍/矢じり型を構成
-  - [ ] `assetKeys.ts` に bossEnvoy パーツキー追加
-- [ ] `stage1.ts` の Stage5 に `bossRig: 'bossEnvoy'` を指定
-- [ ] 動作確認（専用リグ表示）
+- [x] `characterRig.ts` に `bossEnvoy` リグを追加
+  - [x] `RigSpec.family` 型・`PALETTE`・`RIGS`・`RIG_BODY_SIZE` に追加（ENVOY を balance から import）
+  - [x] 既存 shape の組み合わせで槍/矢じり型を構成（後退翼×2=roundedBox / 紡錘形 core=roundedBox / 前方の槍=barrel(armFront・攻撃時リコイル) / 鋭い単眼=cyclops。新 PartShape は追加せず）
+  - [x] `assetKeys.ts` に bossEnvoy パーツキー追加
+  - [x] `FlyingBoss` に rigFamily 引数を追加、`EnvoyBoss` が `'bossEnvoy'` を渡す
+  - [x] characterRig.test 改訂（cyclops は飛行系ボス2種=哨戒機/使者の頭に限定）＋ bossEnvoy 構造テスト追加
+- [x] ~~`stage1.ts` の Stage5 に `bossRig: 'bossEnvoy'` を指定~~（実装方針変更により不要: 専用クラス EnvoyBoss が自身のリグ系統を保持する規約に従う。stage.bossRig は GameScene の generic Boss 分岐専用で EnvoyBoss には適用されず、指定すると dead config になる。FlyingBoss/WardenBoss/PurifierBoss と同じ方式）
+- [x] 動作確認（専用リグ表示）
+  - playwright introspection で bossEnvoy リグ採用を確認: 5パーツのテクスチャ(part-bossenvoy-*)が指定実寸(wingback30x9/wingfront30x9/core34x20/spear30x11/head16x10)で生成・visible・boss に attach。ランタイムエラーゼロ。bossFlying 流用を解消
+  - 注: force-jump+pause+レターボックスカメラの合成制約でピクセルスクショは取得できず。実寸一致の data 検証＋構造テストで担保（最終ビジュアル目視は Phase F の通しプレイで実施）
 
 ## フェーズ D: PURIFIER bloom 実装
 

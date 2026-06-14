@@ -93,4 +93,13 @@ export const PART = {
     legBack: 'part-bosswarden-legback',
     legFront: 'part-bosswarden-legfront',
   },
+  // stage5 使者(ENVOY): スリムな槍/矢じり型の流線機体。後退翼 + 紡錘形コア +
+  // 前方へ突き出た槍(barrel) + 鋭い単眼(cyclops)。飛行ボス(単眼+ウィング)と別シルエット。
+  bossEnvoy: {
+    wingBack: 'part-bossenvoy-wingback',
+    wingFront: 'part-bossenvoy-wingfront',
+    core: 'part-bossenvoy-core',
+    spear: 'part-bossenvoy-spear',
+    head: 'part-bossenvoy-head',
+  },
 } as const;

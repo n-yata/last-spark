@@ -23,13 +23,35 @@ describe('characterRig(リグ構成)', () => {
     expect(head!.shape).toBe('sensor');
   });
 
-  it('cyclops 形状を使うのは哨戒機の頭だけ(意図しない流用がない)', () => {
+  it('cyclops 形状を使うのは飛行系ボス(哨戒機・使者)の頭だけ(地上系へ流用しない)', () => {
     const cyclopsParts = Object.values(RIGS)
       .flatMap((rig) => rig.parts)
       .filter((p) => p.shape === 'cyclops');
-    expect(cyclopsParts).toHaveLength(1);
-    expect(cyclopsParts[0].key).toBe(
+    // 単眼は「空から狙う/見張る眼」を持つ飛行系ボス(bossFlying/bossEnvoy)の頭に限る。
+    const keys = cyclopsParts.map((p) => p.key).sort();
+    const expected = [
       RIGS.bossFlying.parts.find((p) => p.role === 'head')!.key,
-    );
+      RIGS.bossEnvoy.parts.find((p) => p.role === 'head')!.key,
+    ].sort();
+    expect(keys).toEqual(expected);
+    // すべて head 役割(胴や腕に紛れていない)。
+    expect(cyclopsParts.every((p) => p.role === 'head')).toBe(true);
+  });
+
+  it('使者(bossEnvoy)は専用リグで、飛行ボス(bossFlying)流用ではない', () => {
+    const envoy = RIGS.bossEnvoy;
+    // 頭は鋭い単眼(cyclops)。
+    expect(envoy.parts.find((p) => p.role === 'head')!.shape).toBe('cyclops');
+    // 前方へ突き出た槍は barrel(攻撃時にリコイル=突き)。
+    const spear = envoy.parts.find((p) => p.shape === 'barrel');
+    expect(spear).toBeDefined();
+    expect(spear!.role).toBe('armFront');
+    expect(spear!.x).toBeGreaterThan(0); // 前方(機体の進行方向)へ突き出る
+    // 脚なしの飛行機体(歩行スイングなし)。
+    expect(envoy.swingRad).toBe(0);
+    expect(envoy.parts.some((p) => p.role === 'legBack' || p.role === 'legFront')).toBe(false);
+    // bossFlying とはパーツキーを共有しない(独立リグ)。
+    const flyingKeys = new Set(RIGS.bossFlying.parts.map((p) => p.key));
+    expect(envoy.parts.every((p) => !flyingKeys.has(p.key))).toBe(true);
   });
 });

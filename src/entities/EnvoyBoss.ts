@@ -24,8 +24,8 @@ export class EnvoyBoss extends FlyingBoss {
   private lastAfterimageAt = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    // Phase B ではビジュアルは飛行ボスリグ(bossFlying)を流用する(専用リグは Phase C で追加)。
-    super(scene, x, y, ENVOY);
+    // 専用リグ bossEnvoy(槍/矢じり型の流線機体)を使う。飛行ボス(bossFlying)流用を解消。
+    super(scene, x, y, ENVOY, 'bossEnvoy');
     this.envoy = ENVOY;
   }
 
