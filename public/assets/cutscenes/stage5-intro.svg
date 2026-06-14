@@ -1,6 +1,6 @@
 <svg width="960" height="540" viewBox="0 0 960 540" role="img" xmlns="http://www.w3.org/2000/svg">
 <title>LAST SPARK ステージ5 — ECLIPSE外縁部でRAYとTERRAが対峙する</title>
-<desc>青みがかった冷たい鋼色の空間。密集した機械構造とパイプ、林立する塔の奥に、巨大なECLIPSE本体のシルエットが青白く光る単眼を覗かせる。シアン色に発光するロボットRAYが遠くのECLIPSEを見据え、その背後で少女TERRAが身を寄せて怯える一枚絵。</desc>
+<desc>青みがかった冷たい鋼色の空間。密集した機械構造とパイプ、林立する塔の奥に、管理中枢の巨大な機械構造体（無貌のモノリス）が青白い冷光を放ちながらそびえ立つ。シアン色に発光するロボットRAYが奥の構造体を見据え、その背後で少女TERRAが身を寄せて怯える一枚絵。</desc>
 
 <defs>
 <linearGradient id="s5sky" x1="0" y1="0" x2="0" y2="1">
@@ -8,11 +8,6 @@
 <stop offset="0.5" stop-color="#0c1119"/>
 <stop offset="1" stop-color="#0e1620"/>
 </linearGradient>
-<radialGradient id="s5eye" cx="0.5" cy="0.5" r="0.5">
-<stop offset="0" stop-color="#dfe6ff" stop-opacity="0.95"/>
-<stop offset="0.35" stop-color="#9fb0ff" stop-opacity="0.55"/>
-<stop offset="1" stop-color="#6f7dff" stop-opacity="0"/>
-</radialGradient>
 <radialGradient id="s5aura" cx="0.5" cy="0.5" r="0.5">
 <stop offset="0" stop-color="#5a66c8" stop-opacity="0.3"/>
 <stop offset="0.7" stop-color="#39408f" stop-opacity="0.1"/>
@@ -43,8 +38,8 @@
 <!-- 空間 -->
 <rect x="0" y="0" width="960" height="540" fill="url(#s5sky)"/>
 
-<!-- ECLIPSE 本体の威光(中央奥) -->
-<circle cx="600" cy="200" r="260" fill="url(#s5aura)"/>
+<!-- 管理中枢の冷光(中央奥・構造体が放つ環境光) -->
+<circle cx="600" cy="230" r="280" fill="url(#s5aura)"/>
 
 <!-- 遠景: 林立する塔・アンテナ群(暗い鋼のシルエット) -->
 <g fill="#0a0f17">
@@ -65,27 +60,30 @@
 <path d="M839 128 L 839 92 M827 108 L 851 108"/>
 </g>
 
-<!-- ECLIPSE 本体(巨大な八角コアのシルエット・単眼) -->
-<g transform="translate(600 196)">
-<!-- 装甲シルエット(非人型の塊) -->
-<polygon points="-150,-40 -90,-120 90,-120 150,-40 150,70 90,150 -90,150 -150,70"
+<!-- 管理中枢の外壁(顔を持たない巨大な機械モノリス。"あの声"は姿を見せない＝名前のなさが圧になる) -->
+<g transform="translate(600 0)">
+<!-- 主塔のシルエット(地平から立ち上がる巨大な構造体) -->
+<polygon points="-96,430 -72,150 -40,92 40,92 72,150 96,430"
   fill="#0d1320" stroke="#1b2740" stroke-width="3"/>
-<polygon points="-110,-20 -64,-84 64,-84 110,-20 110,52 64,110 -64,110 -110,52"
+<polygon points="-68,430 -50,162 -28,118 28,118 50,162 68,430"
   fill="#0a1019"/>
-<!-- 装甲の走査ライン -->
-<g stroke="#27407a" stroke-width="2" opacity="0.5">
-<line x1="-130" y1="0" x2="130" y2="0"/>
-<line x1="-120" y1="40" x2="120" y2="40"/>
-<line x1="-100" y1="-50" x2="100" y2="-50"/>
+<!-- 頂部の構造ブロック -->
+<rect x="-28" y="66" width="56" height="30" fill="#0d1320" stroke="#1b2740" stroke-width="2"/>
+<!-- 冷光の縦シーム(構造の継ぎ目から漏れる青白い光) -->
+<g stroke="#9fb0ff" stroke-width="2" opacity="0.5">
+<line x1="0" y1="118" x2="0" y2="430"/>
+<line x1="-30" y1="160" x2="-30" y2="430" opacity="0.35"/>
+<line x1="30" y1="160" x2="30" y2="430" opacity="0.35"/>
 </g>
-<!-- 単眼(青白い威光) -->
-<circle cx="0" cy="14" r="120" fill="url(#s5eye)"/>
-<ellipse cx="0" cy="14" rx="58" ry="30" fill="#121a2a"/>
-<ellipse cx="0" cy="14" rx="56" ry="28" fill="#0a1019"/>
-<ellipse cx="0" cy="14" rx="40" ry="20" fill="#c9d4ff" opacity="0.9"/>
-<ellipse cx="0" cy="14" rx="18" ry="11" fill="#ffffff"/>
-<!-- 虹彩のスリット -->
-<rect x="-3" y="-2" width="6" height="32" rx="3" fill="#3a44a0"/>
+<!-- 装甲の走査ライン(横) -->
+<g stroke="#27407a" stroke-width="2" opacity="0.5">
+<line x1="-78" y1="210" x2="78" y2="210"/>
+<line x1="-86" y1="280" x2="86" y2="280"/>
+<line x1="-92" y1="350" x2="92" y2="350"/>
+</g>
+<!-- 頂部の標識灯(冷光の横バー。機械的な指示灯であって顔ではない) -->
+<rect x="-16" y="49" width="32" height="11" rx="3" fill="#9fb0ff" opacity="0.22"/>
+<rect x="-12" y="51" width="24" height="6" rx="3" fill="#c9d4ff" opacity="0.85"/>
 </g>
 
 <!-- 中景: 密集したパイプ・導管(冷たい鋼) -->
@@ -175,8 +173,8 @@
 <circle cx="6" cy="-96" r="2" fill="#2a1d14"/>
 <circle cx="-6.4" cy="-96.6" r="0.7" fill="#bfeef0"/>
 <circle cx="6.6" cy="-96.6" r="0.7" fill="#bfeef0"/>
-<!-- 口(きゅっと結ぶ) -->
-<path d="M-4 -86 Q0 -84 4 -86" fill="none" stroke="#7a4a3a" stroke-width="1.4"/>
+<!-- 口(不安げに引き結ぶ・口角を下げる) -->
+<path d="M-4 -85 Q0 -88 4 -85" fill="none" stroke="#7a4a3a" stroke-width="1.4"/>
 </g>
 
 <!-- 冷たい塵・火花 -->
