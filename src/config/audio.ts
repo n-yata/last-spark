@@ -126,14 +126,14 @@ export interface BeamSoundSpec {
 }
 
 export const BEAM_SOUND: BeamSoundSpec = {
-  lowWave: 'sawtooth',
-  lowFreq: 110, // A2: 低く重い土台
-  highWave: 'sawtooth',
-  highFreq: 165, // E3(完全5度上): パワーコード感で「強さ」を補強
-  noiseVolume: 0.2, // ビームのジリつき(過剰にならない範囲)
-  attackMs: 35, // 鋭く立ち上げる(クリックは避ける程度)
-  releaseMs: 120, // 停止時に短く滑らかに切る
-  volume: 0.4, // 多層合算でクリップしないよう抑えめ(master に余裕)
+  lowWave: 'sine', // 鋸波のジリつきをやめ、丸いサインで土台を作る(耳障りさを排する)
+  lowFreq: 130, // C3 付近: 低く滑らかなハム
+  highWave: 'triangle', // 三角波で角の取れた倍音(鋸波より柔らかい)
+  highFreq: 195, // G3(完全5度上): パワー感は残しつつ刺さらない厚み
+  noiseVolume: 0.05, // ジリつきは最小限(クリーンな「エネルギー音」寄りに)
+  attackMs: 40, // ふわっと立ち上げる(クリックは避ける程度)
+  releaseMs: 140, // 停止時に滑らかに切る
+  volume: 0.35, // 滑らかな分耳に残りやすいので気持ち抑えめ
 } as const;
 
 // --- BGM トラック(5種) ---
