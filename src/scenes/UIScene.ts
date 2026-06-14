@@ -8,7 +8,7 @@ import { TouchControls } from '../ui/TouchControls';
 import { MovePad } from '../ui/MovePad';
 import { StoryOverlay } from '../ui/StoryOverlay';
 import { createTouchLayout } from '../config/touchLayout';
-import { resolveControlBand } from '../config/controlBand';
+import { resolveControlBand, isTouchControlEnabled } from '../config/controlBand';
 import { STORY } from '../config/storyEvents';
 import type { TextRequest } from '../types/story';
 
@@ -57,11 +57,20 @@ export class UIScene extends Phaser.Scene {
       this.storyOverlay.enqueue(pending);
     }
 
+    const touchEnabled = isTouchControlEnabled(this.game);
     const band = resolveControlBand(this);
     const layout = createTouchLayout(this.scale.width, this.scale.height, band);
     const shootHeld = (reg.get(HUD.shootHeld) as boolean) ?? false;
     const jumpHeld = (reg.get(HUD.jumpHeld) as boolean) ?? false;
-    this.touchControls.render(layout, this.scale.width, this.scale.height, band, shootHeld, jumpHeld);
+    this.touchControls.render(
+      layout,
+      this.scale.width,
+      this.scale.height,
+      band,
+      shootHeld,
+      jumpHeld,
+      touchEnabled,
+    );
 
     const hp = (reg.get(HUD.playerHp) as number) ?? 0;
     const maxHp = (reg.get(HUD.playerMaxHp) as number) ?? 0;
