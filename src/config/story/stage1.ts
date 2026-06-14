@@ -5,7 +5,7 @@ import type { StageStory } from '../../types/story';
 
 export const STAGE1_STORY: StageStory = {
   stageId: 'stage1',
-  intro: ['壊れた町。さびと、つたに覆われている。', 'だれかに見られている気がする。', '私は、なぜここにいるのだろう。'].join('\n'),
+  intro: ['壊れた町。さびと、つたに覆われている。', 'この町は、見張られているようだ。', '私は、なぜここにいるのだろう。'].join('\n'),
   eclipseVoice: 'ここは管理されている。入って来る者は、消す。',
   inner: {
     // 目覚め

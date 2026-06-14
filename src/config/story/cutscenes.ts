@@ -26,7 +26,7 @@ const STAGE1_INTRO: Cutscene = {
   lines: [
     { kind: 'rayInner', text: '……私は、目を覚ました' },
     { kind: 'direction', text: '壊れた町。さびと、つたに覆われている' },
-    { kind: 'rayInner', text: 'だれかに見られている気がする' },
+    { kind: 'rayInner', text: 'この町は、見張られているようだ' },
     { kind: 'rayInner', text: '私は、なぜここにいるのだろう' },
   ],
 };

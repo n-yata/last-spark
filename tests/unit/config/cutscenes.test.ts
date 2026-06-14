@@ -24,7 +24,7 @@ describe('getCutscene', () => {
     expect(texts).toContain('……私は、目を覚ました');
     // ステージ開始テキスト Stage 1 の確定3行。
     expect(texts).toContain('壊れた町。さびと、つたに覆われている');
-    expect(texts).toContain('だれかに見られている気がする');
+    expect(texts).toContain('この町は、見張られているようだ');
     expect(texts).toContain('私は、なぜここにいるのだろう');
   });
 
