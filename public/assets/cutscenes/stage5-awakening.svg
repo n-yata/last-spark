@@ -1,0 +1,232 @@
+<svg width="960" height="540" viewBox="0 0 960 540" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>LAST SPARK ステージ5 — 外縁部の最奥で休眠コアがRAYに最後の光を渡す</title>
+<desc>ECLIPSE外縁部の最奥。冷たい鋼色の廃機械が積み重なる暗い空間に、朽ちて錆と蔓に覆われた古い円環状の機械（休眠コア）が半ば崩れて沈んでいる。その中心がRAYと同じシアンの光でかすかに目覚め、一筋の光の糸となってロボットRAYの胸のコアへ流れ込む。RAYは右手をコアへ差し伸べてそれを受け取り、傍らで少女TERRAが息をのんで見守る一枚絵。</desc>
+
+<defs>
+<linearGradient id="awSky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#070b12"/>
+<stop offset="0.5" stop-color="#0c1119"/>
+<stop offset="1" stop-color="#0e1620"/>
+</linearGradient>
+<radialGradient id="awCoreAura" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#37f7d8" stop-opacity="0.42"/>
+<stop offset="0.55" stop-color="#2f9fd0" stop-opacity="0.14"/>
+<stop offset="1" stop-color="#2f9fd0" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="awRayGlow" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#37f7d8" stop-opacity="0.5"/>
+<stop offset="0.6" stop-color="#37f7d8" stop-opacity="0.12"/>
+<stop offset="1" stop-color="#37f7d8" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="awCoreHeart" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#d9fff7"/>
+<stop offset="0.45" stop-color="#37f7d8"/>
+<stop offset="1" stop-color="#1c6f86" stop-opacity="0.2"/>
+</radialGradient>
+<linearGradient id="awStream" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#9ffff0" stop-opacity="0.9"/>
+<stop offset="1" stop-color="#37f7d8" stop-opacity="0.25"/>
+</linearGradient>
+<linearGradient id="awFloor" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#10161f"/>
+<stop offset="1" stop-color="#080c12"/>
+</linearGradient>
+<!-- 視認性のためのシャドウ持ち上げ(全体を明度UP・色相維持)。load.svg はブラウザで
+     ラスタライズされ defs 参照(グラデーション同様)が描画されるため、このフィルタも適用される。
+     sRGB 空間で線形変換(slope=ゲイン, intercept=黒の持ち上げ)。stage5-intro と同値で統一する。 -->
+<filter id="lift" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feComponentTransfer>
+<feFuncR type="linear" slope="1.32" intercept="0.075"/>
+<feFuncG type="linear" slope="1.32" intercept="0.075"/>
+<feFuncB type="linear" slope="1.32" intercept="0.075"/>
+</feComponentTransfer>
+</filter>
+</defs>
+
+<g filter="url(#lift)">
+<!-- 空間 -->
+<rect x="0" y="0" width="960" height="540" fill="url(#awSky)"/>
+
+<!-- 休眠コアの放つ環境光(中央やや右奥・目覚めの冷光) -->
+<circle cx="640" cy="300" r="280" fill="url(#awCoreAura)"/>
+
+<!-- 遠景: 林立する塔・廃アンテナ群(暗い鋼のシルエット。stage5-intro と地続きの外縁部) -->
+<g fill="#0a0f17">
+<rect x="44" y="130" width="32" height="290"/>
+<rect x="40" y="118" width="40" height="14"/>
+<rect x="104" y="210" width="22" height="210"/>
+<rect x="150" y="170" width="38" height="250"/>
+<rect x="860" y="150" width="36" height="270"/>
+<rect x="856" y="138" width="44" height="14"/>
+<rect x="912" y="200" width="26" height="220"/>
+</g>
+<!-- 折れたアンテナ・梁(朽ちて傾く) -->
+<g stroke="#0c121b" stroke-width="3" fill="none" opacity="0.9">
+<path d="M60 118 L 60 82 M48 96 L 72 96"/>
+<path d="M169 170 L 162 134 M156 148 L 180 146"/>
+<path d="M878 138 L 882 104 M868 118 L 892 116"/>
+</g>
+
+<!-- 中景: 崩れた機械の堆積(休眠コアを囲む廃機械の山) -->
+<g fill="#0c121d" stroke="#18233a" stroke-width="2">
+<polygon points="470,430 500,330 560,318 600,360 588,430"/>
+<polygon points="700,430 712,348 770,330 812,372 806,430"/>
+</g>
+<g stroke="#223047" stroke-width="2" fill="none" opacity="0.5">
+<path d="M508,336 L 556,326"/>
+<path d="M718,352 L 766,338"/>
+</g>
+
+<!-- 中景: 密集した配管・導管(冷たい鋼) -->
+<g stroke="#141d2a" stroke-width="12" fill="none" opacity="0.9" stroke-linecap="round">
+<path d="M0 372 L 180 372 L 220 336 L 320 336"/>
+<path d="M960 388 L 800 388 L 760 352"/>
+</g>
+<g stroke="#223047" stroke-width="2" fill="none" opacity="0.55">
+<path d="M0 366 L 180 366 L 220 330 L 320 330"/>
+</g>
+
+<!-- 休眠コア: 朽ちて半ば沈んだ古い円環機械。RAY と同じ"何か"——説明はしない。
+     錆と蔓に覆われ、中心だけがシアンに目覚めかける。 -->
+<g transform="translate(640 300)">
+<!-- 接地影 -->
+<ellipse cx="0" cy="116" rx="150" ry="22" fill="#050810" opacity="0.6"/>
+<!-- 外環(腐食した装甲リング・一部が欠ける) -->
+<path d="M-120 18 A120 120 0 1 1 96 78" fill="none" stroke="#161f30" stroke-width="26"/>
+<path d="M-120 18 A120 120 0 1 1 96 78" fill="none" stroke="#283750" stroke-width="6" opacity="0.7"/>
+<!-- 欠損部の破断面(右下が崩れて沈む) -->
+<path d="M96 78 L 132 92 L 120 116 L 86 96 Z" fill="#0c1320" stroke="#1b2740" stroke-width="2"/>
+<!-- 内環(継ぎ目から冷光が漏れる) -->
+<circle cx="0" cy="0" r="78" fill="#0a1019" stroke="#1b2740" stroke-width="3"/>
+<g stroke="#9fb0ff" stroke-width="2" opacity="0.4">
+<line x1="-78" y1="0" x2="-58" y2="0"/>
+<line x1="78" y1="0" x2="58" y2="0"/>
+<line x1="0" y1="-78" x2="0" y2="-58"/>
+</g>
+<!-- 走査の名残(かすかな環状ライン) -->
+<circle cx="0" cy="0" r="54" fill="none" stroke="#27407a" stroke-width="2" opacity="0.5"/>
+<!-- 中心のコア(RAY の胸と同じ造形・最後の光が灯る) -->
+<circle cx="0" cy="0" r="40" fill="url(#awCoreHeart)" opacity="0.5"/>
+<circle cx="0" cy="0" r="20" fill="#37f7d8" opacity="0.55"/>
+<circle cx="0" cy="0" r="11" fill="#d9fff7"/>
+<!-- 朽ちを示す蔓(冷たい廃墟に絡む数本) -->
+<g stroke="#243a2c" stroke-width="3" fill="none" opacity="0.75" stroke-linecap="round">
+<path d="M-120 18 Q-138 60 -118 104"/>
+<path d="M-96 -72 Q-128 -86 -150 -64"/>
+</g>
+<g fill="#2f4a36" opacity="0.7">
+<circle cx="-128" cy="62" r="4"/>
+<circle cx="-120" cy="86" r="3"/>
+<circle cx="-140" cy="-70" r="3.5"/>
+</g>
+</g>
+
+<!-- 床(冷たい金属の格子) -->
+<rect x="0" y="430" width="960" height="110" fill="url(#awFloor)"/>
+<rect x="0" y="430" width="960" height="3" fill="#2a3850" opacity="0.7"/>
+<g stroke="#070b11" stroke-width="2" opacity="0.8">
+<line x1="0" y1="470" x2="960" y2="470"/>
+<line x1="0" y1="505" x2="960" y2="505"/>
+<line x1="170" y1="430" x2="130" y2="540"/>
+<line x1="380" y1="430" x2="360" y2="540"/>
+<line x1="600" y1="430" x2="620" y2="540"/>
+<line x1="800" y1="430" x2="840" y2="540"/>
+</g>
+<!-- 床に映る目覚めの冷光 -->
+<ellipse cx="640" cy="446" rx="220" ry="14" fill="#37f7d8" opacity="0.08"/>
+
+<!-- 最後の光: 休眠コア中心 → RAY の胸のコアへ流れ込む一筋の光の糸 -->
+<g opacity="0.92">
+<path d="M626 296 Q536 300 432 338" fill="none" stroke="url(#awStream)" stroke-width="7" stroke-linecap="round" opacity="0.35"/>
+<path d="M626 296 Q536 300 432 338" fill="none" stroke="#d9fff7" stroke-width="2.4" stroke-linecap="round"/>
+<!-- 光の粒(コアからレイへ向かう流れ) -->
+<g fill="#d9fff7">
+<circle cx="592" cy="298" r="2.6"/>
+<circle cx="540" cy="304" r="2.2"/>
+<circle cx="492" cy="318" r="2.4"/>
+<circle cx="452" cy="330" r="2"/>
+</g>
+</g>
+
+<!-- RAY: 右手をコアへ差し伸べ、最後の光を受け取る。胸のコアが強く灯る。 -->
+<g transform="translate(430 430)">
+<!-- 発光ハロ(受光で強まる) -->
+<ellipse cx="0" cy="-64" rx="124" ry="138" fill="url(#awRayGlow)"/>
+<!-- 接地影 -->
+<ellipse cx="0" cy="6" rx="56" ry="12" fill="#060a10" opacity="0.6"/>
+<!-- 脚 -->
+<path d="M-22 -52 L -6 -52 L -8 4 L -28 4 Z" fill="#16242a"/>
+<path d="M4 -52 L 22 -52 L 26 4 L 8 4 Z" fill="#1b2c33"/>
+<!-- 胴 -->
+<path d="M-26 -118 L 24 -118 L 18 -50 L -20 -50 Z" fill="#1d2f36"/>
+<!-- 胸のコア(受光で強く発光) -->
+<circle cx="-2" cy="-92" r="15" fill="#37f7d8" opacity="0.4"/>
+<circle cx="-2" cy="-92" r="8" fill="#9ffff0"/>
+<circle cx="-2" cy="-92" r="3.6" fill="#ffffff"/>
+<!-- 左腕(脇に下ろす) -->
+<path d="M-26 -112 L -16 -110 L -26 -64 L -38 -66 Z" fill="#16242a"/>
+<circle cx="-32" cy="-64" r="6" fill="#16242a"/>
+<!-- 右腕(コアへ差し伸べる・手のひらに光) -->
+<path d="M22 -110 L 34 -104 L 60 -92 L 58 -82 L 34 -90 Z" fill="#22343c"/>
+<circle cx="62" cy="-88" r="7" fill="#37f7d8" opacity="0.5"/>
+<circle cx="62" cy="-88" r="4" fill="#d9fff7"/>
+<!-- 頭(右=コアを見つめる) -->
+<path d="M-14 -150 L 22 -150 L 18 -120 L -10 -120 Z" fill="#243740"/>
+<rect x="-2" y="-142" width="22" height="9" rx="4" fill="#37f7d8"/>
+<rect x="-4" y="-144" width="26" height="13" rx="6" fill="#37f7d8" opacity="0.25"/>
+<!-- 縁の発光ライン -->
+<path d="M-26 -118 L 24 -118 L 18 -50 L -20 -50 Z" fill="none" stroke="#37f7d8" stroke-width="1.2" opacity="0.5"/>
+</g>
+
+<!-- TERRA: RAY の背後(左)で、息をのんで光を見守る(恐れでなく見守り) -->
+<g transform="translate(360 436)">
+<!-- 接地影 -->
+<ellipse cx="0" cy="0" rx="24" ry="7" fill="#060a10" opacity="0.5"/>
+<!-- 脚 -->
+<rect x="-9" y="-32" width="8" height="32" rx="3" fill="#5e4530"/>
+<rect x="2" y="-32" width="8" height="32" rx="3" fill="#6b4f38"/>
+<rect x="-12" y="-5" width="13" height="6" rx="2" fill="#33251a"/>
+<rect x="1" y="-5" width="13" height="6" rx="2" fill="#3a2a1c"/>
+<!-- 胴 -->
+<path d="M-15 -82 L 15 -82 L 20 -32 L -20 -32 Z" fill="#7d5e42"/>
+<path d="M-10 -78 L 10 -78 L 15 -34 L -15 -34 Z" fill="#9a7650" opacity="0.85"/>
+<!-- 両手を胸の前で軽く合わせる(見守る仕草) -->
+<path d="M-14 -76 L -4 -70 L 4 -70 L 14 -76 L 10 -60 L -10 -60 Z" fill="#7d5e42"/>
+<circle cx="-2" cy="-62" r="5" fill="#e8b89a"/>
+<!-- 頭(光の方=右上を見上げる) -->
+<circle cx="2" cy="-94" r="19" fill="#e8b89a"/>
+<!-- 髪 -->
+<path d="M-17 -96 Q-15 -117 2 -117 Q20 -117 21 -95 Q12 -108 2 -107 Q-10 -108 -17 -96 Z" fill="#4a3522"/>
+<path d="M-17 -97 Q-20 -85 -15 -78 L-10 -91 Z" fill="#4a3522"/>
+<path d="M21 -96 Q24 -85 19 -79 L14 -92 Z" fill="#4a3522"/>
+<!-- 目(光を見つめ見開く) -->
+<circle cx="-4" cy="-96" r="2.2" fill="#2a1d14"/>
+<circle cx="8" cy="-96" r="2.2" fill="#2a1d14"/>
+<circle cx="-3.3" cy="-96.7" r="0.8" fill="#bfeef0"/>
+<circle cx="8.7" cy="-96.7" r="0.8" fill="#bfeef0"/>
+<!-- 口(かすかに開く・息をのむ) -->
+<ellipse cx="2" cy="-85" rx="2.4" ry="1.6" fill="#7a4a3a"/>
+</g>
+
+<!-- 目覚めの塵・火花(コア周りは暖かいシアン、奥は冷色) -->
+<g opacity="0.85">
+<g fill="#9ffff0">
+<circle cx="600" cy="250" r="1.8"/>
+<circle cx="690" cy="300" r="1.6"/>
+<circle cx="650" cy="360" r="1.5"/>
+<circle cx="560" cy="270" r="1.4"/>
+</g>
+<g fill="#9fb0ff" opacity="0.4">
+<circle cx="300" cy="300" r="1.5"/>
+<circle cx="820" cy="280" r="1.4"/>
+<circle cx="200" cy="240" r="1.3"/>
+</g>
+</g>
+
+<!-- ビネット -->
+<rect x="0" y="0" width="960" height="120" fill="#04060b" opacity="0.5"/>
+<rect x="0" y="470" width="960" height="70" fill="#04060b" opacity="0.45"/>
+<rect x="0" y="0" width="70" height="540" fill="#04060b" opacity="0.32"/>
+<rect x="890" y="0" width="70" height="540" fill="#04060b" opacity="0.32"/>
+</g>
+</svg>

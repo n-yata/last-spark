@@ -39,6 +39,10 @@ export class PreloadScene extends Phaser.Scene {
       width: svgW,
       height: svgH,
     });
+    this.load.svg(CUTSCENE_TEX.stage5Awakening, 'assets/cutscenes/stage5-awakening.svg', {
+      width: svgW,
+      height: svgH,
+    });
     this.load.svg(CUTSCENE_TEX.stage6Ending, 'assets/cutscenes/stage6-ending.svg', {
       width: svgW,
       height: svgH,
