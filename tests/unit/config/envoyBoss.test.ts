@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ENVOY, FLYING_BOSS, SHOT } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 
 // stage5「ECLIPSEの使者(高速型)」のチューニング検証。
 // 使者は飛行ボス(stage2)を継承しつつ、固有アクション lance(高速槍弾)/blink(瞬間移動)で

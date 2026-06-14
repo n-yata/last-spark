@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isAllStagesCleared } from '../../../src/systems/progress';
-import { STAGE_IDS } from '../../../src/config/stage1';
+import { STAGE_IDS } from '../../../src/config/stages';
 
 // 全クリア判定の純粋ロジック検証。タイトルの「ALL CLEAR」表示はこの判定に依存するため、
 // 「必要なステージが揃ったときだけ true」をデータ起点で守る。

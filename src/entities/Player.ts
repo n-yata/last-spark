@@ -3,7 +3,7 @@ import { TEX } from '../config/assetKeys';
 import { PLAYER, LADDER, SHOT } from '../config/balance';
 import type { InputState } from '../types/input';
 import type { Damageable } from '../types/combat';
-import type { LadderRect } from '../config/stage1';
+import type { LadderRect } from '../config/stages';
 import { isChargedShot, canFire, createProjectileSpec } from '../systems/shot';
 import {
   initialShotState,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLAYER, FLYING_BOSS, STAGE, SHOT } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 
 // 飛行ボスが「地上プレイヤーの水平ショットで当てられる」ことと、高度域が地面より上で
 // 妥当であることを保証する。接地ボスの bossHittable.test と同じ撃破可能性の思想を、

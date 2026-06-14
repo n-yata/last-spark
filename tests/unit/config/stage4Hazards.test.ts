@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 import { STAGE } from '../../../src/config/balance';
 
 // stage4「汚染地帯」の汚染溜まり(②新ギミック)の配置検証。汚染床は人間の荒廃の遺産であって

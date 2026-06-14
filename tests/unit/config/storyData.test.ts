@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getStageStory } from '../../../src/config/story';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 import { getCutscene } from '../../../src/config/story/cutscenes';
 
 // 確定テキスト(docs/story.md)の取りこぼし・誤編集を検出するデータ整合テスト。
