@@ -49,20 +49,24 @@ export function cutJumpVelocity(vy: number, multiplier: number): number {
 
 /**
  * ワンウェイ床に着地(衝突)を有効化すべきか。
- * 下降中(velY>=0)かつ足元(playerBottom)が床上端(platformTop)付近より上にある時だけ true。
- * 上昇中・床より深く潜っている時は false(=下から通り抜けられる)。
- * @param playerBottom プレイヤー足元の Y
- * @param playerVelY   鉛直速度(下向き正)
- * @param platformTop  床上端の Y
- * @param tolerance    上端からの許容めり込み(px)
+ * 下降中(velY>=0)かつ「前フレームの足元(prevBottom)」が床上端(platformTop)付近より上にある時だけ true。
+ * 上昇中・前フレームに床より深く潜っていた時は false(=下から通り抜けられる)。
+ *
+ * 現在足元ではなく前フレーム足元で判定するのは、高速落下(大ジャンプの戻り等)で1フレームの移動量が
+ * 床上端の許容窓(tolerance)を超え、現在足元だけ見ると窓を飛び越して(トンネリング)すり抜ける不具合を
+ * 防ぐため。前フレームに床上にいて下降中なら、今フレームで深くめり込んでいても着地させる。
+ * @param prevBottom  前フレームのプレイヤー足元 Y(Arcade Body.prev 由来)
+ * @param playerVelY  鉛直速度(下向き正)
+ * @param platformTop 床上端の Y
+ * @param tolerance   上端からの許容めり込み(px)
  */
 export function shouldLandOnOneWay(
-  playerBottom: number,
+  prevBottom: number,
   playerVelY: number,
   platformTop: number,
   tolerance = 6,
 ): boolean {
-  return playerVelY >= 0 && playerBottom <= platformTop + tolerance;
+  return playerVelY >= 0 && prevBottom <= platformTop + tolerance;
 }
 
 // ── 梯子ギミック ──────────────────────────────────────────
