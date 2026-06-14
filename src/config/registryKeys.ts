@@ -18,13 +18,3 @@ export const HUD = {
   movePadCurX: 'hud.movepad.curX',
   movePadCurY: 'hud.movepad.curY',
 } as const;
-
-// プレイ進行に関わる一時状態(セーブ非保存・registry のみで揮発)。HUD 表示とは別系統の、
-// シーンをまたいで持ち越す進行フラグを集約する。
-export const PROGRESS = {
-  // RAY の攻撃強化フラグ。stage5 を正規クリアした演出(stage5-awakening)で true になり、
-  // stage6 のプレイ系列(リトライ含む)の間だけ維持する。createPlayer は読むだけで消費しない。
-  // セーブには保存せず、単体選択での stage6 開始(GameSceneData.fromStageSelect)と
-  // 全クリア(finalizeEnding)でクリアする。これにより「正規クリア→リトライ維持/単体選択→素」を両立する。
-  playerEmpowered: 'progress.player.empowered',
-} as const;
