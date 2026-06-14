@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SE, SE_KEYS, BGM, type BgmKey } from '../../../src/config/audio';
+import { SE, SE_KEYS, BGM, BEAM_SOUND, type BgmKey } from '../../../src/config/audio';
 
 describe('SE カタログ', () => {
   it('13 種の SE キーが定義されている', () => {
@@ -25,6 +25,27 @@ describe('SE カタログ', () => {
         spec.durationMs,
       );
     }
+  });
+});
+
+describe('持続ビーム音(BEAM_SOUND)', () => {
+  it('音量・ノイズ量は 0–1 に収まる(クリップ防止)', () => {
+    expect(BEAM_SOUND.volume).toBeGreaterThanOrEqual(0);
+    expect(BEAM_SOUND.volume).toBeLessThanOrEqual(1);
+    expect(BEAM_SOUND.noiseVolume).toBeGreaterThanOrEqual(0);
+    expect(BEAM_SOUND.noiseVolume).toBeLessThanOrEqual(1);
+  });
+
+  it('エンベロープ(attack/release)は非負', () => {
+    expect(BEAM_SOUND.attackMs).toBeGreaterThanOrEqual(0);
+    expect(BEAM_SOUND.releaseMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('低層・高層の周波数は正で、高層が「強さ」のため低層より高い', () => {
+    expect(BEAM_SOUND.lowFreq).toBeGreaterThan(0);
+    expect(BEAM_SOUND.highFreq).toBeGreaterThan(0);
+    // 高層を低層より高く取り、パワーコード感(完全5度上)で強さを補強する設計。
+    expect(BEAM_SOUND.highFreq).toBeGreaterThan(BEAM_SOUND.lowFreq);
   });
 });
 
