@@ -23,8 +23,19 @@
 <stop offset="0.6" stop-color="#37f7d8" stop-opacity="0.12"/>
 <stop offset="1" stop-color="#37f7d8" stop-opacity="0"/>
 </radialGradient>
+<!-- 視認性のためのシャドウ持ち上げ(暗部を持ち上げて視認性UP・色相維持)。エンディングの夜明けの
+     明部は活かしたいので、他カットより弱めのゲイン・黒持ち上げにとどめ、苦い勝利の薄暗さは残す。
+     sRGB 空間で線形変換。 -->
+<filter id="lift" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feComponentTransfer>
+<feFuncR type="linear" slope="1.18" intercept="0.05"/>
+<feFuncG type="linear" slope="1.18" intercept="0.05"/>
+<feFuncB type="linear" slope="1.18" intercept="0.05"/>
+</feComponentTransfer>
+</filter>
 </defs>
 
+<g filter="url(#lift)">
 <!-- 空(藍 → 夜明けへ) -->
 <rect x="0" y="0" width="960" height="540" fill="url(#s6sky)"/>
 
@@ -208,4 +219,5 @@
 <rect x="0" y="480" width="960" height="60" fill="#04060c" opacity="0.4"/>
 <rect x="0" y="0" width="60" height="540" fill="#04060c" opacity="0.28"/>
 <rect x="900" y="0" width="60" height="540" fill="#04060c" opacity="0.28"/>
+</g>
 </svg>

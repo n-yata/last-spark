@@ -27,8 +27,19 @@
 <stop offset="0" stop-color="#10161f"/>
 <stop offset="1" stop-color="#080c12"/>
 </linearGradient>
+<!-- 視認性のためのシャドウ持ち上げ(全体を明度UP・色相維持)。load.svg はブラウザで
+     ラスタライズされ defs 参照(グラデーション同様)が描画されるため、このフィルタも適用される。
+     sRGB 空間で線形変換(slope=ゲイン, intercept=黒の持ち上げ)。 -->
+<filter id="lift" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feComponentTransfer>
+<feFuncR type="linear" slope="1.32" intercept="0.075"/>
+<feFuncG type="linear" slope="1.32" intercept="0.075"/>
+<feFuncB type="linear" slope="1.32" intercept="0.075"/>
+</feComponentTransfer>
+</filter>
 </defs>
 
+<g filter="url(#lift)">
 <!-- 空間 -->
 <rect x="0" y="0" width="960" height="540" fill="url(#s5sky)"/>
 
@@ -183,4 +194,5 @@
 <rect x="0" y="470" width="960" height="70" fill="#04060b" opacity="0.45"/>
 <rect x="0" y="0" width="70" height="540" fill="#04060b" opacity="0.32"/>
 <rect x="890" y="0" width="70" height="540" fill="#04060b" opacity="0.32"/>
+</g>
 </svg>

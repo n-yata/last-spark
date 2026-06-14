@@ -132,66 +132,78 @@ const STAGE1_BG: StageBackgroundTheme = {
 
 const STAGE2_BG: StageBackgroundTheme = {
   // 立坑の街: 縦に潜る工業都市。鉄骨と足場が下方の闇へ続く。冷たいシアンの作業灯。
+  // 視認性のため空を stage1 相当まで明度UP(シアンの色相は維持)。シルエットは空より暗いが
+  // 鉄骨やぐら・作業灯が読める水準まで持ち上げる(奥>手前の明暗関係は維持)。
   stageId: 'stage2',
-  skyTop: '#0b1014',
-  skyBottom: '#16202a',
+  skyTop: '#1b2630',
+  skyBottom: '#283a48',
   accent: '#6cf0ff',
   seed: 0x5a1b02,
   layers: [
-    { color: '#0c1218', scrollFactor: 0.3, shape: 'shaftTown', height: 460, step: 220 },
-    { color: '#070b0f', scrollFactor: 0.55, shape: 'shaftTown', height: 480, step: 160 },
+    { color: '#16242e', scrollFactor: 0.3, shape: 'shaftTown', height: 460, step: 220 },
+    { color: '#0e1a22', scrollFactor: 0.55, shape: 'shaftTown', height: 480, step: 160 },
   ],
 };
 
 const STAGE3_BG: StageBackgroundTheme = {
   // 収容施設: 無機質な管理施設。等間隔の収容区画と冷たい監視灯。閉塞感。
+  // 視認性のため空・施設シルエットを明度UP(白青の色相は維持)。閉塞感は構図・寒色で出し、
+  // 暗さには頼らない。監視灯・発光ラインが読める水準へ。
   stageId: 'stage3',
-  skyTop: '#101418',
-  skyBottom: '#1a2026',
+  skyTop: '#222a31',
+  skyBottom: '#333f49',
   accent: '#acc4d6', // 冷たい人工照明の白青
   seed: 0x5a1b03,
   layers: [
-    { color: '#141a20', scrollFactor: 0.35, shape: 'facility', height: 300, step: 200 },
-    { color: '#0d1217', scrollFactor: 0.6, shape: 'facility', height: 380, step: 150 },
+    { color: '#1e262e', scrollFactor: 0.35, shape: 'facility', height: 300, step: 200 },
+    { color: '#141d24', scrollFactor: 0.6, shape: 'facility', height: 380, step: 150 },
   ],
 };
 
 const STAGE4_BG: StageBackgroundTheme = {
-  // 汚染地帯: 環境破壊の現場。淀んだ黄緑の靄に枯れた構造物。既存 backgroundColor(#151a0c)系。
+  // 汚染地帯: 環境破壊の現場。淀んだ黄緑の靄に枯れた構造物。
+  // 淀んだ毒緑の色相を保ったまま明度UP。枯れ構造物・毒の靄が判別できる水準へ。
+  // カメラ背景色(stage1.ts backgroundColor)も併せて #20280f 系へ持ち上げる。
   stageId: 'stage4',
-  skyTop: '#1a1f10',
-  skyBottom: '#272f14',
+  skyTop: '#2a3018',
+  skyBottom: '#3c4620',
   accent: '#9bd24a', // 毒性の緑光
   seed: 0x5a1b04,
   layers: [
-    { color: '#141a0c', scrollFactor: 0.3, shape: 'wasteland', height: 200, step: 200 },
-    { color: '#0d1207', scrollFactor: 0.55, shape: 'wasteland', height: 280, step: 150 },
+    { color: '#20280f', scrollFactor: 0.3, shape: 'wasteland', height: 200, step: 200 },
+    { color: '#161e0a', scrollFactor: 0.55, shape: 'wasteland', height: 280, step: 150 },
   ],
 };
 
 const STAGE5_BG: StageBackgroundTheme = {
-  // ECLIPSE外縁部: 冷たい金属。高密度の機械構造体に青い光。既存 backgroundColor(#0c1119)系。
+  // ECLIPSE外縁部: 冷たい金属。高密度の機械構造体に青い光。
+  // 冷たい鋼の青を保ったまま明度UP。高密度の機械ブロック・通気スリット光が読める水準へ。
+  // カメラ背景色(stage1.ts backgroundColor)も併せて #141d2a 系へ持ち上げる。
   stageId: 'stage5',
-  skyTop: '#080d15',
-  skyBottom: '#101826',
+  skyTop: '#1a2434',
+  skyBottom: '#28384e',
   accent: '#5ab0ff',
   seed: 0x5a1b05,
   layers: [
-    { color: '#0b1019', scrollFactor: 0.3, shape: 'outerWorks', height: 320, step: 140 },
-    { color: '#06090f', scrollFactor: 0.55, shape: 'outerWorks', height: 420, step: 110 },
+    { color: '#16202e', scrollFactor: 0.3, shape: 'outerWorks', height: 320, step: 140 },
+    { color: '#0d1622', scrollFactor: 0.55, shape: 'outerWorks', height: 420, step: 110 },
   ],
 };
 
 const STAGE6_BG: StageBackgroundTheme = {
-  // ECLIPSE支配中枢: 太陽を遮る影の核。ほぼ黒い藍に、不吉に脈打つコアの赤光とモノリス。
+  // ECLIPSE支配中枢: 太陽を遮る影の核。暗い藍に、不吉に脈打つコアの赤光とモノリス。
+  // 全ステージ中で最も暗いトーンは維持しつつ(影の核の威圧)、地形・モノリスが判別できる
+  // 最低限まで明度UP。不吉さは暗藍+赤のアクセントで担保し、漆黒には頼らない。
   stageId: 'stage6',
-  skyTop: '#04060c',
-  skyBottom: '#0a0814',
+  // skyTop は layers[0](#14101f)より明るくして、モノリス頭頂が空上端に被ってもシルエットが
+  // 読めるコントラストを確保する(最暗トーン・不吉さは維持したまま僅かに引き上げる)。
+  skyTop: '#1a1928',
+  skyBottom: '#1c1730',
   accent: '#e0457a', // コアの不吉な赤
   seed: 0x5a1b06,
   layers: [
-    { color: '#080612', scrollFactor: 0.25, shape: 'core', height: 360, step: 260 },
-    { color: '#040308', scrollFactor: 0.5, shape: 'core', height: 460, step: 200 },
+    { color: '#14101f', scrollFactor: 0.25, shape: 'core', height: 360, step: 260 },
+    { color: '#0c0a16', scrollFactor: 0.5, shape: 'core', height: 460, step: 200 },
   ],
 };
 

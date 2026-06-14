@@ -2,6 +2,19 @@
 <title>LAST SPARK ステージ3 — RAYとTERRAの出会い</title>
 <desc>暗い収容施設の中、解錠された檻の前で、シアン色に発光するロボットRAYと、それに素手を伸ばして見上げる小さな少女TERRAが静かに向き合う一枚絵。</desc>
 
+<!-- 視認性のためのシャドウ持ち上げ(全体を明度UP・色相維持)。load.svg はブラウザで
+     ラスタライズされ defs 参照が描画されるため、このフィルタも適用される。
+     sRGB 空間で線形変換(slope=ゲイン, intercept=黒の持ち上げ)。 -->
+<defs>
+<filter id="lift" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feComponentTransfer>
+<feFuncR type="linear" slope="1.34" intercept="0.075"/>
+<feFuncG type="linear" slope="1.34" intercept="0.075"/>
+<feFuncB type="linear" slope="1.34" intercept="0.075"/>
+</feComponentTransfer>
+</filter>
+</defs>
+<g filter="url(#lift)">
 <rect x="0" y="0" width="960" height="540" fill="#0a0e11"/>
 <rect x="0" y="0" width="960" height="400" fill="#0e151a"/>
 <rect x="0" y="400" width="960" height="140" fill="#070b0d"/>
@@ -139,4 +152,5 @@
 <rect x="0" y="486" width="960" height="54" fill="#000000" opacity="0.32"/>
 <rect x="0" y="0" width="70" height="540" fill="#000000" opacity="0.22"/>
 <rect x="890" y="0" width="70" height="540" fill="#000000" opacity="0.22"/>
+</g>
 </svg>
