@@ -6,6 +6,7 @@ import { STAGE, BOSS, FLYING_BOSS, ENVOY, HAZARD, getStageTuning } from '../conf
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
+import { getStageBackground, type StageBackgroundTheme } from '../config/stageBackground';
 import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
@@ -25,6 +26,7 @@ import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
 import { selectExplorationBgm } from '../systems/soundSynth';
+import { paintStageBackground } from '../systems/backgroundPainter';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -50,6 +52,8 @@ type ArcadeColliderObject =
 export class GameScene extends Phaser.Scene {
   private stage!: StageData;
   private stageId = DEFAULT_STAGE_ID;
+  /** 現在ステージの背景テーマ。buildBackground で確定し、setupCamera のベース色にも使う。 */
+  private bgTheme!: StageBackgroundTheme;
   private player!: Player;
   /** 地面(全面衝突=壁/床)。 */
   private groundGroup!: Phaser.Physics.Arcade.StaticGroup;
@@ -104,6 +108,7 @@ export class GameScene extends Phaser.Scene {
     this.story = getStageStory(this.stageId);
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 
+    this.buildBackground();
     this.buildPlatforms();
     this.buildLadders();
     this.createGroups();
@@ -410,12 +415,25 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * ステージ世界観に連動したパララックス背景(空グラデーション + 多層シルエット)を構築する。
+   * テーマは stageBackground が stageId から引き、描画は backgroundPainter が手続き生成する
+   * (アセット追加なし)。depth は負値でゲームプレイ要素(地形 0 以上)より背面に置く。
+   * 全幅描画 + scrollFactor<1 のため、カメラ追従・ボス戦の bounds 縮約・RESIZE/ズーム変化に
+   * 追随でき、create で一度だけ生成すればよい。
+   */
+  private buildBackground(): void {
+    this.bgTheme = getStageBackground(this.stageId);
+    paintStageBackground(this, this.bgTheme, this.stage.width, STAGE.groundY);
+  }
+
   private setupCamera(): void {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, this.stage.width, STAGE.height);
     cam.startFollow(this.player, true, 0.12, 0.12);
-    // 環境ストーリーテリングの簡易表現として、ステージ指定の背景色があればそれを使う(stage4=汚染の淀み)。
-    cam.setBackgroundColor(this.stage.backgroundColor ?? '#0a0e14');
+    // カメラのベース塗り。背景レイヤーが可視域を覆うため、これは主に地面下/奈落の保険。
+    // 既存のステージ指定色(stage4=汚染の淀み 等)を尊重しつつ、未指定はテーマの地平線色を使う。
+    cam.setBackgroundColor(this.stage.backgroundColor ?? this.bgTheme.skyBottom);
     this.applyCameraLayout();
     // RESIZE でキャンバスが伸縮しても、ワールドの縦の見え方(高さ540相当)を一定に保つ
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);

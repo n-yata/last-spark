@@ -243,7 +243,7 @@ class SpawnSystem {
 
 ### ステージ構成と地形ギミック(複数ステージ / すり抜け床 / 梯子)
 
-**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、接地型の種別 `bossVariant?`、ボス固有チューニング `bossConfig?`、収容ケージ `cage?`、ボス後演出キー `postBossCutsceneKey?`、開始演出キー `introCutsceneKey?`、背景色 `backgroundColor?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → stage3 → stage4 と続ける(`nextStageId` 無し=最終ステージ。未実装の次ステージへは接続しない)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。`bossConfig` を持つステージ(stage3 の重装型 `CONTAINMENT_WARDEN`)は接地ボスの既定 `BOSS` に代えてその設定で生成する(`bossAi` の行動ロジックは共通のまま、行動間隔・威力・移動速度のパラメータだけで差別化)。接地型のうち `bossVariant='purifier'` のステージ(stage4)は `PurifierBoss`(浄化型・扇状の範囲攻撃 `spray`)を生成する。`introCutsceneKey` を持つステージ(stage4)はステージ開始時に `CutsceneScene` を再生してから開始テキストへ進む。`backgroundColor` は環境ストーリーテリングの簡易表現としてカメラ背景色をステージごとに変える(stage4=汚染の淀み)。
+**ステージデータ**: 各ステージは `StageData`(地形 `platforms`、梯子 `ladders?`、敵 `enemies`、ログトリガー `logTriggers?`、ボストリガー、ボス系統 `bossKind?`、接地型の種別 `bossVariant?`、ボス固有チューニング `bossConfig?`、収容ケージ `cage?`、ボス後演出キー `postBossCutsceneKey?`、開始演出キー `introCutsceneKey?`、背景色 `backgroundColor?`、`nextStageId?`)としてコード定義し、`getStageData(stageId)` で引く。`GameScene.init({ stageId })` で開始ステージを受け、`nextStageId` を辿って stage1 → stage2 → stage3 → stage4 と続ける(`nextStageId` 無し=最終ステージ。未実装の次ステージへは接続しない)。`bossKind` 未定義は接地型('ground')、stage2 は飛行型('flying')で、`GameScene.spawnBoss` が系統に応じて `Boss` / `FlyingBoss` を生成する(飛行型は地面コライダを付けない)。`bossConfig` を持つステージ(stage3 の重装型 `CONTAINMENT_WARDEN`)は接地ボスの既定 `BOSS` に代えてその設定で生成する(`bossAi` の行動ロジックは共通のまま、行動間隔・威力・移動速度のパラメータだけで差別化)。接地型のうち `bossVariant='purifier'` のステージ(stage4)は `PurifierBoss`(浄化型・扇状の範囲攻撃 `spray`)を生成する。`introCutsceneKey` を持つステージ(stage4)はステージ開始時に `CutsceneScene` を再生してから開始テキストへ進む。ステージ背景はストーリー世界観に連動した手続き生成のパララックス背景(空グラデーション + 多層シルエット)で表現する。テーマ(空色・アクセント色・シルエット種別・パララックス係数)は `src/config/stageBackground.ts` が `stageId` から引き(`getStageBackground`、純データ+決定論ロジックで Phaser 非依存)、`src/systems/backgroundPainter.ts` が `paintStageBackground` で描画する(アセット追加なし、既存のプレースホルダ手続き生成を踏襲)。背景は depth 負値でゲームプレイ要素より背面に置き、全幅描画 + `setScrollFactor<1` でカメラ追従・ボス戦の bounds 縮約・RESIZE に追随する(`GameScene.buildBackground` が `create` で一度だけ構築)。`backgroundColor` はカメラのベース塗り(地面下/奈落の保険)で、未指定時はテーマの地平線色(`skyBottom`)を使う。
 
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
@@ -494,7 +494,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 - 縦持ち検知時は `OrientationScene` を重ね、横向きへの回転を促す。
 
 ### カラーコーディング(世界観: 暗め基調 + 発光アクセント)
-- 背景/廃墟: 低彩度の暗色。
+- 背景/廃墟: 低彩度の暗色。ステージごとに空グラデーションとシルエットのテーマを変え、世界観を出し分ける(崩れた都市=錆びた夕暮れ / 立坑=工業の鋼青 / 収容施設=冷たい白青 / 汚染地帯=毒の黄緑 / 外縁部=金属の青 / 支配中枢=漆黒に赤い核光)。
 - プレイヤーのコア/弾/敵コア: ネオン発光色(グロー/明度差で表現)。
 - チャージ完了: 発光色を強めて成立を明示。
 
