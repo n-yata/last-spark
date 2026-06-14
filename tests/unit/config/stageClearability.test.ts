@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStageData, STAGE_IDS } from '../../../src/config/stage1';
+import { getStageData, STAGE_IDS } from '../../../src/config/stages';
 import { PLAYER, STAGE } from '../../../src/config/balance';
 
 // クリア可能性ガード(②構成再配置の安全網)。各ステージの地面の奈落(ギャップ)が、

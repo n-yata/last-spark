@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLAYER, CONTAINMENT_WARDEN, STAGE, SHOT } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 import { computeLobVelocity, createProjectileSpec } from '../../../src/systems/shot';
 
 // stage3 収容番人(重装ミサイル型)の設定・系統・ミサイル弾道の妥当性を保証する。

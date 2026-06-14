@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 import { PLAYABLE_STAGES } from '../../../src/stageSelect/stages';
 
 // タイトルのステージ選択が参照する PLAYABLE_STAGES の整合性を検証する。

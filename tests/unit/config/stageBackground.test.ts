@@ -6,7 +6,7 @@ import {
   lerpColor,
   type StageBackgroundTheme,
 } from '../../../src/config/stageBackground';
-import { STAGE_IDS } from '../../../src/config/stage1';
+import { STAGE_IDS } from '../../../src/config/stages';
 
 // 背景テーマ(stageBackground)のデータ整合と純ロジックの検証。
 // 描画(Phaser 依存)は backgroundPainter 側にあり、ここでは扱わない。

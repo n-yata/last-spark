@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ECLIPSE_CORE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, ENVOY } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 
 // stage6「ECLIPSE本体」のチューニング検証。最終決戦のラスボスとして全ボス中最も硬く、
 // 浮遊して静止し(移動なし)、配下召喚のパラメータが破綻しないことを守る。

@@ -230,7 +230,7 @@ class SpawnSystem {
 
 ### ストーリーテリング基盤(テキスト表示)
 
-> ストーリー本文は `docs/story.md`(北極星)を正本とし、ゲーム内表示はその確定テキストを反映する。設計の責務分割は「ジオメトリ(`config/stage1.ts`)とテキスト(`config/story/`)を混ぜない」。
+> ストーリー本文は `docs/story.md`(北極星)を正本とし、ゲーム内表示はその確定テキストを反映する。設計の責務分割は「ジオメトリ(`config/stages.ts`)とテキスト(`config/story/`)を混ぜない」。
 
 **テキスト種別(4種)**: ゲーム内テキストは `StoryTextKind`(`eclipseVoice` / `rayInner` / `stageIntro` / `terraLine`)で区別し、種別ごとに表示位置・色・フォント・一時停止要否を変える(話者ラベルは出さず、見た目だけで「誰の言葉か」を判別させる)。kind→スタイルのマップ `TEXT_STYLES` は純粋ロジック(`systems/storyDirector.ts`)に置き、描画(`ui/StoryOverlay.ts`)と共有する。「物語を語る口は4つ」という `docs/story.md`(2026-06-14 再設計)の方針に対応する(旧 `scientistLog`=科学者ログは全廃済み。型・セーブ・トリガー機構いずれも実装から撤去済み)。
 
@@ -556,13 +556,11 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 
 ```
 public/assets/
-├── sprites/      # プレイヤー/敵/ボス/弾のスプライトシート
-├── tilemaps/     # ステージ1(崩れた都市)のタイルマップ + タイルセット
-└── ui/           # 仮想ボタン/ロゴ/HUD 画像
+└── cutscenes/    # カットシーン背景の SVG（唯一の外部アセット）
 ```
 
-- スプライトはスプライトシート + アニメ定義で管理。
-- ステージは Tiled 形式のタイルマップ(JSON) + 敵配置レイヤーで定義し、`SpawnSystem` が読む。
+- スプライト/地形/HUD は外部素材を持たず、`PreloadScene` が実行時に Phaser の図形描画でテクスチャを手続き生成する。キャラの見た目は `config/characterRig.ts` のリグ定義から組み立てる。
+- ステージは Tiled 等の外部マップを使わず、`src/config/stages.ts` の `STAGES` テーブルに `StageData`(地形・敵配置・ボストリガー等)をコード定義し、`SpawnSystem` が `stageId` で `getStageData` を引く。
 - **サウンドは外部音源ファイルを持たない**。SE/BGM は `src/config/audio.ts` の合成仕様から `SoundManager` が Web Audio で手続き生成するため、`audio/` アセットは不要(知財方針にも合致)。
 
 ## パフォーマンス最適化

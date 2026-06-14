@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // テスト本文の型注釈で Phaser.Physics.Arcade.Group / Phaser.Scene を使うために必要。
 import type Phaser from 'phaser';
 import { FLYING_BOSS } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 
 // SpawnSystem のボス戦突入トリガ発火ロジックの回帰テスト。
 //
