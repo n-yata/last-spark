@@ -43,10 +43,14 @@ const WARDEN_WEIGHTS: PhaseWeights = {
  * spray/bloom は浄化型専用のため、このテーブルにのみ含め、他系統の抽選には混入させない。
  * 難易度調整: phase2 は攻撃(spray/bloom)偏重で息継ぎが無く頻度が高すぎたため、phase1 より
  * 控えめな idle を戻して「攻勢の中の僅かな息継ぎ」を作る(phase1 より攻勢的な性格は維持)。
+ * 追加調整: 汚染床(bloom)の出現頻度が高く強すぎたため、bloom の重みを約半分に下げる
+ * (phase1 25→13, phase2 32→16)。空いた分は move(無害な位置取り)中心+idle(息継ぎ)へ回し、
+ * shoot/spray(他の攻撃)は据え置きにして全体の圧も僅かに下げる。
+ * phase2 で spray・bloom が phase1 より多い関係(攻勢的な性格)は維持する。
  */
 const PURIFIER_WEIGHTS: PhaseWeights = {
-  phase1: { move: 25, shoot: 20, spray: 25, bloom: 25, idle: 5 },
-  phase2: { move: 20, shoot: 15, spray: 28, bloom: 32, idle: 8 },
+  phase1: { move: 34, shoot: 20, spray: 25, bloom: 13, idle: 8 },
+  phase2: { move: 32, shoot: 15, spray: 28, bloom: 16, idle: 12 },
 };
 
 /**
