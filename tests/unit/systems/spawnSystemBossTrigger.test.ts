@@ -76,7 +76,7 @@ const stage = getStageData(STAGE_ID);
 const RAW_BOSS_TRIGGER_X = stage.bossTriggerX; // 3700
 const BOSS_SPAWN_X = stage.bossSpawn.x; // 3950
 // 修正で導入されたフォールバック距離(px)。private static のため定義値を参照する。
-const BOSS_PLAYER_FALLBACK_PX = 220;
+const BOSS_PLAYER_FALLBACK_PX = 400;
 
 function makeSpawnSystem(): SpawnSystem {
   const scene = {} as unknown as Phaser.Scene;
@@ -125,7 +125,7 @@ describe('SpawnSystem ボス戦突入トリガ', () => {
     const effective = readBossTriggerX(spawn);
     // カメラは実効 bossTriggerX に「届かない」値(アスペクト比依存の症状を再現)。
     const cameraNotReaching = effective - 1;
-    // プレイヤーはフォールバック閾値ちょうどに到達(>= bossSpawn.x - 220)。
+    // プレイヤーはフォールバック閾値ちょうどに到達(>= bossSpawn.x - 400)。
     const playerAtFallback = BOSS_SPAWN_X - BOSS_PLAYER_FALLBACK_PX;
 
     // 事前条件: このカメラ値だけでは従来経路では発火しないことを担保する。

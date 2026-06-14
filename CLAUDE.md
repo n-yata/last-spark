@@ -46,7 +46,7 @@
 - `design.md`: 実装アプローチ
 - `tasklist.md`: 具体的なタスクリスト
 
-命名規則: `20250115-add-user-profile` 形式
+命名規則: `20260614-add-user-profile` 形式（`[YYYYMMDD]-[タスク名]`）
 
 #### ステアリングファイルの管理
 
@@ -71,12 +71,19 @@
 - `/setup-project`実行時に自動的に読み込まれる
 
 #### 正式版ドキュメント
+
+テンプレート由来の6つ(`/setup-project`で対話的に作成):
+
 - **product-requirements.md** - プロダクト要求定義書
 - **functional-design.md** - 機能設計書
 - **architecture.md** - 技術仕様書
 - **repository-structure.md** - リポジトリ構造定義書
 - **development-guidelines.md** - 開発ガイドライン
 - **glossary.md** - ユビキタス言語定義
+
+本プロジェクト固有の追加ドキュメント:
+
+- **story.md** - ストーリー設定書(Story Bible)。世界観・キャラクター・物語骨格を定義する永続ドキュメント。ステージ追加・テキスト作成・ビジュアル・BGM方針など、あらゆる開発上の判断はこのドキュメントを北極星とする。
 
 ### 作業単位のドキュメント(`.steering/`)
 

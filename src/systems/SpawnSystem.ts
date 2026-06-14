@@ -39,8 +39,12 @@ export class SpawnSystem {
    * フォールバック距離(px)。横長/縦長など端末のアスペクト比によっては「カメラ右端」が
    * bossTriggerX に届かず(ステージ幅とボス位置が近いと顕著)ボスが永久に出ない不具合があるため、
    * プレイヤー到達でも確実にボス戦へ移行させる。
+   *
+   * この値は「ボスが出現する最低保証距離」も兼ねる。狭い/縦長画面ではカメラ経路が遅れ、
+   * この距離まで近づいて初めてボスが出る = 接近しすぎないと出ない体感になる。広い画面の
+   * カメラ経路と概ね揃う距離まで広げ、端末によらず少し手前でボスが出るようにする。
    */
-  private static readonly BOSS_PLAYER_FALLBACK_PX = 220;
+  private static readonly BOSS_PLAYER_FALLBACK_PX = 400;
 
   constructor(
     scene: Phaser.Scene,
