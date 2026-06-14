@@ -362,11 +362,11 @@ const STAGE4: StageData = {
   nextStageId: 'stage5',
 };
 
-// ステージ5「ECLIPSE外縁部」: 科学者の遺志を完全に受け取り、RAY の迷いが消える決意のステージ。
+// ステージ5「ECLIPSE外縁部」: 揺らぎを理屈でなく選択で越える決意のステージ(docs/story.md)。
 // ボスは「ECLIPSEの使者(高速型)」。スリムで流線型、高速移動・連続攻撃のヒット&アウェイで戦う
-// (飛行型 FlyingBoss を流用し、ENVOY パラメータで速さを表現)。ログ3本はすべて「RAYへ」宛ての
-// 直接的なメッセージで、postBoss が遺言(クライマックス)にあたる。ボス後演出シーンは持たず、
-// 撃破→(ボス後ログ任意接触)→ボス撃破内心→クリアへ直行する(stage1-2・stage4 と同じ「演出キーなし」分岐)。
+// (飛行型 FlyingBoss を流用し、ENVOY パラメータで速さを表現)。ボス撃破後は休眠コアとの共鳴で
+// RAY が攻撃強化を獲得する演出(stage5-awakening)を再生する。cage を持たないため救出ではなく
+// postBoss 演出フロー(enterPostBossCutscene)を通ってクリアへ進む。獲得した強化は stage6 でのみ有効。
 const STAGE5_WIDTH = 4800;
 const STAGE5: StageData = {
   id: 'stage5',
@@ -421,6 +421,9 @@ const STAGE5: StageData = {
   backgroundColor: '#141d2a',
   // ステージ開始演出(TERRA同行)。ECLIPSE が近づく緊張に TERRA が怯える。
   introCutsceneKey: 'stage5-intro',
+  // ボス撃破後、休眠コアとの共鳴で RAY が攻撃強化を獲得する演出。cage を持たないため救出ではなく
+  // postBoss 演出フロー(enterPostBossCutscene)を通る。獲得した強化は stage6 のみ有効(セーブ非保存)。
+  postBossCutsceneKey: 'stage5-awakening',
   // stage5 クリア後は stage6(ECLIPSE支配中枢=最終ステージ)へ続く。
   nextStageId: 'stage6',
 };

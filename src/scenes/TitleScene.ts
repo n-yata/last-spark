@@ -120,7 +120,9 @@ export class TitleScene extends Phaser.Scene {
     // タイトルからの開始は既定で stage1 から(最初から)。ステージ選択では選んだ stageId。
     // scene.start に data を渡さないと Phaser は前回の data(継続時の stageId)を
     // 保持して init に渡すため、明示的に stageId を指定してクリア後の引き継ぎを断つ。
-    transitionTo(this, SCENE_KEYS.game, { stageId });
+    // fromStageSelect=true で RAY 強化フラグを落とし、タイトル発の新規プレイは必ず素から始める
+    // (stage6 を単体選択しても強化が漏れない)。継続/リトライは別経路で強化を維持する。
+    transitionTo(this, SCENE_KEYS.game, { stageId, fromStageSelect: true });
   }
 
   private drawBackdrop(width: number, height: number): void {

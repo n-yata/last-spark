@@ -1,15 +1,20 @@
 import Phaser from 'phaser';
 import type { Damageable, ProjectileKind } from '../types/combat';
+import { SHOT } from '../config/balance';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { Projectile } from '../entities/Projectile';
+import { Beam } from '../entities/Beam';
+
+/** 命中元の種別。弾(ProjectileKind)に加え、持続ビーム('beam')を含む(Beam は Projectile ではない)。 */
+type HitKind = ProjectileKind | 'beam';
 
 // 衝突登録・ダメージ適用・撃破処理。Scene へはコールバックで通知し、逆依存しない。
 
 export interface CombatCallbacks {
-  /** shotKind は命中した弾の種別(チャージ弾のみヒットストップ等の出し分けに使う)。 */
-  onHit?: (x: number, y: number, target: 'enemy' | 'boss', shotKind: ProjectileKind) => void;
+  /** shotKind は命中元の種別(チャージ弾やビームのヒット演出出し分けに使う)。 */
+  onHit?: (x: number, y: number, target: 'enemy' | 'boss', shotKind: HitKind) => void;
   onEnemyDefeated?: (enemy: Enemy) => void;
   onBossDefeated?: (boss: Boss) => void;
   onPlayerDamaged?: (player: Player) => void;
@@ -21,6 +26,8 @@ export interface CombatRefs {
   enemies: Phaser.Physics.Arcade.Group;
   playerShots: Phaser.Physics.Arcade.Group;
   enemyShots: Phaser.Physics.Arcade.Group;
+  /** 強化ビームのグループ(任意)。指定時のみビーム⇔敵/ボスの当たり判定を登録する。 */
+  playerBeams?: Phaser.GameObjects.Group;
 }
 
 export class CombatSystem {
@@ -62,6 +69,18 @@ export class CombatSystem {
       if (!enemy || !enemy.active) return;
       this.damagePlayer(refs.player, enemy.contactDamage);
     });
+
+    // プレイヤービーム ⇔ 雑魚敵(強化時の持続レーザー。per-target 間引きで多段ヒット、命中しても消えない)
+    if (refs.playerBeams) {
+      physics.add.overlap(refs.playerBeams, refs.enemies, (a, b) => {
+        const beam = this.asBeam(a, b);
+        const enemy = this.asInstance(a, b, Enemy);
+        if (!beam || !enemy || !beam.active || !enemy.active) return;
+        if (!beam.tryHit(enemy, this.scene.time.now)) return;
+        this.hitDamageable(enemy, SHOT.beamDamage, enemy.x, enemy.y, 'enemy', 'beam');
+        if (enemy.isDead()) this.callbacks.onEnemyDefeated?.(enemy);
+      });
+    }
   }
 
   /** ボス出現時に、ボス関連の衝突を追加登録する。 */
@@ -83,6 +102,17 @@ export class CombatSystem {
       if (boss.isDead()) return;
       this.damagePlayer(this.refs!.player, boss.contactDamage);
     });
+
+    // プレイヤービーム ⇔ ボス(強化時の持続レーザー。per-target 間引きで多段ヒット、命中しても消えない)
+    if (this.refs.playerBeams) {
+      physics.add.overlap(this.refs.playerBeams, boss, (a, b) => {
+        const beam = this.asBeam(a, b);
+        if (!beam || !beam.active || boss.isDead()) return;
+        if (!beam.tryHit(boss, this.scene.time.now)) return;
+        this.hitDamageable(boss, SHOT.beamDamage, boss.x, boss.y, 'boss', 'beam');
+        if (boss.isDead()) this.callbacks.onBossDefeated?.(boss);
+      });
+    }
   }
 
   /** 任意の Damageable にダメージを適用する。 */
@@ -105,7 +135,7 @@ export class CombatSystem {
     x: number,
     y: number,
     kind: 'enemy' | 'boss',
-    shotKind: ProjectileKind,
+    shotKind: HitKind,
   ): void {
     this.applyDamage(target, amount);
     this.callbacks.onHit?.(x, y, kind, shotKind);
@@ -125,6 +155,12 @@ export class CombatSystem {
   private asProjectile(a: unknown, b: unknown): Projectile | null {
     if (a instanceof Projectile) return a;
     if (b instanceof Projectile) return b;
+    return null;
+  }
+
+  private asBeam(a: unknown, b: unknown): Beam | null {
+    if (a instanceof Beam) return a;
+    if (b instanceof Beam) return b;
     return null;
   }
 

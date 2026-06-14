@@ -74,6 +74,23 @@ const STAGE5_INTRO: Cutscene = {
   ],
 };
 
+// Stage 5「ECLIPSE外縁部」ボス撃破後の強化演出シーン(stage5-awakening)。使者を倒した直後、外縁部の
+// 最奥で朽ちた古い機械(休眠コア)が RAY に反応し、最後の光を渡す=攻撃強化を獲得する。
+// docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。「私と同じ何か」の気配を説明せず
+// 匂わせるだけに留め、謎は謎のまま残す。冒頭にボス撃破内心(旧 stage5.ts inner.bossDefeated 相当)を
+// 統合する — stage5 は postBossCutsceneKey を持ち finishStageClear を通らない(enterPostBossCutscene
+// 経由)ため、撃破内心はこの演出の中で見せる。ト書き(direction)は CutsceneScene が括弧で囲う。
+const STAGE5_AWAKENING: Cutscene = {
+  key: 'stage5-awakening',
+  lines: [
+    { kind: 'rayInner', text: 'この気持ちは、私のものだ。それでいい' },
+    { kind: 'direction', text: '朽ちた機械が、かすかに光る' },
+    { kind: 'rayInner', text: 'これは……私と、同じものか' },
+    { kind: 'direction', text: '最後の光が、レイへ流れ込む' },
+    { kind: 'rayInner', text: '受け取った。次へ進める' },
+  ],
+};
+
 // Stage 6「ECLIPSE支配中枢」結末演出シーン(エンディング)。ラスボス撃破後に再生する。
 // docs/story.md「Stage 6 結末演出の詳細構成」+「TERRAのセリフ > Stage 6 — 結末演出シーン」確定版を
 // そのまま転記する。(1)管理解除 →(2)TERRAとのセリフ交換(自由な空) →(3)争いの痕跡(ト書き) →
@@ -104,6 +121,7 @@ const CUTSCENES: Record<string, Cutscene> = {
   'stage3-rescue': STAGE3_RESCUE,
   'stage4-intro': STAGE4_INTRO,
   'stage5-intro': STAGE5_INTRO,
+  'stage5-awakening': STAGE5_AWAKENING,
   'stage6-ending': STAGE6_ENDING,
 };
 
