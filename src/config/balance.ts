@@ -428,13 +428,13 @@ export interface CoreBossConfig extends BossConfig {
  * jump は持たない(浮遊体)。重み付けは bossAi の CORE_WEIGHTS が担う。
  */
 export const ECLIPSE_CORE = {
-  maxHp: 40, // ラスボス。全ボス中最も硬い(使者26 < 浄化28 < 番人30 < コア40)
+  maxHp: 56, // ラスボス。全ボス中最も硬い(使者26 < 浄化28 < 番人30 < コア56)。難易度調整: stage6 で RAY が覚醒し通常弾2発化＋持続ビームで火力が倍化するため、溶けないよう 40→56 に増強
   phase2HpRatio: 0.5,
   contactDamage: 3, // コア本体への接触は重い
-  bulletDamage: 2,
-  bulletSpeed: 300,
+  bulletDamage: 3, // 難易度調整: 強化後プレイヤー(maxHp16)への脅威を上げる 2→3
+  bulletSpeed: 340, // 難易度調整: 見てから避けにくくする 300→340
   moveSpeed: 0, // コアは浮遊して静止する(移動しない)
-  staggerDamageThreshold: 14, // 巨大コアはのけぞりにくい(最終戦の重量感)
+  staggerDamageThreshold: 20, // 巨大コアはのけぞりにくい(最終戦の重量感)。難易度調整: 2発化＋ビームでのけぞりハメを防ぐため 14→20
   width: 124, // 巨大
   height: 148,
   // アクション継続時間(ms)。summon は溜めを感じさせ長め、shoot はテンポよく。
@@ -444,10 +444,10 @@ export const ECLIPSE_CORE = {
     summon: 1100,
     stagger: 800,
   },
-  phase2SpeedFactor: 0.6, // phase2(コア直接攻撃)で行動間隔を大きく詰め、攻勢を最大化する
+  phase2SpeedFactor: 0.52, // phase2(コア直接攻撃)で行動間隔を大きく詰め、攻勢を最大化する。難易度調整: 終盤の攻勢を強める 0.6→0.52
   // --- 召喚固有 ---
-  summonCount: 2, // 1 回の召喚で配下 2 体
-  summonMaxActive: 4, // 場の配下上限(超過時は召喚をスキップして溢れを防ぐ)
+  summonCount: 3, // 1 回の召喚で配下 3 体。難易度調整: phase1 の盤面圧を上げる 2→3
+  summonMaxActive: 6, // 場の配下上限(超過時は召喚をスキップして溢れを防ぐ)。難易度調整: 召喚増に合わせ 4→6
 } as const satisfies CoreBossConfig;
 
 /**
