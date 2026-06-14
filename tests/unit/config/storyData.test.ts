@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getStageStory } from '../../../src/config/story';
 import { getStageData } from '../../../src/config/stages';
+import { getCutscene } from '../../../src/config/story/cutscenes';
 
 // 確定テキスト(docs/story.md)の取りこぼし・誤編集を検出するデータ整合テスト。
 // 表示そのものは実機確認だが、データが確定版どおりであることはここで保証する。
@@ -62,8 +63,13 @@ describe('getStageStory', () => {
     // 内心（気持ち）を名指しせず、観測した「守る行動」を故障と断じる。
     expect(s.eclipseVoice).toBe('その個体を守る意味はない。お前の動きは、故障だ。');
     expect(s.inner.eclipseReaction).toBe('故障でもいい。私は、この子を守ると決めた。');
+    // ボス撃破後内心は stage5.ts から強化演出(stage5-awakening)冒頭の rayInner へ移設された。
+    // stage5 は postBossCutsceneKey を持ち finishStageClear を通らないため、
+    // 撃破内心は演出スクリプトの中で見せる設計になっている。
     // 出自（なぜ作られたか）は語らない。
-    expect(s.inner.bossDefeated).toBe('この気持ちは、私のものだ。それでいい。');
+    const awakening = getCutscene('stage5-awakening')!;
+    const firstRayInner = awakening.lines.find((l) => l.kind === 'rayInner');
+    expect(firstRayInner?.text).toBe('この気持ちは、私のものだ。それでいい');
   });
 
   it('stage6 の確定テキストが③確定版と一致する', () => {
@@ -86,12 +92,21 @@ describe('ボス後演出フローのステージ条件', () => {
     expect(s.bossKind).toBe('warden');
   });
 
-  it('stage1 / stage2 / stage4 / stage5 / stage6 はボス後演出(救出)を持たない', () => {
-    for (const id of ['stage1', 'stage2', 'stage4', 'stage5', 'stage6']) {
+  it('cage を伴う救出演出(postBoss)を持つのは stage3 のみ: 他ステージは cage を持たない', () => {
+    // stage3 は救出フロー(cage あり)。stage5 はボス撃破後強化演出を持つが cage は持たない。
+    // stage1 / stage2 / stage4 / stage6 はボス後演出自体を持たない。
+    for (const id of ['stage1', 'stage2', 'stage4', 'stage6']) {
       const s = getStageData(id);
       expect(s.postBossCutsceneKey).toBeUndefined();
       expect(s.cage).toBeUndefined();
     }
+  });
+
+  it('stage5 は cage を持たない強化演出(postBossCutsceneKey)を持つ', () => {
+    // stage5-awakening: 休眠コアとの共鳴による強化演出。救出フロー(cage)ではない。
+    const s = getStageData('stage5');
+    expect(s.postBossCutsceneKey).toBe('stage5-awakening');
+    expect(s.cage).toBeUndefined();
   });
 
   it('stage2→stage3→stage4→stage5→stage6 と連結している', () => {

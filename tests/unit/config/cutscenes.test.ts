@@ -134,4 +134,35 @@ describe('getCutscene', () => {
     const cs = getCutscene('stage6-ending')!;
     expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('争った跡'))).toBe(true);
   });
+
+  // stage5-awakening: ボス撃破後の強化演出(休眠コアとの共鳴)。docs/story.md 厳守の検証。
+  it('stage5-awakening が登録されている', () => {
+    expect(getCutscene('stage5-awakening')).toBeDefined();
+  });
+
+  it('stage5-awakening の冒頭行はボス撃破後内心「この気持ちは、私のものだ。それでいい」', () => {
+    // stage5.ts から移設した撃破内心。演出の最初に見せることで撃破→感慨→強化の流れを作る。
+    const cs = getCutscene('stage5-awakening')!;
+    expect(cs.lines[0]).toEqual({ kind: 'rayInner', text: 'この気持ちは、私のものだ。それでいい' });
+  });
+
+  it('stage5-awakening は rayInner と direction のみで構成される(科学者の語り部なし)', () => {
+    // docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。
+    // 許可される kind は rayInner(レイの内心)と direction(ト書き)のみ。
+    // terraLine(テラのセリフ)・narration(ナレーション=科学者/システム文)は含まない。
+    const cs = getCutscene('stage5-awakening')!;
+    for (const line of cs.lines) {
+      expect(['rayInner', 'direction']).toContain(line.kind);
+    }
+  });
+
+  it('stage5-awakening に禁止語(科学者・メモリ・設計者・記録)が含まれない', () => {
+    // docs/story.md で科学者設定は廃止済み。これらの語はストーリー世界観を壊す。
+    const cs = getCutscene('stage5-awakening')!;
+    const allText = cs.lines.map((l) => l.text).join('');
+    expect(allText).not.toContain('科学者');
+    expect(allText).not.toContain('メモリ');
+    expect(allText).not.toContain('設計者');
+    expect(allText).not.toContain('記録');
+  });
 });

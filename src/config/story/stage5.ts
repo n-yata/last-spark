@@ -14,7 +14,8 @@ export const STAGE5_STORY: StageStory = {
     // あの声を聞いた直後の決意。bossIntro の直後に発火する。
     // ※出自は語らず、今の選択を肯定する。
     eclipseReaction: '故障でもいい。私は、この子を守ると決めた。',
-    // ボス撃破後。撃破演出後・クリア遷移前に発火する。出自（なぜ作られたか）は語らない。
-    bossDefeated: 'この気持ちは、私のものだ。それでいい。',
+    // ボス撃破後の内心「この気持ちは、私のものだ。それでいい」は、強化演出(cutscenes.ts の
+    // 'stage5-awakening')の冒頭へ移設した。stage5 は postBossCutsceneKey を持ち finishStageClear を
+    // 通らない(enterPostBossCutscene 経由)ため、ここに bossDefeated を置いても発火しない。
   },
 };

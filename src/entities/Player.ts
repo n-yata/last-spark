@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { PLAYER, LADDER } from '../config/balance';
+import { PLAYER, LADDER, SHOT } from '../config/balance';
 import type { InputState } from '../types/input';
 import type { Damageable } from '../types/combat';
 import type { LadderRect } from '../config/stages';
@@ -29,6 +29,7 @@ import { getSound } from '../systems/SoundManager';
 import { CharacterRig } from './CharacterRig';
 import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
+import { Beam } from './Beam';
 
 // プレイヤー(最後のロボット)。移動/ジャンプ/発射/被弾を担う。
 
@@ -45,6 +46,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private onLadder = false;
   private ladderBoxes: Box[] = [];
   private projectiles?: Phaser.Physics.Arcade.Group;
+  /** RAY 強化状態(stage6 のみ)。true で通常弾が上下2発・チャージ攻撃が持続ビームになる。 */
+  private empowered = false;
+  /** 強化ビームの発射先グループ(GameScene が設定)。empowered かつ設定済みのときだけビームを出す。 */
+  private beams?: Phaser.GameObjects.Group;
+  /** ビーム発動中の再発火を抑止する終了時刻(ms)。発動中(now < beamActiveUntil)は新規ショットを受けない。 */
+  private beamActiveUntil = 0;
   private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -63,6 +70,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   /** 発射に使う弾プールを設定する。 */
   setProjectiles(group: Phaser.Physics.Arcade.Group): void {
     this.projectiles = group;
+  }
+
+  /** 強化ビーム(持続レーザー)の生成先グループを設定する。強化時のチャージ攻撃で使用する。 */
+  setBeams(group: Phaser.GameObjects.Group): void {
+    this.beams = group;
+  }
+
+  /**
+   * 攻撃強化の有効/無効を設定する(stage5 クリア演出で獲得、stage6 で適用)。
+   * 強化時は通常弾が上下2発、チャージ攻撃が持続ビームになる。
+   */
+  setEmpowered(value: boolean): void {
+    this.empowered = value;
   }
 
   /** このステージの梯子領域を設定する(重なり判定用の矩形へ変換して保持)。 */
@@ -253,17 +273,53 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (!this.projectiles || !canFire(now, this.lastShotAt)) {
       return;
     }
-    this.lastShotAt = now;
+    // 強化ビーム発動中は新規ショットを受け付けない(持続中の多重発動を防ぐ)。
+    if (now < this.beamActiveUntil) {
+      return;
+    }
 
+    // 強化時のチャージ攻撃は持続ビーム。それ以外(非強化、または通常弾)は従来の弾発射へ。
+    if (this.empowered && action === 'fireCharged' && this.beams) {
+      this.fireBeam(now);
+      return;
+    }
+
+    this.lastShotAt = now;
     const kind = action === 'fireCharged' ? 'charged' : 'normal';
     const dir = facingSign(this.facing);
     const muzzleX = this.x + dir * (PLAYER.width / 2 + 6);
-    const projectile = this.projectiles.get(muzzleX, this.y) as Projectile | null;
-    if (!projectile) return;
-    const velocity = dir * createProjectileSpec(kind).speed;
-    projectile.fire(muzzleX, this.y, velocity, kind, 'player');
+    const speed = createProjectileSpec(kind).speed;
+
+    // 強化時の通常弾は上下2発(緩い斜め)。それ以外は前方単発。1 発あたりの威力は据え置き、
+    // 2 発化(手数)で強化を体感させる。velocityY は sin 分配(0 のとき従来の直進弾と同一)。
+    const angles =
+      this.empowered && kind === 'normal' ? [-SHOT.splitAngleRad, SHOT.splitAngleRad] : [0];
+    for (const angle of angles) {
+      const projectile = this.projectiles.get(muzzleX, this.y) as Projectile | null;
+      if (!projectile) continue;
+      const vx = dir * speed * Math.cos(angle);
+      const vy = speed * Math.sin(angle);
+      projectile.fire(muzzleX, this.y, vx, kind, 'player', { velocityY: vy });
+    }
     this.rig.triggerAttack(now);
     getSound().playSe(kind === 'charged' ? 'shootCharged' : 'shootNormal');
+  }
+
+  /**
+   * 強化チャージ攻撃: 持続ビームを発動する。発動中は beamActiveUntil まで再発火を抑止する
+   * (発動中もプレイヤーは移動可能で、ビームはマズルへ追従する)。
+   */
+  private fireBeam(now: number): void {
+    if (!this.beams) return;
+    this.lastShotAt = now;
+    this.beamActiveUntil = now + SHOT.beamLifespanMs;
+    const beam = new Beam(this.scene);
+    this.beams.add(beam);
+    // Group.add() がボディ設定をグループ既定値(重力ON)で上書きするため、静止設定を再適用する。
+    beam.configureBody();
+    beam.fire(this); // Player(x/y/facing)を owner に渡し、以後マズルへ追従させる。
+    this.rig.triggerAttack(now);
+    getSound().playSe('shootCharged');
   }
 
   /** 被弾。無敵中は無効。HP0 で撃破。 */
