@@ -3,7 +3,9 @@ import type { TouchLayout } from '../config/touchLayout';
 import { EFFECTS } from '../config/effects';
 import { scaled, scaledFontPx } from '../config/uiScale';
 
-// 仮想ボタン/移動ゾーンの半透明ガイドを描画する(操作はしない=表示のみ)。
+// 仮想ボタン(SHOT/JUMP)と下部操作帯のガイドを描画する(操作はしない=表示のみ)。
+// タッチ端末でのみ表示し、非タッチ(デスクトップ)では一切描画しない。
+// 入力判定は InputController が別系統で行うため、本クラスの表示有無は操作に影響しない。
 // 実画面サイズに追従するため、毎フレーム render(layout) で再描画する。
 
 const ZONE_COLOR = 0x37f7d8;
@@ -44,6 +46,7 @@ export class TouchControls {
 
   /**
    * 現在のレイアウト(実画面サイズ基準)に合わせてガイドを再描画する。
+   * touchEnabled=false(非タッチ端末)では帯・ボタン・ラベルを一切描画せず、画面を素のまま保つ。
    * bandHeight>0(タッチ時の下部コントロール帯)の場合、画面下部に帯背景を描画し、
    * 仮想ボタンが帯の上に乗るようにする(プレイ領域=帯の上、ボタン=帯の中)。
    * shootHeld/jumpHeld が true のボタンは強調表示し、指で隠れても押下中と分かるようにする。
@@ -55,10 +58,23 @@ export class TouchControls {
     bandHeight = 0,
     shootHeld = false,
     jumpHeld = false,
+    touchEnabled = false,
   ): void {
-    const { moveZone, shootButton, jumpButton } = layout;
     this.gfx.clear();
-    // 下部コントロール帯の背景(タッチ時のみ)。プレイ領域との境界に上端線を引く。
+    // 非タッチ端末(デスクトップ等)ではキーボード操作のため、仮想ボタン・帯・ラベルは不要。
+    // 全要素を非表示にして素の画面を保つ(移動ゾーンの枠線・薄塗りもここで一切描かれない)。
+    if (!touchEnabled) {
+      this.shootLabel.setVisible(false);
+      this.jumpLabel.setVisible(false);
+      this.moveHint.setVisible(false);
+      return;
+    }
+    this.shootLabel.setVisible(true);
+    this.jumpLabel.setVisible(true);
+    this.moveHint.setVisible(true);
+
+    const { moveZone, shootButton, jumpButton } = layout;
+    // 下部コントロール帯の背景。プレイ領域との境界に上端線を引く。
     if (bandHeight > 0) {
       const bandTop = height - bandHeight;
       this.gfx.fillStyle(BAND_COLOR, 0.92);
@@ -66,17 +82,6 @@ export class TouchControls {
       this.gfx.lineStyle(scaled(2), ZONE_COLOR, 0.25);
       this.gfx.lineBetween(0, bandTop, width, bandTop);
     }
-    // 左: 移動ゾーンの境界。線幅・内側余白は scaled() で物理px換算する。
-    const inset = scaled(4);
-    this.gfx.lineStyle(scaled(2), ZONE_COLOR, 0.12);
-    this.gfx.strokeRect(
-      moveZone.x + inset,
-      moveZone.y + inset,
-      moveZone.width - inset * 2,
-      moveZone.height - inset * 2,
-    );
-    this.gfx.fillStyle(ZONE_COLOR, 0.06);
-    this.gfx.fillRect(moveZone.x, moveZone.y, moveZone.width, moveZone.height);
     // 右: ジャンプ(左上) + ショット(右下)の仮想ボタン
     this.drawButton(jumpButton.x, jumpButton.y, jumpButton.radius, JUMP_COLOR, jumpHeld);
     this.drawButton(shootButton.x, shootButton.y, shootButton.radius, SHOOT_COLOR, shootHeld);
