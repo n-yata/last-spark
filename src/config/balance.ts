@@ -260,21 +260,23 @@ export const PURIFIER = {
     bloom: 1100,
     stagger: 750,
   },
-  phase2SpeedFactor: 0.72,
-  // 扇状スプレー: 5 発を約90度に散布。遅い毒霧で広範囲に圧をかける。
+  phase2SpeedFactor: 0.8, // phase2 の行動間隔短縮を緩める(難易度調整: 攻撃頻度が高すぎたため 0.72→0.8)
+  // 扇状スプレー: 4 発を約90度に散布。遅い毒霧で広範囲に圧をかける。
+  // 総開き角は維持しつつ本数を 5→4 に減らし、弾の隙間を広げて回避可能にする(難易度調整: 避けにくさの緩和)。
   spray: {
-    count: 5,
+    count: 4,
     spreadRad: Math.PI * 0.5,
     speed: 200,
   },
   // 汚染床設置(bloom): phase2 で枚数増・存続延長し、足元の安全地帯をじわじわ奪う。
+  // ただし phase2 の床は広く長すぎて回避困難だったため、横幅と存続を抑える(難易度調整)。
   bloom: {
     countP1: 1,
     countP2: 2,
     patchWidthP1: 90,
-    patchWidthP2: 130,
+    patchWidthP2: 110, // 130→110: phase2 の床1枚を縮小し回避余地を残す
     lifespanMsP1: 3500,
-    lifespanMsP2: 5000,
+    lifespanMsP2: 4200, // 5000→4200: 床の常設感を緩め安全地帯の回復を早める
     damage: HAZARD.pollutionDamage, // 既存スリップダメージ床と地続きの腐食ダメージ
   },
 } as const satisfies PurifierBossConfig;
@@ -354,38 +356,39 @@ export const ENVOY = {
   phase2HpRatio: 0.5,
   contactDamage: 2,
   bulletDamage: 1,
-  bulletSpeed: 320, // 速い弾(飛行ボス280より速く、ヒット&アウェイの圧を上げる)
-  moveSpeed: 130, // 高速移動(飛行ボス90より速い。dive はこの速度で水平接近する)
+  bulletSpeed: 290, // 速い弾(飛行ボス280より速い)。難易度調整: 見てから避けやすく 320→290
+  moveSpeed: 110, // 高速移動(飛行ボス90より速い個性は維持)。難易度調整: 張り付き緩和 130→110
   staggerDamageThreshold: 7, // 軽量機体ゆえのけぞりやすい(高速な分、反撃の隙を作る)
   width: 60, // スリムな流線型(飛行ボス76より細い)
   height: 52, // 平たく小さい空中機体
   // アクション継続時間(ms)。全体に短くして手数の多いヒット&アウェイのリズムにする。
   // lance/blink は固有アクションで、blink は瞬間移動の鋭さを出すため最も短い。
+  // 難易度調整: 手数が多すぎたため hover(休み)と lance 後の隙を延ばす。
   actionDurationMs: {
-    hover: 700,
+    hover: 800, // 700→800: 滞空(休み)を延ばし手数を減らす
     shoot: 500,
     dive: 600,
-    lance: 550,
+    lance: 650, // 550→650: 槍弾後の隙を延ばす
     blink: 450,
     stagger: 650,
   },
-  phase2SpeedFactor: 0.65, // phase2 で行動間隔をさらに詰めて攻勢を強める
+  phase2SpeedFactor: 0.68, // phase2 で行動間隔を詰める(飛行ボス0.7より強く詰める個性は維持)。難易度調整: 詰めすぎを緩和 0.65→0.68
   // --- 飛行固有 ---
   hoverAltitude: 160, // 外縁部の高い位置を舞う(飛行ボス150よりやや高い)
   hoverAmplitude: 28, // 大きめの上下バブで居場所を読みにくくする
   hoverPeriodMs: 1400, // 速いバブ周期(飛行ボス1800より速い)
-  diveSpeed: 460, // 鋭い急降下(飛行ボス360より速い)
+  diveSpeed: 400, // 鋭い急降下(飛行ボス360より速い)。難易度調整: 急降下の鋭さ緩和 460→400
   climbSpeed: 320, // 急降下後すぐ高度復帰する(ヒット&アウェイの「アウェイ」)
   diveBottomMargin: 12, // より地面近くまで降りて圧をかける
   // --- 使者固有 ---
   lance: {
-    countP1: 2,
-    countP2: 3,
-    speed: 420,
+    countP1: 1, // 難易度調整: phase1 の手数を下げる 2→1(phase2 で増える設計は維持)
+    countP2: 2, // 難易度調整: phase2 の弾幕密度を下げる 3→2(phase1 より多い設計は維持)
+    speed: 380, // 難易度調整: 槍弾を読みやすく 420→380
     intervalMs: 110,
   },
   blink: {
-    dashSpeed: 520,
+    dashSpeed: 480, // 難易度調整: 瞬間移動の鋭さを僅かに緩和 520→480
     afterimageMs: 200,
   },
 } as const satisfies EnvoyBossConfig;
