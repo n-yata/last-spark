@@ -3,28 +3,26 @@ import { getSound } from '../systems/SoundManager';
 import { scaled, scaledFontPx } from '../config/uiScale';
 import { PLAYABLE_STAGES } from './stages';
 
-// 開発モード(タイトル画面のステージ選択)の UI。
-// このモジュールは TitleScene から `import.meta.env.DEV` ガード下で「動的 import」される。
-// 本番ビルドではガードが false に畳まれて import 文ごと除去されるため、別チャンク化された
-// 本モジュールは未参照となり本番バンドルから完全に外れる。DEV MODE 等の文字列や
-// ステージ表示ラベルが本番 JS に残留・露見しない(DevTools からの手動起動も不可)。
+// タイトル画面のステージ選択 UI。任意のステージから本編を始められる一般向け機能。
+// 初期表示を軽くするため、TitleScene から表示確定後に「動的 import」で遅延ロードする
+// (ステージ選択は導線をタップして初めて使うため、別チャンクに分けても体験を損なわない)。
 
-export interface DevMode {
+export interface StageSelect {
   /** ステージ選択オーバーレイが開いているか(キーボード誤発進ガード用)。 */
   isOverlayOpen(): boolean;
 }
 
 /**
- * タイトル画面に「DEV MODE」導線とステージ選択オーバーレイを追加する。
+ * タイトル画面に「STAGE SELECT」導線とステージ選択オーバーレイを追加する。
  * @param scene       追加先のシーン(TitleScene)
  * @param startZone   スタート判定ゾーン。オーバーレイ表示中は無効化して誤発進を防ぐ。
  * @param onStartStage 選択した stageId で本編を開始するコールバック(効果音・遷移は呼び出し側)。
  */
-export function createDevMode(
+export function createStageSelect(
   scene: Phaser.Scene,
   startZone: Phaser.GameObjects.Zone,
   onStartStage: (stageId: string) => void,
-): DevMode {
+): StageSelect {
   const { width, height } = scene.scale;
   let overlay: Phaser.GameObjects.Container | undefined;
 
@@ -62,7 +60,7 @@ export function createDevMode(
 
     o.add(
       scene.add
-        .text(width / 2, height * 0.14, 'STAGE SELECT (DEV)', {
+        .text(width / 2, height * 0.14, 'STAGE SELECT', {
           fontFamily: 'monospace',
           fontSize: scaledFontPx(28),
           color: '#37f7d8',
@@ -99,17 +97,17 @@ export function createDevMode(
     overlay = o;
   };
 
-  // DEV MODE 導線。右下に控えめに配置する。
+  // STAGE SELECT 導線。右下に控えめに配置する。
   const button = scene.add
-    .text(width - scaled(16), height - scaled(16), 'DEV MODE ▸', {
+    .text(width - scaled(16), height - scaled(16), 'STAGE SELECT ▸', {
       fontFamily: 'monospace',
       fontSize: scaledFontPx(16),
-      color: '#8aa0b8',
+      color: '#7fe9dd',
     })
     .setOrigin(1, 1)
     .setInteractive({ useHandCursor: true });
   button.on(Phaser.Input.Events.POINTER_OVER, () => button.setColor('#fff27a'));
-  button.on(Phaser.Input.Events.POINTER_OUT, () => button.setColor('#8aa0b8'));
+  button.on(Phaser.Input.Events.POINTER_OUT, () => button.setColor('#7fe9dd'));
   button.on(Phaser.Input.Events.POINTER_DOWN, () => {
     getSound().playSe('uiTap');
     openStageSelect();

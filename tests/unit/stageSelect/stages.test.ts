@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getStageData } from '../../../src/config/stage1';
-import { PLAYABLE_STAGES } from '../../../src/devMode/stages';
+import { PLAYABLE_STAGES } from '../../../src/stageSelect/stages';
 
-// 開発モードのステージ選択が参照する PLAYABLE_STAGES の整合性を検証する。
+// タイトルのステージ選択が参照する PLAYABLE_STAGES の整合性を検証する。
 // このリストが実際に起動可能なステージと食い違うと、選択しても stage1 に
 // フォールバックして「選んだのに最初から始まる」不具合になるため、データ起点で守る。
 
