@@ -46,7 +46,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private onLadder = false;
   private ladderBoxes: Box[] = [];
   private projectiles?: Phaser.Physics.Arcade.Group;
-  /** RAY 強化状態(stage6 のみ)。true で通常弾が上下2発・チャージ攻撃が持続ビームになる。 */
+  /** RAY 強化状態(stage6 のみ)。true で通常弾が正面平行2発・チャージ攻撃が持続ビームになる。 */
   private empowered = false;
   /** 強化ビームの発射先グループ(GameScene が設定)。empowered かつ設定済みのときだけビームを出す。 */
   private beams?: Phaser.GameObjects.Group;
@@ -79,7 +79,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   /**
    * 攻撃強化の有効/無効を設定する(stage5 クリア演出で獲得、stage6 で適用)。
-   * 強化時は通常弾が上下2発、チャージ攻撃が持続ビームになる。
+   * 強化時は通常弾が正面平行2発、チャージ攻撃が持続ビームになる。
    */
   setEmpowered(value: boolean): void {
     this.empowered = value;
@@ -290,16 +290,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     const muzzleX = this.x + dir * (PLAYER.width / 2 + 6);
     const speed = createProjectileSpec(kind).speed;
 
-    // 強化時の通常弾は上下2発(緩い斜め)。それ以外は前方単発。1 発あたりの威力は据え置き、
-    // 2 発化(手数)で強化を体感させる。velocityY は sin 分配(0 のとき従来の直進弾と同一)。
-    const angles =
-      this.empowered && kind === 'normal' ? [-SHOT.splitAngleRad, SHOT.splitAngleRad] : [0];
-    for (const angle of angles) {
-      const projectile = this.projectiles.get(muzzleX, this.y) as Projectile | null;
+    // 強化時の通常弾は正面へ平行に進む2発(マズルを上下に ±splitOffsetPx ずらす)。それ以外は
+    // 前方単発。2発とも velocityY=0 で真っ直ぐ前進させ、斜めにはしない。1 発あたりの威力は据え置き、
+    // 2 発化(手数)で強化を体感させる(オフセット 0 のとき従来の直進単発と同一)。
+    const offsetsY =
+      this.empowered && kind === 'normal' ? [-SHOT.splitOffsetPx, SHOT.splitOffsetPx] : [0];
+    const vx = dir * speed;
+    for (const offsetY of offsetsY) {
+      const muzzleY = this.y + offsetY;
+      const projectile = this.projectiles.get(muzzleX, muzzleY) as Projectile | null;
       if (!projectile) continue;
-      const vx = dir * speed * Math.cos(angle);
-      const vy = speed * Math.sin(angle);
-      projectile.fire(muzzleX, this.y, vx, kind, 'player', { velocityY: vy });
+      projectile.fire(muzzleX, muzzleY, vx, kind, 'player', { velocityY: 0 });
     }
     this.rig.triggerAttack(now);
     getSound().playSe(kind === 'charged' ? 'shootCharged' : 'shootNormal');
