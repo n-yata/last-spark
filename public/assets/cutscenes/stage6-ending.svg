@@ -1,26 +1,35 @@
 <svg width="960" height="540" viewBox="0 0 960 540" role="img" xmlns="http://www.w3.org/2000/svg">
-<title>LAST SPARK ステージ6 — 管理の解けた空の下のRAYとTERRA(エンディング)</title>
-<desc>ECLIPSEの支配が解けた廃墟の外。崩れたバリケードと落書きの残る壁、争いの痕跡が点在する地に、夜明けの淡い光が差し込む。施設の入口からは人間たちがためらいがちに姿を見せ、手前ではシアン色に発光するロボットRAYと少女TERRAが手をつなぎ、管理されていない空を並んで見上げる後ろ姿の一枚絵。苦い勝利と再生の始まりを描く。</desc>
+<title>LAST SPARK ステージ6 — だれにも管理されていない空を見上げるRAYとTERRA(エンディング)</title>
+<desc>ECLIPSEの支配が解けた廃墟の外。崩れたバリケードと落書きの残る壁が前景の隅に低く沈み、画面の大半を占めるのは夜明けの広い空。藍色の夜空から星が消えゆき、地平の中央では新しい太陽が昇りはじめ、光の帯が空へ立ちのぼる。その前に、シアン色に発光するロボットRAYと少女TERRAだけが手をつなぎ、だれにも管理されていない空を並んで見上げる後ろ姿のシルエット。苦い勝利のあとの、これから歩き出す二人の始まりを描く。</desc>
 
 <defs>
 <linearGradient id="s6sky" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#06080f"/>
-<stop offset="0.42" stop-color="#101a2c"/>
-<stop offset="0.72" stop-color="#2c3142"/>
-<stop offset="1" stop-color="#5a4d4a"/>
+<stop offset="0" stop-color="#070a1c"/>
+<stop offset="0.34" stop-color="#182746"/>
+<stop offset="0.6" stop-color="#3b3c63"/>
+<stop offset="0.8" stop-color="#7e5f66"/>
+<stop offset="1" stop-color="#d39a6c"/>
 </linearGradient>
-<linearGradient id="s6dawn" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#caa37e" stop-opacity="0"/>
-<stop offset="1" stop-color="#d8a778" stop-opacity="0.5"/>
-</linearGradient>
-<radialGradient id="s6sun" cx="0.5" cy="1" r="0.8">
-<stop offset="0" stop-color="#f4d9b0" stop-opacity="0.85"/>
-<stop offset="0.4" stop-color="#d9a86e" stop-opacity="0.35"/>
-<stop offset="1" stop-color="#d9a86e" stop-opacity="0"/>
+<!-- 地平に昇る新しい太陽(これから) -->
+<radialGradient id="s6sun" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#fff3da" stop-opacity="0.95"/>
+<stop offset="0.28" stop-color="#ffdca1" stop-opacity="0.8"/>
+<stop offset="0.6" stop-color="#e9a86a" stop-opacity="0.3"/>
+<stop offset="1" stop-color="#e9a86a" stop-opacity="0"/>
 </radialGradient>
+<!-- 太陽から空へ広がる夜明けの大気光 -->
+<radialGradient id="s6bloom" cx="0.5" cy="0.78" r="0.62">
+<stop offset="0" stop-color="#f6cf95" stop-opacity="0.55"/>
+<stop offset="0.45" stop-color="#caa078" stop-opacity="0.18"/>
+<stop offset="1" stop-color="#caa078" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="s6ray" x1="0" y1="1" x2="0" y2="0">
+<stop offset="0" stop-color="#ffe6b8" stop-opacity="0.5"/>
+<stop offset="1" stop-color="#ffe6b8" stop-opacity="0"/>
+</linearGradient>
 <radialGradient id="s6rayGlow" cx="0.5" cy="0.5" r="0.5">
-<stop offset="0" stop-color="#37f7d8" stop-opacity="0.45"/>
-<stop offset="0.6" stop-color="#37f7d8" stop-opacity="0.12"/>
+<stop offset="0" stop-color="#37f7d8" stop-opacity="0.5"/>
+<stop offset="0.6" stop-color="#37f7d8" stop-opacity="0.14"/>
 <stop offset="1" stop-color="#37f7d8" stop-opacity="0"/>
 </radialGradient>
 <!-- 視認性のためのシャドウ持ち上げ(暗部を持ち上げて視認性UP・色相維持)。エンディングの夜明けの
@@ -36,118 +45,112 @@
 </defs>
 
 <g filter="url(#lift)">
-<!-- 空(藍 → 夜明けへ) -->
+<!-- 空が主役: 画面の大半を占める夜明けの空(藍 → 地平の暖色へ) -->
 <rect x="0" y="0" width="960" height="540" fill="url(#s6sky)"/>
 
-<!-- 消えゆく星(管理されていない空) -->
-<g fill="#cfd8e8">
-<circle cx="120" cy="60" r="1.6" opacity="0.5"/>
-<circle cx="240" cy="110" r="1.2" opacity="0.4"/>
-<circle cx="360" cy="48" r="1.4" opacity="0.45"/>
-<circle cx="520" cy="90" r="1.1" opacity="0.3"/>
-<circle cx="690" cy="64" r="1.5" opacity="0.4"/>
-<circle cx="820" cy="120" r="1.2" opacity="0.35"/>
-<circle cx="900" cy="56" r="1.3" opacity="0.4"/>
-<circle cx="180" cy="160" r="1" opacity="0.25"/>
-<circle cx="760" cy="170" r="1" opacity="0.25"/>
+<!-- 消えゆく星(だれにも管理されていない空) -->
+<g fill="#dde4f2">
+<circle cx="110" cy="52" r="1.6" opacity="0.55"/>
+<circle cx="220" cy="96" r="1.2" opacity="0.4"/>
+<circle cx="330" cy="40" r="1.4" opacity="0.5"/>
+<circle cx="470" cy="74" r="1.1" opacity="0.32"/>
+<circle cx="610" cy="50" r="1.5" opacity="0.45"/>
+<circle cx="730" cy="100" r="1.2" opacity="0.38"/>
+<circle cx="840" cy="44" r="1.3" opacity="0.42"/>
+<circle cx="910" cy="120" r="1.1" opacity="0.32"/>
+<circle cx="170" cy="150" r="1" opacity="0.26"/>
+<circle cx="540" cy="160" r="0.9" opacity="0.22"/>
+<circle cx="790" cy="172" r="1" opacity="0.24"/>
+<circle cx="280" cy="200" r="0.8" opacity="0.18"/>
 </g>
 
-<!-- 夜明けの帯と低い陽(控えめ・苦い勝利のトーン) -->
-<rect x="0" y="300" width="960" height="120" fill="url(#s6dawn)"/>
-<ellipse cx="480" cy="406" rx="320" ry="120" fill="url(#s6sun)"/>
+<!-- 太陽から空いっぱいに広がる夜明けの大気光 -->
+<ellipse cx="480" cy="402" rx="640" ry="300" fill="url(#s6bloom)"/>
 
-<!-- 雲の切れ間(横たわる雲のシルエット) -->
-<g fill="#1a2030" opacity="0.7">
-<ellipse cx="220" cy="200" rx="180" ry="22"/>
-<ellipse cx="720" cy="230" rx="200" ry="24"/>
-<ellipse cx="520" cy="250" rx="120" ry="16"/>
+<!-- 空へ立ちのぼる光の帯(god rays・これからへの希望) -->
+<g opacity="0.5">
+<polygon points="480,402 360,40 408,40" fill="url(#s6ray)"/>
+<polygon points="480,402 470,20 506,20" fill="url(#s6ray)" opacity="0.9"/>
+<polygon points="480,402 560,40 612,40" fill="url(#s6ray)"/>
+<polygon points="480,402 240,150 300,140" fill="url(#s6ray)" opacity="0.6"/>
+<polygon points="480,402 700,140 760,160" fill="url(#s6ray)" opacity="0.6"/>
 </g>
 
-<!-- 遠景: 崩れた廃墟の街並み(夜明けに沈むシルエット) -->
-<g fill="#161a26">
-<polygon points="0,400 0,250 60,250 60,220 96,220 96,250 150,250 150,400"/>
-<polygon points="180,400 180,300 210,300 210,268 234,290 234,300 290,300 290,400"/>
-<!-- 崩れた高層(天端が割れている) -->
-<polygon points="320,400 320,180 352,180 352,150 360,168 372,150 372,180 410,180 410,400"/>
-<polygon points="760,400 760,210 800,210 800,184 824,210 824,400"/>
-<polygon points="850,400 850,250 900,250 900,224 940,224 940,250 960,250 960,400"/>
-</g>
-
-<!-- 施設の壁(手前右。落書き・争いの痕跡が残る) -->
+<!-- 横たわる雲(夜明けの光を下から受ける) -->
 <g>
-<rect x="640" y="300" width="320" height="180" fill="#1c212e"/>
-<rect x="640" y="300" width="320" height="6" fill="#2c3550" opacity="0.6"/>
-<!-- 入口(人間が姿を見せる) -->
-<rect x="700" y="356" width="84" height="124" fill="#0a0d15"/>
-<rect x="700" y="356" width="84" height="124" fill="url(#s6sun)" opacity="0.18"/>
+<g fill="#202744" opacity="0.7">
+<ellipse cx="200" cy="150" rx="170" ry="16"/>
+<ellipse cx="740" cy="176" rx="190" ry="18"/>
+<ellipse cx="430" cy="120" rx="120" ry="11"/>
+</g>
+<!-- 雲の下端に乗る暖色のリム -->
+<g stroke="#f0c896" stroke-width="1.4" fill="none" opacity="0.3">
+<path d="M40 164 Q200 176 360 162"/>
+<path d="M560 192 Q740 204 920 188"/>
+</g>
+</g>
+
+<!-- 遠景: 崩れた廃墟の街並み(地平に低く沈むシルエット・苦い勝利)。
+     足元は地面ライン(y=430)の下まで伸ばして接地させ、宙に浮かせない。 -->
+<g fill="#161a2a">
+<polygon points="0,438 0,344 54,344 54,322 86,322 86,344 132,344 132,438"/>
+<polygon points="150,438 150,360 186,360 186,332 206,350 206,360 252,360 252,438"/>
+<!-- 天端が割れた高層 -->
+<polygon points="276,438 276,300 304,300 304,276 312,292 322,276 322,300 354,300 354,438"/>
+<polygon points="700,438 700,318 736,318 736,296 758,318 758,438"/>
+<polygon points="800,438 800,346 846,346 846,326 884,326 884,346 960,346 960,438"/>
+</g>
+
+<!-- 地平の太陽(昇りはじめ・これから) -->
+<ellipse cx="480" cy="404" rx="300" ry="150" fill="url(#s6sun)"/>
+<circle cx="480" cy="404" r="46" fill="#fff4de" opacity="0.85"/>
+<circle cx="480" cy="404" r="30" fill="#fffaf0" opacity="0.95"/>
+
+<!-- 地面(夜明けに照らされる) -->
+<rect x="0" y="430" width="960" height="110" fill="#191c25"/>
+<rect x="0" y="430" width="960" height="4" fill="#3a3330" opacity="0.6"/>
+<g stroke="#0c0e13" stroke-width="3" opacity="0.7" fill="none">
+<path d="M0 474 L 200 468 L 400 480 L 600 470 L 960 478"/>
+<path d="M140 506 L 300 498 L 460 508"/>
+</g>
+<!-- 太陽から地面に伸びる夜明けの照り返し -->
+<polygon points="452,432 508,432 560,540 400,540" fill="#f0cf9e" opacity="0.12"/>
+<ellipse cx="480" cy="436" rx="280" ry="10" fill="#f4d9b0" opacity="0.14"/>
+
+<!-- 前景右: 崩れた壁のかけら(落書き・争いの痕跡。空をふさがぬよう低く) -->
+<g>
+<polygon points="812,540 812,420 846,408 900,418 960,410 960,540" fill="#1b202d"/>
+<polygon points="812,420 846,408 900,418 960,410 960,420 812,426" fill="#2a3350" opacity="0.5"/>
 <!-- 壁のひび -->
 <g stroke="#0d1019" stroke-width="2" fill="none" opacity="0.8">
-<path d="M820 300 L 832 360 L 820 420 L 836 480"/>
-<path d="M900 320 L 888 380 L 902 440"/>
+<path d="M866 414 L 858 460 L 872 500 L 860 540"/>
+<path d="M922 416 L 914 470 L 928 520"/>
 </g>
-<!-- 落書き(争いの痕跡。荒いストローク) -->
+<!-- 落書き(争いの痕跡) -->
 <g stroke="#7a3b3b" stroke-width="3" fill="none" opacity="0.7" stroke-linecap="round">
-<path d="M850 340 L 884 340 M867 330 L 867 372"/>
-<path d="M812 410 L 840 396 M812 396 L 840 410"/>
+<path d="M828 452 L 862 452 M845 442 L 845 484"/>
+<path d="M894 500 L 922 486 M894 486 L 922 500"/>
 </g>
 <g stroke="#c9c2b0" stroke-width="2" fill="none" opacity="0.4" stroke-linecap="round">
-<path d="M900 360 L 930 356 L 906 384 L 936 380"/>
+<path d="M824 500 L 854 496 L 830 524 L 860 520"/>
 </g>
 </g>
 
-<!-- 施設入口から姿を見せる人々(夜明けの逆光に縁取られ、ためらいがちに踏み出す。
-     大人と子どもの組で温かみを出し、なだらかな肩・自然な体形で柔らかく見せる) -->
-<!-- 入口奥の暖かい光(人々の背後) -->
-<rect x="706" y="360" width="72" height="118" fill="url(#s6sun)" opacity="0.3"/>
-<!-- 大人(やや背を丸め、子を見守る) -->
-<g transform="translate(724 436)">
-<path d="M-9 -44 Q-11 -51 -4 -53 Q0 -54 4 -53 Q11 -51 9 -44 L11 -2 L-11 -2 Z" fill="#2c2731"/>
-<circle cx="0" cy="-59" r="7" fill="#2c2731"/>
-<rect x="-8" y="-4" width="6" height="5" rx="1.5" fill="#231e28"/>
-<rect x="2" y="-4" width="6" height="5" rx="1.5" fill="#231e28"/>
-<!-- 夜明けの縁光(右肩・頭の輪郭) -->
-<path d="M4 -53 Q11 -51 9 -44 L11 -12" fill="none" stroke="#f0d2a0" stroke-width="1.4" opacity="0.5"/>
-<path d="M2 -65 Q7 -63 7 -57" fill="none" stroke="#f0d2a0" stroke-width="1.2" opacity="0.45"/>
-</g>
-<!-- 子ども(大人の手前・小さく寄り添う) -->
-<g transform="translate(742 438)">
-<path d="M-6 -29 Q-7 -34 -3 -35 Q0 -36 3 -35 Q7 -34 6 -29 L7 -2 L-7 -2 Z" fill="#322b36"/>
-<circle cx="0" cy="-40" r="5" fill="#322b36"/>
-<rect x="-5" y="-3" width="4" height="4" rx="1" fill="#262029"/>
-<rect x="2" y="-3" width="4" height="4" rx="1" fill="#262029"/>
-<path d="M3 -35 Q7 -34 6 -29 L7 -8" fill="none" stroke="#f0d2a0" stroke-width="1.2" opacity="0.45"/>
-</g>
-<!-- さらに奥の人影(ごく淡く・人々の複数性を示す) -->
-<g transform="translate(765 437)" opacity="0.5">
-<path d="M-6 -41 Q-7 -47 -2 -48 Q3 -49 5 -43 L7 -2 L-7 -2 Z" fill="#29242f"/>
-<circle cx="-1" cy="-54" r="6" fill="#29242f"/>
-</g>
-
-<!-- 倒れたバリケード(手前左。争いの跡) -->
+<!-- 前景左: 倒れたバリケード(争いの跡。低く沈める) -->
 <g fill="#12161f">
-<polygon points="60,470 220,452 250,468 260,500 40,506"/>
+<polygon points="40,500 200,480 232,496 244,532 20,538"/>
 </g>
 <g stroke="#0a0d14" stroke-width="3" fill="none" opacity="0.8">
-<line x1="80" y1="466" x2="240" y2="452"/>
-<line x1="100" y1="488" x2="250" y2="474"/>
+<line x1="60" y1="496" x2="224" y2="482"/>
+<line x1="80" y1="518" x2="234" y2="504"/>
 </g>
 <!-- 有刺鉄線のなごり -->
 <g stroke="#2a2e38" stroke-width="1.6" fill="none" opacity="0.7">
-<path d="M70 452 L 110 446 L 150 452 L 190 444 L 230 450"/>
+<path d="M52 482 L 94 476 L 134 482 L 174 474 L 214 480"/>
 </g>
-<rect x="150" y="446" width="60" height="6" fill="#7a3b3b" opacity="0.5" transform="rotate(-6 150 446)"/>
+<rect x="132" y="476" width="60" height="6" fill="#7a3b3b" opacity="0.5" transform="rotate(-6 132 476)"/>
 
-<!-- 地面(夜明けに照らされる) -->
-<rect x="0" y="430" width="960" height="110" fill="#191b22"/>
-<rect x="0" y="430" width="960" height="4" fill="#3a3330" opacity="0.6"/>
-<g stroke="#0c0e13" stroke-width="3" opacity="0.7" fill="none">
-<path d="M0 472 L 200 466 L 400 478 L 600 468 L 960 476"/>
-<path d="M140 504 L 300 496 L 460 506"/>
-</g>
-<!-- 地面に伸びる夜明けの照り返し -->
-<ellipse cx="480" cy="452" rx="300" ry="14" fill="#e8c79a" opacity="0.08"/>
-
-<!-- RAY と TERRA: 手をつなぎ、空を見上げる後ろ姿(中央手前) -->
+<!-- RAY と TERRA: 手をつなぎ、空を見上げる後ろ姿(中央手前・夜明けに縁取られたシルエット) -->
 <!-- RAY(背面・シアンの縁取り発光) -->
 <g transform="translate(452 430)">
 <ellipse cx="0" cy="-60" rx="120" ry="135" fill="url(#s6rayGlow)"/>
@@ -158,7 +161,7 @@
 <!-- 胴(背面・肩甲のパネル) -->
 <path d="M-28 -122 L 28 -122 L 22 -52 L -22 -52 Z" fill="#172730"/>
 <!-- 背面の発光スリット(脊椎ライン) -->
-<rect x="-3" y="-118" width="6" height="60" rx="3" fill="#37f7d8" opacity="0.45"/>
+<rect x="-3" y="-118" width="6" height="60" rx="3" fill="#37f7d8" opacity="0.5"/>
 <!-- 外側の腕(下ろす) -->
 <path d="M-28 -116 L -18 -114 L -30 -60 L -42 -62 Z" fill="#121d24"/>
 <circle cx="-36" cy="-60" r="6" fill="#121d24"/>
@@ -170,6 +173,8 @@
 <path d="M-16 -154 L 16 -154" fill="none" stroke="#37f7d8" stroke-width="2" opacity="0.6"/>
 <!-- 縁の発光ライン -->
 <path d="M-28 -122 L 28 -122 L 22 -52 L -22 -52 Z" fill="none" stroke="#37f7d8" stroke-width="1.2" opacity="0.5"/>
+<!-- 夜明けの暖色リム(右肩・逆光) -->
+<path d="M16 -154 L 14 -122 L 22 -52" fill="none" stroke="#ffdca8" stroke-width="1.6" opacity="0.5"/>
 </g>
 
 <!-- TERRA(背面・RAY の右で手をつなぎ、空を見上げる。なだらかな体形・自然な腕でやわらかく) -->
@@ -194,30 +199,27 @@
 <!-- 後ろ髪(なめらかなボブ + 低い毛束) -->
 <path d="M-17 -104 Q-18 -120 0 -121 Q18 -120 17 -104 Q17 -90 11 -83 Q0 -87 -11 -83 Q-17 -90 -17 -104 Z" fill="#41301f"/>
 <path d="M-5 -85 Q0 -79 5 -85 Q4 -75 0 -73 Q-4 -75 -5 -85 Z" fill="#41301f"/>
-<!-- 夜明けの縁光(頭の輪郭) -->
-<path d="M-17 -104 Q-18 -120 0 -121 Q18 -120 17 -104" fill="none" stroke="#f4d9b0" stroke-width="1.3" opacity="0.4"/>
+<!-- 夜明けの縁光(頭・肩の輪郭) -->
+<path d="M-17 -104 Q-18 -120 0 -121 Q18 -120 17 -104" fill="none" stroke="#ffe6b8" stroke-width="1.4" opacity="0.5"/>
+<path d="M13 -82 L17 -50" fill="none" stroke="#ffdca8" stroke-width="1.3" opacity="0.4"/>
 </g>
 <!-- つながれた手(2人の間の小さな接点) -->
 <circle cx="484" cy="367" r="4.5" fill="#d8a98a"/>
 
-<!-- RAY の縁にも夜明けの暖色がわずかに乗る(逆光) -->
-<g fill="#f4d9b0" opacity="0.1">
-<rect x="424" y="308" width="6" height="120"/>
-</g>
-
 <!-- 舞う塵(夜明けの光に浮かぶ) -->
-<g fill="#f0ddc0" opacity="0.18">
-<circle cx="360" cy="300" r="2"/>
-<circle cx="560" cy="280" r="1.6"/>
-<circle cx="300" cy="360" r="1.6"/>
-<circle cx="640" cy="320" r="2"/>
-<circle cx="420" cy="250" r="1.4"/>
+<g fill="#f4e3c6" opacity="0.2">
+<circle cx="330" cy="300" r="2"/>
+<circle cx="600" cy="270" r="1.6"/>
+<circle cx="270" cy="350" r="1.6"/>
+<circle cx="660" cy="330" r="2"/>
+<circle cx="400" cy="240" r="1.4"/>
+<circle cx="720" cy="250" r="1.5"/>
 </g>
 
-<!-- ビネット(上は控えめにして空を生かす) -->
-<rect x="0" y="0" width="960" height="80" fill="#04060c" opacity="0.35"/>
-<rect x="0" y="480" width="960" height="60" fill="#04060c" opacity="0.4"/>
-<rect x="0" y="0" width="60" height="540" fill="#04060c" opacity="0.28"/>
-<rect x="900" y="0" width="60" height="540" fill="#04060c" opacity="0.28"/>
+<!-- ビネット(上は空を生かすため最小限) -->
+<rect x="0" y="0" width="960" height="56" fill="#04060c" opacity="0.28"/>
+<rect x="0" y="486" width="960" height="54" fill="#04060c" opacity="0.4"/>
+<rect x="0" y="0" width="48" height="540" fill="#04060c" opacity="0.24"/>
+<rect x="912" y="0" width="48" height="540" fill="#04060c" opacity="0.24"/>
 </g>
 </svg>
