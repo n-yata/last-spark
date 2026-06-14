@@ -22,52 +22,57 @@ describe('getStageStory', () => {
     expect(getStageStory('stageX')).toBeUndefined();
   });
 
-  it('stage1 の確定テキストが story.md と一致する', () => {
+  it('stage1 の確定テキストが③確定版と一致する', () => {
     const s = getStageStory('stage1')!;
-    expect(s.eclipseVoice).toBe('ここは、かんりされている。入ってくるものは、けす');
-    expect(s.intro).toContain('こわれた町。さびと、つる草におおわれた、むかしの町。');
-    expect(s.inner.stageStart).toBe('……おれは、目をさました');
-    expect(s.inner.firstEnemyDefeated).toBe('動けた。——おれは、何者だ');
+    expect(s.eclipseVoice).toBe('ここは管理されている。入って来る者は、消す。');
+    expect(s.intro).toContain('壊れた町。さびと、つたに覆われている。');
+    expect(s.inner.stageStart).toBe('……私は、目を覚ました。');
+    expect(s.inner.firstEnemyDefeated).toBe('体が動く。私は、何なのだろう。');
   });
 
-  it('stage2 の確定テキストが story.md と一致する', () => {
+  it('stage2 の確定テキストが③確定版と一致する', () => {
     const s = getStageStory('stage2')!;
-    expect(s.eclipseVoice).toBe('このたてものは、ECLIPSEのものだ。入ってくるものは、けす');
-    expect(s.inner.stageStart).toBe('上に、何かある。引きよせられる——どうして');
+    expect(s.eclipseVoice).toBe('ここは管理下にある。入って来た者は、消す。');
+    expect(s.inner.stageStart).toBe('上に、何かある。引き寄せられるのは、なぜだろう。');
   });
 
-  it('stage3 の確定テキストが story.md と一致する', () => {
+  it('stage3 の確定テキストが③確定版と一致する', () => {
     const s = getStageStory('stage3')!;
-    expect(s.intro).toContain('人をとじこめる、しせつ。生きている人の、けはいがする。');
-    expect(s.eclipseVoice).toBe('そいつは、おれたちのものだ。かえせ');
-    expect(s.inner.stageStart).toBe('生きている。人の、においがする');
-    expect(s.inner.terraFound).toBe('……この子が、とじこめられている');
+    expect(s.intro).toContain('人を閉じ込める場所。');
+    // ボス前時点ではまだ奪っていないので「返せ」ではなく「渡さない」。
+    expect(s.eclipseVoice).toBe('それは、我々のものだ。渡さない。');
+    expect(s.inner.stageStart).toBe('生きている。誰か、いる。');
+    // ボス前の気配。まだテラとは分からない。
+    expect(s.inner.terraFound).toBe('奥に、誰かいる。閉じ込められている。');
   });
 
-  it('stage4 の確定テキストが story.md と一致する', () => {
+  it('stage4 の確定テキストが③確定版と一致する', () => {
     const s = getStageStory('stage4')!;
-    expect(s.intro).toContain('よごれた土地。大地はかれ、空気はにごっている。');
-    expect(s.eclipseVoice).toBe('お前もきかいだ。なぜ、むだなことをえらぶ');
-    expect(s.inner.stageStart).toBe('……これが、人間のしたことか');
-    expect(s.inner.eclipseReaction).toBe('ECLIPSEは……正しいのか');
-    expect(s.inner.bossDefeated).toBe('それでも——TERRAの顔が、うかぶ');
+    expect(s.intro).toContain('汚れた土地。草も枯れ、空気もにごっている。');
+    expect(s.eclipseVoice).toBe('お前も機械だ。なぜ、星を殺す者を守る。');
+    expect(s.inner.stageStart).toBe('……これが、人間のしたことか。');
+    // 「あの声は正しいか」ではない＝レイは敵の名も主張も知らない。
+    expect(s.inner.eclipseReaction).toBe('私が守る人間が、この星をこうした。私は、間違っているのだろうか。');
+    expect(s.inner.bossDefeated).toBe('それでも、テラの顔が浮かぶ。');
   });
 
-  it('stage5 の確定テキストが story.md と一致する', () => {
+  it('stage5 の確定テキストが③確定版と一致する', () => {
     const s = getStageStory('stage5')!;
-    expect(s.intro).toContain('ECLIPSEのそとがわ。きかいが、どんどん多くなる。');
-    expect(s.eclipseVoice).toBe('気もちは、こしょうだ。地球は、お前をいらない');
-    expect(s.inner.eclipseReaction).toBe('気もちが、力になる。おれには——それがある');
-    expect(s.inner.bossDefeated).toBe('おれは、感じるために作られた。それだけで——十分だ');
+    expect(s.intro).toContain('世界を管理するものの、すぐ外。');
+    // 内心（気持ち）を名指しせず、観測した「守る行動」を故障と断じる。
+    expect(s.eclipseVoice).toBe('その個体を守る意味はない。お前の動きは、故障だ。');
+    expect(s.inner.eclipseReaction).toBe('故障でもいい。私は、この子を守ると決めた。');
+    // 出自（なぜ作られたか）は語らない。
+    expect(s.inner.bossDefeated).toBe('この気持ちは、私のものだ。それでいい。');
   });
 
-  it('stage6 の確定テキストが story.md と一致する', () => {
+  it('stage6 の確定テキストが③確定版と一致する', () => {
     const s = getStageStory('stage6')!;
-    expect(s.intro).toContain('いちばんおくのへや。ここが、ECLIPSEのまんなかだ。');
-    expect(s.eclipseVoice).toBe('地球を守るために、お前をけす');
-    expect(s.inner.stageStart).toBe('ここだ。ここで——終わる');
-    expect(s.inner.eclipseReaction).toBe('これが、おれの答えだ');
-    expect(s.inner.bossDefeated).toBe('……終わった');
+    expect(s.intro).toContain('一番奥の部屋。');
+    expect(s.eclipseVoice).toBe('お前は、星を殺す者の味方をする。それは、星への裏切りだ。');
+    expect(s.inner.stageStart).toBe('ここだ。ここで、終わる。');
+    expect(s.inner.eclipseReaction).toBe('これが、私の答えだ。');
+    expect(s.inner.bossDefeated).toBe('……終わった。');
   });
 });
 

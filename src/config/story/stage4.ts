@@ -1,21 +1,21 @@
 import type { StageStory } from '../../types/story';
 
-// Stage 4「汚染地帯」の確定テキスト。docs/story.md「テキストコンテンツ(確定版)」より転記。
-// ステージ開始演出シーン(TERRA同行)は config/story/cutscenes.ts の 'stage4-intro' を正とする。
-// テーマは「環境への怒りと悲しみ」。ECLIPSE の論理に揺らぐステージ。
+// Stage 4「汚染地帯」の確定テキスト。docs/story.md のビートと「書き方の原則」に沿って③で確定。
+// ステージ開始演出シーン(テラ同行)は config/story/cutscenes.ts の 'stage4-intro' を正とする。
+// テーマは「揺らぎ」。敵名は出さない。あの声はレイの「守る行動」を根拠にし、内心は名指ししない。
 
 export const STAGE4_STORY: StageStory = {
   stageId: 'stage4',
-  intro: ['よごれた土地。大地はかれ、空気はにごっている。', 'これが、人間ののこしたきずあとだ。', 'ECLIPSEの言葉が——頭をよぎる。'].join(
-    '\n',
-  ),
-  eclipseVoice: 'お前もきかいだ。なぜ、むだなことをえらぶ',
+  intro: ['汚れた土地。草も枯れ、空気もにごっている。', 'これが、人間が残したものだ。', 'あの声の言葉が、頭をよぎる。'].join('\n'),
+  // 観測した「守る行動」が根拠。内心（迷い）は名指ししない。
+  eclipseVoice: 'お前も機械だ。なぜ、星を殺す者を守る。',
   inner: {
     // 汚染地帯を見て(ステージ開始時)
-    stageStart: '……これが、人間のしたことか',
-    // ECLIPSE の語りかけ(ボス前)を聞いて。bossIntro の直後に発火する。
-    eclipseReaction: 'ECLIPSEは……正しいのか',
-    // ボス撃破後・TERRA を思い出して。撃破演出後・クリア遷移前に発火する。
-    bossDefeated: 'それでも——TERRAの顔が、うかぶ',
+    stageStart: '……これが、人間のしたことか。',
+    // あの声を聞いた直後の揺らぎ。bossIntro の直後に発火する。
+    // ※「あの声は正しいか」ではない＝レイは敵の名も主張も知らない。自分の迷いとして出す。
+    eclipseReaction: '私が守る人間が、この星をこうした。私は、間違っているのだろうか。',
+    // ボス撃破後・テラを思い出して。撃破演出後・クリア遷移前に発火する。
+    bossDefeated: 'それでも、テラの顔が浮かぶ。',
   },
 };

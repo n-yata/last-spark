@@ -1,6 +1,6 @@
-// 演出シーン(CutsceneScene)のスクリプト定義。docs/story.md「TERRAのセリフ」確定版を転記する。
-// TERRA のセリフと RAY の内心を交互に並べ、ト書き(direction)で状況を説明する。
-// Stage 4-6 の演出もこのファイルへ追記するだけで CutsceneScene が再生できる(後続ブロックの前提)。
+// 演出シーン(CutsceneScene)のスクリプト定義。docs/story.md のビートと「書き方の原則」に沿って③で確定。
+// テラのセリフとレイの内心を交互に並べ、ト書き(direction)で状況を説明する。表示テキストの固有名は
+// レイ/テラ（型・キー等のコード識別子は RAY/TERRA のまま）。胸の刻印のみ英字「RAY」を残す。
 
 /** 演出スクリプトの 1 行。話者種別で表示スタイルが変わる(話者ラベルは出さない)。 */
 export type CutsceneLine =
@@ -24,10 +24,10 @@ export interface Cutscene {
 const STAGE1_INTRO: Cutscene = {
   key: 'stage1-intro',
   lines: [
-    { kind: 'rayInner', text: '……おれは、目をさました' },
-    { kind: 'direction', text: 'こわれた町。さびと、つる草におおわれた、むかしの町。' },
-    { kind: 'rayInner', text: 'ここは、見はられている。' },
-    { kind: 'rayInner', text: 'おれは——どうして、ここにいるんだ。' },
+    { kind: 'rayInner', text: '……私は、目を覚ました' },
+    { kind: 'direction', text: '壊れた町。さびと、つたに覆われている' },
+    { kind: 'rayInner', text: 'だれかに見られている気がする' },
+    { kind: 'rayInner', text: '私は、なぜここにいるのだろう' },
   ],
 };
 
@@ -35,15 +35,16 @@ const STAGE3_RESCUE: Cutscene = {
   key: 'stage3-rescue',
   lines: [
     { kind: 'terraLine', text: '……ロボット？' },
-    { kind: 'rayInner', text: '……小さい。こんなに、小さい' },
-    { kind: 'terraLine', text: 'こわくない？' },
-    { kind: 'rayInner', text: 'こわい。でも、はなさない' },
-    { kind: 'terraLine', text: '名前は——TERRAっていうの。あなたは？' },
+    { kind: 'rayInner', text: '……小さい。こんなに、小さいのか' },
+    { kind: 'terraLine', text: '怖くない？' },
+    { kind: 'rayInner', text: '怖い。でも、離さない' },
+    { kind: 'terraLine', text: '名前は、テラっていうの。あなたは？' },
     { kind: 'rayInner', text: '……答え方が、分からない' },
-    { kind: 'direction', text: 'TERRAが、RAYのむねのしるしに気づく' },
-    { kind: 'terraLine', text: '……R・A・Y。RAYだ！　RAYっていうんだね' },
-    { kind: 'rayInner', text: 'RAY。——それが、おれの名前' },
-    { kind: 'rayInner', text: 'この子を、守る。理由は分からない。でも——そう感じる' },
+    // 胸の刻印は英字「RAY」のまま。テラがそれを読んで「レイ」と呼ぶ（名前の由来 ray of light と繋がる）。
+    { kind: 'direction', text: 'テラが、レイの胸の印に気づく' },
+    { kind: 'terraLine', text: '……R・A・Y。レイだ！　レイって、いうんだね' },
+    { kind: 'rayInner', text: 'レイ。それが、私の名前' },
+    { kind: 'rayInner', text: 'この子を守る。理由は分からない。でも、そう感じる' },
   ],
 };
 
@@ -53,10 +54,10 @@ const STAGE3_RESCUE: Cutscene = {
 const STAGE4_INTRO: Cutscene = {
   key: 'stage4-intro',
   lines: [
-    { kind: 'terraLine', text: 'ここ、空気が変。息が苦しい' },
-    { kind: 'rayInner', text: '人間が——こわした場所だ' },
+    { kind: 'terraLine', text: 'ここ、空気が変。息が、苦しい' },
+    { kind: 'rayInner', text: '人間が、壊した場所だ' },
     { kind: 'terraLine', text: 'だれが、こんなにしたの？' },
-    { kind: 'rayInner', text: '……人間が。おれが守ろうとしている——人間が' },
+    { kind: 'rayInner', text: '……人間が。私が守ろうとしている、その人間が' },
   ],
 };
 
@@ -66,9 +67,9 @@ const STAGE4_INTRO: Cutscene = {
 const STAGE5_INTRO: Cutscene = {
   key: 'stage5-intro',
   lines: [
-    { kind: 'terraLine', text: 'ここ、こわい。ECLIPSEが近い' },
-    { kind: 'rayInner', text: 'もうすぐ——終わりに向かう' },
-    { kind: 'terraLine', text: 'RAY、ぜったいに勝てる？' },
+    { kind: 'terraLine', text: 'ここ、怖い。あの声が、近い' },
+    { kind: 'rayInner', text: 'もうすぐ、終わりに向かう' },
+    { kind: 'terraLine', text: 'レイ、絶対に勝てる？' },
     { kind: 'rayInner', text: '……分からない。でも、止まれない' },
   ],
 };
@@ -82,19 +83,19 @@ const STAGE6_ENDING: Cutscene = {
   key: 'stage6-ending',
   lines: [
     // ステップ1: 管理解除。
-    { kind: 'narration', text: 'ECLIPSEのかんりが、とけた' },
-    // ステップ2: TERRAとのセリフ交換(だれにも管理されない自由な空)。
-    { kind: 'terraLine', text: 'RAY、空が——' },
-    { kind: 'rayInner', text: 'だれにも、かんりされていない空' },
+    { kind: 'narration', text: 'あの声の管理が、解けた' },
+    // ステップ2: テラとのセリフ交換(だれにも管理されない自由な空)。
+    { kind: 'terraLine', text: 'レイ、空が——' },
+    { kind: 'rayInner', text: 'だれにも管理されていない空だ' },
     { kind: 'terraLine', text: 'きれい' },
     { kind: 'rayInner', text: '……ああ' },
-    // 苦い勝利: 楽園ではない。壁に残る争いの痕跡。
-    { kind: 'direction', text: 'こわれた町のかべに——らくがき、くずれたバリケード、人間どうしがあらそったあと' },
-    { kind: 'rayInner', text: 'これが、おれが守ろうとした世界だ' },
-    { kind: 'terraLine', text: 'ねえ、RAY。次は何する？' },
-    { kind: 'rayInner', text: '次は——おれたちが、決める' },
-    // ステップ4: エンディング本文。
-    { kind: 'narration', text: '終わりではなく、始まり。\n人間はここから、また歩き直す。' },
+    // 苦い勝利: 楽園ではない。壁に残る争いの痕跡（群衆は出さない・ト書き描写は story.md 容認）。
+    { kind: 'direction', text: '壊れた町の壁に、落書き。崩れたバリケード。人間どうしが争った跡' },
+    { kind: 'rayInner', text: 'これが、私が守ろうとした世界だ' },
+    { kind: 'terraLine', text: 'ねえ、レイ。次は何する？' },
+    { kind: 'rayInner', text: '次は、私たちが決める' },
+    // ステップ4: エンディング本文（人類はほぼ絶滅・やり直しはこの二人から）。
+    { kind: 'narration', text: '終わりではなく、始まり。\nここから、私たちが歩き出す。' },
   ],
 };
 
