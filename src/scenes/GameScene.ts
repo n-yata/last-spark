@@ -547,7 +547,9 @@ export class GameScene extends Phaser.Scene {
     // 異なるため、displayWidth(=width/zoom)で算出する。これを誤ると画面アスペクト比に
     // よってボストリガー地点に届かず「ボスが出ない」不具合になる。
     const cameraRightX = cam.scrollX + cam.displayWidth;
-    this.spawn.update(cameraRightX);
+    // カメラ右端に加えプレイヤー X も渡す。狭い/特定アスペクトの端末でカメラ右端が
+    // bossTriggerX に届かずボスが出ない事象を防ぐ(SpawnSystem 側でプレイヤー到達フォールバック)。
+    this.spawn.update(cameraRightX, this.player.x);
     this.spawn.updateEnemies(time, this.player.x);
 
     if (this.boss) {

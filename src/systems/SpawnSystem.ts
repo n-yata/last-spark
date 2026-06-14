@@ -34,6 +34,14 @@ export class SpawnSystem {
   /** ボス全身が画面内に収まったうえで、さらにこの余白だけ内側に見えてから戦闘開始する。 */
   private static readonly BOSS_VISIBLE_MARGIN_PX = 24;
 
+  /**
+   * プレイヤー自身がボス出現地点のこの距離手前まで到達したら、カメラ右端に依らず必ず発火する
+   * フォールバック距離(px)。横長/縦長など端末のアスペクト比によっては「カメラ右端」が
+   * bossTriggerX に届かず(ステージ幅とボス位置が近いと顕著)ボスが永久に出ない不具合があるため、
+   * プレイヤー到達でも確実にボス戦へ移行させる。
+   */
+  private static readonly BOSS_PLAYER_FALLBACK_PX = 220;
+
   constructor(
     scene: Phaser.Scene,
     enemies: Phaser.Physics.Arcade.Group,
@@ -76,15 +84,22 @@ export class SpawnSystem {
     this.bossCallback = cb;
   }
 
-  /** カメラ右端 X に応じて出現/ボストリガを処理する。 */
-  update(cameraRightX: number): void {
+  /**
+   * カメラ右端 X(と任意でプレイヤー X)に応じて出現/ボストリガを処理する。
+   * ボス戦突入は「カメラ右端が bossTriggerX に到達」が基本だが、端末アスペクト比によっては
+   * カメラ右端が bossTriggerX へ届かない場合があるため、「プレイヤーがボス出現地点付近へ到達」
+   * でも発火させる(端末非依存でボスが必ず出る)。
+   */
+  update(cameraRightX: number, playerX = -Infinity): void {
     const spawnLine = cameraRightX + SpawnSystem.SPAWN_MARGIN_PX;
     while (this.pending.length > 0 && this.pending[0].x <= spawnLine) {
       const spawn = this.pending.shift() as EnemySpawn;
       this.spawnEnemy(spawn);
     }
 
-    if (!this.bossTriggered && cameraRightX >= this.bossTriggerX) {
+    const cameraReached = cameraRightX >= this.bossTriggerX;
+    const playerReached = playerX >= this.stage.bossSpawn.x - SpawnSystem.BOSS_PLAYER_FALLBACK_PX;
+    if (!this.bossTriggered && (cameraReached || playerReached)) {
       this.bossTriggered = true;
       this.bossCallback?.();
     }
