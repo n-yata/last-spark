@@ -319,8 +319,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     // Group.add() がボディ設定をグループ既定値(重力ON)で上書きするため、静止設定を再適用する。
     beam.configureBody();
     beam.fire(this); // Player(x/y/facing)を owner に渡し、以後マズルへ追従させる。
+    // 発射音は Beam.fire/destroy が射出中だけ鳴らす持続音(startBeam/stopBeam)。
+    // 通常チャージの単発SE(shootCharged)とは別系統にして「強化された強さ」を表す。
     this.rig.triggerAttack(now);
-    getSound().playSe('shootCharged');
   }
 
   /** 被弾。無敵中は無効。HP0 で撃破。 */
