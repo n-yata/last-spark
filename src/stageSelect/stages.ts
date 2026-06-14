@@ -1,6 +1,6 @@
 import { STAGE_IDS } from '../config/stage1';
 
-// 開発モードのステージ選択で使うステージ一覧データ(Phaser 非依存)。
+// タイトルのステージ選択で使うステージ一覧データ(Phaser 非依存)。
 // UI(stageSelect.ts)と分離することで、Phaser を読み込まずに単体テストできる。
 
 // ステージ ID → 表示ラベル。未知 ID は ID をそのまま表示する。
