@@ -104,37 +104,45 @@
 
 ## フェーズ F: 品質チェックと仕上げ
 
-- [ ] 難易度カーブの通し調整（HP序列 使者26<浄化28<番人30<コア40 を維持）
-- [ ] すべてのテストが通ることを確認
-  - [ ] `npm test`
-- [ ] リントエラーがないことを確認
-  - [ ] `npm run lint`
-- [ ] 型エラーがないことを確認
-  - [ ] `npm run typecheck`
-- [ ] ビルドが成功することを確認
-  - [ ] `npm run build`
-- [ ] クルトワ（security-engineer）によるセキュリティレビュー
-- [ ] 実装後の振り返り（このファイルの下部に記録）
+- [x] 難易度カーブの通し調整（HP序列 使者26<浄化28<番人30<コア40 を維持）
+  - HP序列は Phase A の値設定で確立し、envoyBoss/purifierBoss/coreBoss/wardenBoss テストで担保。新攻撃(lance damage2/bloom damage2)は既存 signature 攻撃(missile2/spray1)と同水準で、無敵フレームにより多重ヒットも抑制 → 追加チューニングは不要と判断
+- [x] すべてのテストが通ることを確認
+  - [x] `npm test`（442件 pass）
+- [x] リントエラーがないことを確認
+  - [x] `npm run lint`
+- [x] 型エラーがないことを確認
+  - [x] `npm run typecheck`
+- [x] ビルドが成功することを確認
+  - [x] `npm run build`
+- [x] クルトワ（security-engineer）によるセキュリティレビュー（各フェーズ A〜E でコミット前に実施。全て Critical/High なし）
+- [x] 実装後の振り返り（このファイルの下部に記録）
 
 ---
 
 ## 実装後の振り返り
 
 ### 実装完了日
-{YYYY-MM-DD}
+2026-06-14
 
 ### 計画と実績の差分
 
 **計画と異なった点**:
-- {実装時に追記}
+- 着手前に worktree が git から切り離されている事故（本体 .git/worktrees 消失・ブランチ未コミット消失）を発見。バックアップ退避→master 最新化→同名 worktree 再作成→.steering 移植→古い master 由来のスタール差分(PR #42/#43 巻き戻し)破棄、で非破壊復旧してから着手した。
+- リグ系統指定は `stage1.ts` の `bossRig` ではなく、専用クラス(EnvoyBoss/PurifierBoss)が自身のリグをコンストラクタで保持する既存規約に統一（stage.bossRig は generic Boss 分岐専用で dead config になるため）。
+- 作業中に master へ PR #44(story)/#45(boss距離)/#46(docs) がマージされ、フェーズ間で 3 回 master を取り込み（いずれも無衝突）。
 
 **新たに必要になったタスク**:
-- {実装時に追記}
+- `HAZARD` 定数を balance.ts 内で前方移動（PURIFIER.bloom.damage から参照する際の TDZ 回避＋単一正本維持）。
+- `FlyingBoss` に `rigFamily` 引数を追加（EnvoyBoss が bossEnvoy を渡せるように。既定 bossFlying で後方互換）。
+- `Hazard.destroy` override で脈動 tween を確実停止（動的 bloom 床の時限破棄で破棄済み参照を防ぐ）。
 
 ### 学んだこと
 
 **技術的な学び**:
-- {実装時に追記}
+- Phaser の group overlap は group 単位で登録すれば動的に add したメンバーも自動で判定対象になる → bloom の動的 Hazard 追加がそのまま機能した。
+- 既存の疎結合パターン(CoreBoss.setSummonContext)を踏襲し、動的生成の責務を Scene 側へ集約することで、ボスは「どこに・いつまで」だけ伝える綺麗な分離が実現できた。
+- リグは新 PartShape を足さず既存形状(roundedBox/barrel/cyclops/leg/sensor/cannon)の組み合わせで個性を出せた（makePart switch の描画リスクを回避）。
 
 ### 次回への改善提案
-- {実装時に追記}
+- playwright での実機ビジュアル目視は、GameScene を force-start(scene.start で直接ジャンプ)するとカットシーン由来の sleep/カメラ未初期化でワールドが canvas に合成されず、ピクセルスクショが撮れなかった（データ層 introspection＋構造テストで担保）。次回は通常フロー(Title→stage select→実プレイでボストリガーまで到達)で撮るか、ビジュアル確認用の専用デバッグ起動経路を用意すると良い。
+- 並行セッションが複数 worktree で動くため、worktree/.git 破壊事故が再発し得る。作業開始時の git 健全性チェックを定型化すると安全。
