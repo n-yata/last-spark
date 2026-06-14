@@ -45,8 +45,14 @@
 - `requirements.md`: 今回の要求内容
 - `design.md`: 実装アプローチ
 - `tasklist.md`: 具体的なタスクリスト
+- `retrospective.md`: 実装後の振り返り（モード3で作成。tasklist.md とは別ファイル）
 
 命名規則: `20260614-add-user-profile` 形式（`[YYYYMMDD]-[タスク名]`）
+
+**軽微な作業の振り返り**: ステアリングを切るほどでもないバグ修正・小改善でも、残すべき
+学び・申し送り（再発防止、ハマりどころ、設計判断、次回への注意）があれば、`retrospective.md`
+**だけ**を `.steering/[YYYYMMDD]-[作業名]/` に残す（steeringスキルのモード3・ケースB）。
+学びが何もない軽微作業（typo修正など）は作成不要。
 
 #### ステアリングファイルの管理
 
@@ -92,6 +98,7 @@
 - `requirements.md`: 今回の作業の要求内容
 - `design.md`: 変更内容の設計
 - `tasklist.md`: タスクリスト
+- `retrospective.md`: 実装後の振り返り（モード3で作成）
 
 ## 開発プロセス
 
