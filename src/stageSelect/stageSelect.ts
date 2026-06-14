@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getSound } from '../systems/SoundManager';
 import { scaled, scaledFontPx } from '../config/uiScale';
+import { makeMenuButton } from '../ui/menuButton';
 import { PLAYABLE_STAGES } from './stages';
 
 // タイトル画面のステージ選択 UI。任意のステージから本編を始められる一般向け機能。
@@ -30,22 +31,6 @@ export function createStageSelect(
     overlay?.destroy();
     overlay = undefined;
     startZone.setInteractive();
-  };
-
-  const makeMenuButton = (
-    x: number,
-    y: number,
-    label: string,
-    onClick: () => void,
-  ): Phaser.GameObjects.Text => {
-    const btn = scene.add
-      .text(x, y, label, { fontFamily: 'monospace', fontSize: scaledFontPx(20), color: '#cfe9e2' })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    btn.on(Phaser.Input.Events.POINTER_OVER, () => btn.setColor('#fff27a'));
-    btn.on(Phaser.Input.Events.POINTER_OUT, () => btn.setColor('#cfe9e2'));
-    btn.on(Phaser.Input.Events.POINTER_DOWN, onClick);
-    return btn;
   };
 
   const openStageSelect = (): void => {
@@ -78,7 +63,7 @@ export function createStageSelect(
     const gap = Math.min(scaled(56), (bottom - top) / (rows - 1));
     PLAYABLE_STAGES.forEach((stage, index) => {
       o.add(
-        makeMenuButton(width / 2, top + gap * index, stage.label, () => {
+        makeMenuButton(scene, width / 2, top + gap * index, stage.label, () => {
           // 開始へ進む。効果音は onStartStage 側に任せ、二重再生を避ける。
           destroyOverlay();
           onStartStage(stage.id);
@@ -88,7 +73,7 @@ export function createStageSelect(
 
     // BACK: 効果音を鳴らして閉じる。最後のステージの下に配置する。
     o.add(
-      makeMenuButton(width / 2, top + gap * PLAYABLE_STAGES.length, '◂ BACK', () => {
+      makeMenuButton(scene, width / 2, top + gap * PLAYABLE_STAGES.length, '◂ BACK', () => {
         getSound().playSe('uiTap');
         destroyOverlay();
       }),

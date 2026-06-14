@@ -25,6 +25,7 @@ import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { resolveStoryEvent, readingDurationMs } from '../systems/storyDirector';
 import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
+import { shouldResumeGame } from '../systems/orientationGuard';
 import { getSound } from '../systems/SoundManager';
 import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
@@ -94,6 +95,10 @@ export class GameScene extends Phaser.Scene {
   private inPostBoss = false;
   /** 撃破時刻で確定したクリアタイム(救出演出後のクリア遷移へ持ち越す)。 */
   private pendingClearTimeMs = 0;
+  /** オプションメニューによるポーズ中か(OrientationScene の resume 競合回避にも使う)。 */
+  private paused = false;
+  /** ポーズ起動キー(ESC / P)。キーボードプレイ時の導線。 */
+  private pauseKeys?: { esc: Phaser.Input.Keyboard.Key; p: Phaser.Input.Keyboard.Key };
 
   constructor() {
     super(SCENE_KEYS.game);
@@ -107,6 +112,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.ended = false;
+    this.paused = false;
     // シーンはステージ継続(stage1→stage2)で再利用される。前ステージのボス参照が残ると
     // spawnBoss の早期 return で次ステージのボスが出ないため、必ずクリアする。
     this.boss = undefined;
@@ -133,6 +139,7 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch(SCENE_KEYS.ui);
     this.initHud();
     this.setupOrientationHandling();
+    this.setupPauseControls();
     // 探索 BGM。TERRA 同行後(Stage 3 クリア以降)は温もりのある stageWarm へ切り替える。
     getSound().playBgm(selectExplorationBgm(new SaveManager().getData().clearedStages));
     this.startIntro();
@@ -592,10 +599,12 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossActive, false);
     this.registry.set(HUD.bossHp, 0);
     this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
+    this.registry.set(HUD.pauseRequested, false);
   }
 
   override update(time: number): void {
     if (this.ended) return;
+    if (this.checkPauseRequest()) return;
 
     const inputState = this.inputController.update();
     this.player.applyInput(inputState, time);
@@ -755,7 +764,11 @@ export class GameScene extends Phaser.Scene {
         this.scene.pause();
       } else if (!portrait && orientationActive) {
         this.scene.stop(SCENE_KEYS.orientation);
-        this.scene.resume();
+        // 横持ち復帰でも、オプションメニューでポーズ中なら resume しない
+        // (縦持ち pause とポーズの二重管理を shouldResumeGame で一本化する)。
+        if (shouldResumeGame(portrait, this.paused)) {
+          this.scene.resume();
+        }
       }
     };
     this.scale.on(Phaser.Scale.Events.RESIZE, check);
@@ -764,5 +777,86 @@ export class GameScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, check);
     });
     check();
+  }
+
+  /** ポーズ起動キー(ESC / P)を登録する。検出は update の checkPauseRequest で行う。 */
+  private setupPauseControls(): void {
+    const kb = this.input.keyboard;
+    if (!kb) return;
+    this.pauseKeys = {
+      esc: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+      p: kb.addKey(Phaser.Input.Keyboard.KeyCodes.P),
+    };
+  }
+
+  /**
+   * ポーズ要求(HUD のポーズボタン or ESC/P キー)を検出し、あればポーズを開始する。
+   * 開始した(または既にポーズ中の)場合は true を返し、update の残りをスキップさせる。
+   */
+  private checkPauseRequest(): boolean {
+    if (this.paused) return true;
+    const requested = this.registry.get(HUD.pauseRequested) === true;
+    const keyDown =
+      !!this.pauseKeys &&
+      (Phaser.Input.Keyboard.JustDown(this.pauseKeys.esc) ||
+        Phaser.Input.Keyboard.JustDown(this.pauseKeys.p));
+    if (!requested && !keyDown) return false;
+    this.registry.set(HUD.pauseRequested, false);
+    this.requestPause();
+    return true;
+  }
+
+  /** ゲーム + HUD を一時停止し、ポーズメニュー(PauseScene)を重ねる。 */
+  private requestPause(): void {
+    if (this.paused || this.ended) return;
+    this.paused = true;
+    // 物理ステップ中の scene.pause() によるフリーズを避け、次フレーム境界で状態変更する
+    // (救出/エンディング演出と同方式)。
+    this.time.delayedCall(0, () => {
+      this.scene.pause(SCENE_KEYS.ui);
+      this.scene.launch(SCENE_KEYS.pause, { stageId: this.stageId });
+      this.scene.pause();
+    });
+  }
+
+  /** ポーズメニューの「ゲームに戻る」から呼ばれ、GameScene/UIScene を再開する。 */
+  requestResume(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    this.scene.resume(SCENE_KEYS.ui);
+    this.scene.resume();
+  }
+
+  /** ポーズメニューの「もう一度プレイ」: 現ステージを最初からやり直す(開始演出はスキップ)。 */
+  retry(): void {
+    this.leavePauseFor(() =>
+      transitionTo(this, SCENE_KEYS.game, { stageId: this.stageId, skipCutscene: true }),
+    );
+  }
+
+  /** ポーズメニューの「タイトルへ戻る」。 */
+  returnToTitle(): void {
+    this.leavePauseFor(() => transitionTo(this, SCENE_KEYS.title));
+  }
+
+  /** ポーズメニューのステージ選択から指定ステージへ移動する(タイトルのステージ選択と同挙動)。 */
+  goToStage(stageId: string): void {
+    getSound().playSe('uiTap');
+    this.leavePauseFor(() => transitionTo(this, SCENE_KEYS.game, { stageId }));
+  }
+
+  /**
+   * ポーズ状態を解除してゲームから離脱する共通処理。PauseScene/UIScene を停止し、
+   * GameScene 自身を resume(カメラ/クロックを動かしてフェード遷移を有効化)してから遷移する。
+   * フェード中はゲーム進行を止めるため ended を立てる(scene.start で create が false に戻す)。
+   */
+  private leavePauseFor(go: () => void): void {
+    this.paused = false;
+    this.ended = true;
+    this.scene.stop(SCENE_KEYS.pause);
+    this.scene.stop(SCENE_KEYS.ui);
+    this.scene.resume();
+    this.inputController.destroy();
+    go();
   }
 }

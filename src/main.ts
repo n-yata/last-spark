@@ -10,6 +10,7 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { ClearScene } from './scenes/ClearScene';
 import { CutsceneScene } from './scenes/CutsceneScene';
 import { OrientationScene } from './scenes/OrientationScene';
+import { PauseScene } from './scenes/PauseScene';
 
 // エントリポイント。Phaser.Game を生成し全シーンを登録する。
 // シーン遷移: Boot → Preload → Title → Game(+UI 並行) → Clear / GameOver。
@@ -25,6 +26,7 @@ const game = new Phaser.Game(
     ClearScene,
     CutsceneScene,
     OrientationScene,
+    PauseScene,
   ]),
 );
 
