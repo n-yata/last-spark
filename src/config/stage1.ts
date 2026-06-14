@@ -350,8 +350,9 @@ const STAGE4: StageData = {
   bossVariant: 'purifier',
   bossArenaMinX: 4100,
   width: STAGE4_WIDTH,
-  // 汚染の淀みを背景色で表現する(緑がかった暗い土気色。プレースホルダの環境表現)。
-  backgroundColor: '#151a0c',
+  // 汚染の淀みを背景色で表現する(緑がかった土気色)。背景テーマの明度UPに合わせ、
+  // 地平線下で段差が出ないよう前面シルエット色帯へ寄せて持ち上げる。
+  backgroundColor: '#20280f',
   // ステージ開始演出(TERRA同行)。汚染地帯の空気に TERRA が反応する。
   introCutsceneKey: 'stage4-intro',
   // stage4 クリア後は stage5(ECLIPSE外縁部)へ続く。
@@ -412,8 +413,9 @@ const STAGE5: StageData = {
   bossVariant: 'envoy',
   bossArenaMinX: 4200,
   width: STAGE5_WIDTH,
-  // 外縁部の冷たい金属の空気を背景色で表現する(青みがかった暗い鋼色。プレースホルダの環境表現)。
-  backgroundColor: '#0c1119',
+  // 外縁部の冷たい金属の空気を背景色で表現する(青みがかった鋼色)。背景テーマの明度UPに
+  // 合わせ、地平線下で段差が出ないよう持ち上げる。
+  backgroundColor: '#141d2a',
   // ステージ開始演出(TERRA同行)。ECLIPSE が近づく緊張に TERRA が怯える。
   introCutsceneKey: 'stage5-intro',
   // stage5 クリア後は stage6(ECLIPSE支配中枢=最終ステージ)へ続く。
@@ -468,8 +470,9 @@ const STAGE6: StageData = {
   bossKind: 'core',
   bossArenaMinX: 4250,
   width: STAGE6_WIDTH,
-  // 支配中枢の冷たい闇(ほぼ黒に近い藍。太陽を遮る「影」の核を背景で表現。プレースホルダ)。
-  backgroundColor: '#06080f',
+  // 支配中枢の冷たい闇(暗い藍。太陽を遮る「影」の核)。最も暗いトーンは保ちつつ、背景テーマの
+  // 明度UPに合わせて地平線下が沈みすぎないよう僅かに持ち上げる。
+  backgroundColor: '#0e0c18',
   // ステージ開始演出は持たない(開始テキスト stageIntro と内心で導入する)。
   // 最終ステージ: nextStageId なし。撃破後はエンディング演出へ分岐する。
   endingCutsceneKey: 'stage6-ending',
