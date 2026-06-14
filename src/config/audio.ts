@@ -103,6 +103,39 @@ export const SE: Record<SeKey, SeSpec> = {
   uiTap: { wave: 'square', freqStart: 600, freqEnd: 600, durationMs: 60, attackMs: 1, releaseMs: 40, volume: 0.35 },
 } as const;
 
+// --- 持続ビーム音(RAY強化のチャージ攻撃) ---
+// 単発SE(playSe)とは別系統。ビーム射出中ずっと鳴らす重厚な持続音で「強さ」を表す。
+// 低層(重み)+ 完全5度上(パワーコード感)+ ノイズ(ジリつき)を SoundManager.startBeam が合成する。
+
+/** 持続ビーム音の合成仕様。SoundManager.startBeam()/stopBeam() が解釈する。 */
+export interface BeamSoundSpec {
+  /** 低層(重み・パワー)の波形と周波数。 */
+  lowWave: OscillatorType;
+  lowFreq: number;
+  /** 高層(厚み・エネルギー)。低層の完全5度上などにして「強さ」を補強する。 */
+  highWave: OscillatorType;
+  highFreq: number;
+  /** ノイズ層(ビームのジリつき)の音量比 0–1。0 でノイズ無し。 */
+  noiseVolume: number;
+  /** 立ち上がり(ms)。短いほど鋭く発動する。 */
+  attackMs: number;
+  /** 停止時の減衰(ms)。 */
+  releaseMs: number;
+  /** 全体音量 0–1(seVolume と乗算)。 */
+  volume: number;
+}
+
+export const BEAM_SOUND: BeamSoundSpec = {
+  lowWave: 'sawtooth',
+  lowFreq: 110, // A2: 低く重い土台
+  highWave: 'sawtooth',
+  highFreq: 165, // E3(完全5度上): パワーコード感で「強さ」を補強
+  noiseVolume: 0.2, // ビームのジリつき(過剰にならない範囲)
+  attackMs: 35, // 鋭く立ち上げる(クリックは避ける程度)
+  releaseMs: 120, // 停止時に短く滑らかに切る
+  volume: 0.4, // 多層合算でクリップしないよう抑えめ(master に余裕)
+} as const;
+
 // --- BGM トラック(5種) ---
 // 半音オフセット(A4=0)で記述。ビジュアルトーン(暗い廃墟＋発光アクセント)と一貫した方向性。
 // docs/story.md「BGM方針」の4シーンに対応:
