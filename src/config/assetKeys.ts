@@ -13,6 +13,8 @@ export const TEX = {
   // stage4 環境管理機(浄化型)が「浄化」の名目で撒く汚染霧スプレー専用。汚染トーン(背景 #151a0c)と地続き。
   projectilePollution: 'tex-projectile-pollution',
   projectileMissile: 'tex-projectile-missile',
+  // stage5 使者(ENVOY)が放つ高速槍弾。冷たい白青の鋭い槍シルエットで通常弾と差別化する。
+  projectileLance: 'tex-projectile-lance',
   ground: 'tex-ground',
   platform: 'tex-platform',
   ladder: 'tex-ladder',

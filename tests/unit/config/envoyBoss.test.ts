@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ENVOY, FLYING_BOSS } from '../../../src/config/balance';
+import { ENVOY, FLYING_BOSS, SHOT } from '../../../src/config/balance';
+import { getStageData } from '../../../src/config/stage1';
 
 // stage5「ECLIPSEの使者(高速型)」のチューニング検証。
 // 使者は飛行ボス(stage2)を継承しつつ、固有アクション lance(高速槍弾)/blink(瞬間移動)で
@@ -68,5 +69,18 @@ describe('ENVOY(ECLIPSEの使者)のチューニング', () => {
     // phase2 移行比率は (0, 1) の範囲(0%/100% だと移行が成立しない)。
     expect(ENVOY.phase2HpRatio).toBeGreaterThan(0);
     expect(ENVOY.phase2HpRatio).toBeLessThan(1);
+  });
+
+  it('stage5 のボスは飛行型・使者(envoy)として設定されている(EnvoyBoss 生成の配線)', () => {
+    const stage5 = getStageData('stage5');
+    expect(stage5.bossKind).toBe('flying');
+    expect(stage5.bossVariant).toBe('envoy');
+  });
+
+  it('使者を有限回(現実的な手数)でチャージ弾撃破できる(HP序列・難易度カーブ)', () => {
+    const chargedHits = Math.ceil(ENVOY.maxHp / SHOT.chargedDamage);
+    expect(chargedHits).toBeLessThanOrEqual(20);
+    // HP 序列: 使者(26) < 浄化(28)。終盤手前の硬さを保つ。
+    expect(ENVOY.maxHp).toBeLessThan(28);
   });
 });

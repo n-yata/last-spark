@@ -42,6 +42,11 @@ export const SHOT = {
   missileDamage: 2,
   missileSize: 14,
   missileLaunchSpeed: 520,
+  // --- 槍弾(stage5 使者の高速槍弾) ---
+  // 任意角度へ高速で飛ぶ非貫通の槍。通常弾より重い単発(ミサイルと同格の signature 弾)。
+  // 速度は ENVOY.lance.speed を正本とし発射側(EnvoyBoss)が制御するため、spec の speed は使わない。
+  lanceDamage: 2,
+  lanceSize: 16,
 } as const;
 
 export const ENEMY = {

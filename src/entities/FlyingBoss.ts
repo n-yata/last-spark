@@ -34,8 +34,8 @@ export class FlyingBoss extends Boss {
     return this.hoverCenterY + this.fcfg.hoverAmplitude * Math.sin(t * Math.PI * 2);
   }
 
-  /** 目標高度へ向けて鉛直速度を与える(climbSpeed で頭打ち)。 */
-  private followAltitude(now: number): void {
+  /** 目標高度へ向けて鉛直速度を与える(climbSpeed で頭打ち)。サブクラス(EnvoyBoss)が blink 中の高度維持に流用する。 */
+  protected followAltitude(now: number): void {
     const dy = this.hoverTargetY(now) - this.y;
     // 距離比例で寄せ、行き過ぎないよう climbSpeed でクランプする。
     const vy = Phaser.Math.Clamp(dy * 6, -this.fcfg.climbSpeed, this.fcfg.climbSpeed);

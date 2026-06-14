@@ -48,16 +48,20 @@
 
 ## フェーズ B: ENVOY メカニクス実装
 
-- [ ] `EnvoyBoss extends FlyingBoss` を新規作成
-  - [ ] `fireLance()` 実装（時間差で複数の高速槍弾を発射・非貫通）
-  - [ ] `doBlink()` 実装（逆サイドへ瞬間移動・残像）
-  - [ ] `beginNextAction` を override し `pickNextEnvoyBossAction` を使用
-- [ ] lance 弾の追加
-  - [ ] `assetKeys.ts` に `projectileLance` テクスチャキー追加
-  - [ ] `Projectile.ts` / `shot.ts` に lance 分岐追加
-  - [ ] `PreloadScene.ts` で lance 弾の描画
-- [ ] `GameScene.spawnBoss` を `EnvoyBoss` 生成に差し替え（ENVOY 分岐）
-- [ ] 動作確認（ビジュアルは bossFlying 流用のまま）
+- [x] `EnvoyBoss extends FlyingBoss` を新規作成
+  - [x] `fireLance()` 実装（時間差で複数の高速槍弾を発射・非貫通。delayedCall で intervalMs 間隔）
+  - [x] `doBlink()` 実装（startBlink で向き決定＋executeAction の blink 分岐で dashSpeed ダッシュ＋残像。残像は tween 自己破棄・間引き付き）
+  - [x] `beginNextAction` を override し `pickNextEnvoyBossAction` を使用
+- [x] lance 弾の追加
+  - [x] `assetKeys.ts` に `projectileLance` テクスチャキー追加
+  - [x] `Projectile.ts` / `shot.ts` に lance 分岐追加（fire で回転リセット＋lanceテクスチャ、地面到達で回収、createProjectileSpec で damage/size）
+  - [x] `PreloadScene.ts` で lance 弾の描画（makeLance: 右向きの槍シルエット）
+  - [x] `FlyingBoss.followAltitude` を protected 化（blink 中の高度維持に流用）
+  - [x] `SHOT.lanceDamage/lanceSize` 追加
+- [x] `GameScene.spawnBoss` を `EnvoyBoss` 生成に差し替え（ENVOY 分岐。未使用になった ENVOY import を除去）
+- [x] 動作確認（ビジュアルは bossFlying 流用のまま）
+  - playwright で stage5 実機検証: EnvoyBoss 実体化・lance(kind/texture/回転/damage2/命中)・blink(425px ダッシュ)・残像生成＆破棄を確認。ランタイムエラーゼロ
+  - データ層テスト追加（envoyBoss.test.ts に stage5 配線＋撃破可能性）
 
 ## フェーズ C: ENVOY ビジュアル実装
 

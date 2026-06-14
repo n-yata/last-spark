@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS, FLYING_BOSS, ENVOY, HAZARD, getStageTuning } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, HAZARD, getStageTuning } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
@@ -11,6 +11,7 @@ import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { FlyingBoss } from '../entities/FlyingBoss';
+import { EnvoyBoss } from '../entities/EnvoyBoss';
 import { WardenBoss } from '../entities/WardenBoss';
 import { PurifierBoss } from '../entities/PurifierBoss';
 import { CoreBoss } from '../entities/CoreBoss';
@@ -469,9 +470,12 @@ export class GameScene extends Phaser.Scene {
     // 地面コライダーを付けない(接地型・warden は地面に乗りジャンプ着地する)。
     const airborne = this.stage.bossKind === 'flying' || this.stage.bossKind === 'core';
     if (this.stage.bossKind === 'flying') {
-      // 飛行型。stage5 の使者(envoy)は高速型 ENVOY、それ以外(stage2)は既定 FLYING_BOSS。
-      const flyingConfig = this.stage.bossVariant === 'envoy' ? ENVOY : FLYING_BOSS;
-      this.boss = new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, flyingConfig);
+      // 飛行型。stage5 の使者(envoy)は固有メカニクス(lance/blink)を持つ EnvoyBoss、
+      // それ以外(stage2)は既定の FlyingBoss(FLYING_BOSS)。
+      this.boss =
+        this.stage.bossVariant === 'envoy'
+          ? new EnvoyBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y)
+          : new FlyingBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, FLYING_BOSS);
     } else if (this.stage.bossKind === 'core') {
       // stage6: ECLIPSE本体(巨大コア・浮遊)。配下召喚のため敵グループ等のコンテキストを注入する。
       const core = new CoreBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);

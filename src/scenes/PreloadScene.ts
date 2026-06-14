@@ -101,6 +101,9 @@ export class PreloadScene extends Phaser.Scene {
     this.makeOrb(TEX.projectilePollution, SHOT.normalSize + 2, 0xaef03a);
     // ミサイル(stage3 収容番人): 弾頭 + 噴射炎の縦長シルエットで通常弾と区別する。
     this.makeMissile(TEX.projectileMissile, SHOT.missileSize, 0xffb347, 0xff5a3c);
+    // 槍弾(stage5 使者): 右向きの鋭い槍シルエット。冷たい白青で通常弾と区別する。
+    // EnvoyBoss が進行方向へ回転させる前提で、デフォルトは +X 方向を指す。
+    this.makeLance(TEX.projectileLance, SHOT.lanceSize, 0x16304a, 0x8ad8ff);
 
     // 地形
     this.makeGround(TEX.ground, 64, 60, 0x10171d, 0x37f7d8);
@@ -388,6 +391,32 @@ export class PreloadScene extends Phaser.Scene {
     // 噴射炎(下端のコア)
     g.fillStyle(flame, 1);
     g.fillTriangle(left + w * 0.15, size * 0.74, left + w * 0.85, size * 0.74, cx, size * 0.98);
+    g.generateTexture(key, size, size);
+    g.destroy();
+  }
+
+  /**
+   * 槍弾(stage5 使者): 正方テクスチャ内に「右向き」の鋭い槍シルエット(穂先 + 細い柄 + 発光ハロ)を
+   * 描く。任意角度へ高速で飛ぶため、EnvoyBoss が進行方向へ回転させて使う前提で +X を指す。
+   * body=柄色、edge=穂先/発光の鋭い色。丸い通常弾と一目で区別させる。
+   */
+  private makeLance(key: string, size: number, body: number, edge: number): void {
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    const cy = size / 2;
+    const h = size * 0.34; // 柄の太さ(細い槍にするため縦は薄い)
+    const top = cy - h / 2;
+    // 発光ハロ(全体に薄く)
+    g.fillStyle(edge, 0.25);
+    g.fillCircle(size * 0.5, cy, size * 0.42);
+    // 柄(左寄りの細い角丸ボディ)
+    g.fillStyle(body, 1);
+    g.fillRoundedRect(size * 0.06, top, size * 0.6, h, h * 0.4);
+    // 穂先(右端の三角・発光)
+    g.fillStyle(edge, 1);
+    g.fillTriangle(size * 0.6, top, size * 0.6, top + h, size * 0.99, cy);
+    // 柄の発光コア(中心線)
+    g.fillStyle(this.shade(edge, 0.2), 1);
+    g.fillRect(size * 0.1, cy - 1, size * 0.5, 2);
     g.generateTexture(key, size, size);
     g.destroy();
   }
