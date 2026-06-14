@@ -78,14 +78,16 @@
 
 ## フェーズ D: PURIFIER bloom 実装
 
-- [ ] `Hazard.ts` / `GameScene.buildHazards()` の精査（着手前・最重要）
-  - [ ] 動的 Hazard 生成方式（プール化 or 動的add）を確定
-- [ ] `PurifierBoss.fireBloom()` 実装
-  - [ ] GameScene からの hazard コンテキスト注入（setBloomContext 等）
-  - [ ] 動的 Hazard の生成・当たり判定登録・時限破棄
-  - [ ] phase2 で枚数増・存続時間延長
-- [ ] `spray` の phase2 強化（2連射化）
-- [ ] 動作確認（汚染床の生成・消滅・スリップダメージ）
+- [x] `Hazard.ts` / `GameScene.buildHazards()` の精査（着手前・最重要）
+  - [x] 動的 Hazard 生成方式を確定: hazards グループへ動的 add（overlap は group 単位で登録済みのため後追加の床も自動でダメージ判定対象）。プール化は不要と判断（時限破棄で蓄積しない・生成頻度も低い）
+- [x] `PurifierBoss.fireBloom()` 実装
+  - [x] GameScene からの hazard コンテキスト注入（`setBloomContext` / `BloomContext.spawnPatch`。CoreBoss.setSummonContext と同型の疎結合。未注入なら no-op=安全側）
+  - [x] 動的 Hazard の生成・当たり判定登録・時限破棄（`GameScene.spawnBloomPatch`: Hazard 生成→group add→configureBody→delayedCall で lifespan 破棄。Hazard.destroy で脈動 tween を確実停止しリーク防止）
+  - [x] phase2 で枚数増・幅拡大・存続時間延長（countP1/P2・patchWidthP1/P2・lifespanMsP1/P2）
+- [x] `spray` の phase2 強化（2連射化）（fireSpray を fireSprayOnce に分離、phase2 は SPRAY_SECOND_BURST_MS 後に2発目。撃破/無効化後は撃たない）
+- [x] 動作確認（汚染床の生成・消滅・スリップダメージ）
+  - playwright で stage4 隔離検証: ①ボス fireBloom で hazards 2→3（中心x/幅90/高さ16・地面接地）②床単独でスリップダメージ hp16→12（pollutionDamage2 × 2tick・共有overlap経路）③lifespan(1500ms)後に3→2へ時限破棄（リークなし）。ランタイムエラーゼロ
+  - 設定テスト追加（purifierBoss.test.ts: bloom phase2強化・damage=HAZARD・HP序列・stage4配線）
 
 ## フェーズ E: PURIFIER ビジュアル実装
 

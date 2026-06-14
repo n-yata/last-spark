@@ -218,6 +218,26 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * PURIFIER の bloom が動的に汚染床(Hazard)を生成・登録・時限破棄する(ボスから注入される生成関数)。
+   * buildHazards で hazards グループに対し overlap を登録済みのため、後から追加した床も自動的に
+   * ダメージ判定対象になる(ダメージは静的床と同じ HAZARD.pollutionDamage 経路)。lifespanMs 経過で
+   * 破棄し、汚染床を蓄積させない(リーク防止)。
+   */
+  private spawnBloomPatch(
+    rect: { x: number; y: number; width: number; height: number },
+    lifespanMs: number,
+  ): void {
+    const hazard = new Hazard(this, rect);
+    this.hazards.add(hazard);
+    // Group.add() がボディ設定をグループ既定値(重力ON)で上書きするため、静止設定を再適用する。
+    hazard.configureBody();
+    // 時限破棄。シーン破棄時は time イベントごと破棄されるため発火しない(残留床なし)。
+    this.time.delayedCall(lifespanMs, () => {
+      if (hazard.active) hazard.destroy();
+    });
+  }
+
   /** 収容ケージ(stage3 など)の見た目を作る。撃破後に解錠アニメを再生する。 */
   private buildCage(): void {
     const cage = this.stage.cage;
@@ -489,8 +509,13 @@ export class GameScene extends Phaser.Scene {
       // stage3: 収容番人(重装ミサイル型)。接地型なので地面コライダーを付ける。
       this.boss = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
     } else if (this.stage.bossVariant === 'purifier') {
-      // stage4: 環境管理機(浄化型・扇状の範囲攻撃)。接地型なので地面コライダーを付ける。
-      this.boss = new PurifierBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      // stage4: 環境管理機(浄化型・扇状の範囲攻撃 spray + 動的汚染床 bloom)。接地型。
+      // 動的 Hazard の生成・登録・時限破棄は GameScene が担い、ボスへ生成関数を注入する(疎結合)。
+      const purifier = new PurifierBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      purifier.setBloomContext({
+        spawnPatch: (rect, lifespanMs) => this.spawnBloomPatch(rect, lifespanMs),
+      });
+      this.boss = purifier;
     } else {
       this.boss = new Boss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y, {
         config: this.stage.bossConfig,
