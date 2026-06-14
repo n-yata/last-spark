@@ -414,7 +414,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * ワンウェイ床のコライダ判定。対象(プレイヤー/敵)が下降中かつ足元が床上端付近の時だけ
+   * ワンウェイ床のコライダ判定。対象(プレイヤー/敵)が下降中かつ前フレームの足元が床上端付近の時だけ
    * 衝突を有効化する。プレイヤーが梯子につかまっている間は衝突させない(梯子で貫通)。
    */
   private oneWayProcess = (
@@ -426,7 +426,11 @@ export class GameScene extends Phaser.Scene {
     const objBody = objGo.body as Phaser.Physics.Arcade.Body;
     const platBody = platGo.body as Phaser.Physics.Arcade.Body;
     if (objGo === this.player && this.player.isOnLadder) return false;
-    return shouldLandOnOneWay(objBody.bottom, objBody.velocity.y, platBody.top);
+    // 高速落下のトンネリング対策: 現在足元(bottom)ではなく「前フレームの足元」で判定する。
+    // Body.prev は前ステップの左上座標。前フレームに床上にいて下降中なら、今フレームで
+    // 深くめり込んでいても着地させる(大ジャンプ戻りで床上端の許容窓を飛び越すすり抜けを防ぐ)。
+    const prevBottom = objBody.prev.y + objBody.height;
+    return shouldLandOnOneWay(prevBottom, objBody.velocity.y, platBody.top);
   };
 
   private createGroups(): void {
