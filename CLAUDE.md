@@ -2,10 +2,9 @@
 
 ## 技術スタック
 
-- 開発環境: devcontainer
-- Node.js v24.11.0
+- Node.js v24 系(`.nvmrc` で固定。CI は Node 22 で検証)
 - TypeScript 5.x
-- パッケージマネージャー: npm
+- パッケージマネージャー: npm(ロックファイル同期のため `npm ci` を推奨)
 
 ## スペック駆動開発の基本原則
 

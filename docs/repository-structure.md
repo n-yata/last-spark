@@ -114,6 +114,7 @@ State を持つ System クラス:
 - `backgroundPainter.ts`: ステージ背景(パララックス)の描画(`paintStageBackground`)
 - `sceneTransition.ts`: フェード付きシーン遷移(`transitionTo` / `fadeIn`、多重発火ガード)
 - `dprScaling.ts`: 高 DPI(デバイスピクセル比)対応のスケーリング補助
+- `progress.ts`: ゲーム進行(全クリア判定)の純粋関数(`isAllStagesCleared`)
 
 > 上記は主要ファイルの一覧。System レイヤーは機能追加で増えるため網羅を保証せず、新規ファイルは本節の分類(State を持つ System クラス / 純粋ロジック関数群)に従って配置する。
 

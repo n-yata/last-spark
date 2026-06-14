@@ -28,7 +28,7 @@
 ## セットアップ
 
 ```bash
-npm install
+npm ci             # package-lock.json と同期してインストール(CI と同じ。開発でも推奨)
 npm run dev        # 開発サーバ(Vite)
 ```
 
