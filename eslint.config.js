@@ -33,6 +33,7 @@ export default [
         AudioContext: 'readonly',
         AudioBuffer: 'readonly',
         AudioBufferSourceNode: 'readonly',
+        AudioScheduledSourceNode: 'readonly',
         GainNode: 'readonly',
         OscillatorNode: 'readonly',
         OscillatorType: 'readonly',

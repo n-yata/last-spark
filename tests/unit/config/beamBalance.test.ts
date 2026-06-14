@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SHOT } from '../../../src/config/balance';
+import { SHOT, PLAYER } from '../../../src/config/balance';
 
 // RAY 強化時のビーム(チャージ攻撃強化版)の威力設計検証。
 // 設計原則: 総威力をチャージ弾(chargedDamage=3)と同等に収める。
@@ -33,17 +33,19 @@ describe('ビーム威力設計: チャージ弾と同等の総威力', () => {
   });
 });
 
-describe('ビーム形状設計: 前方を向く緩い斜めで縦方向の射程を広げる', () => {
-  it('splitAngleRad が 0 より大きい(前方向きの斜め: 縦方向を持つ)', () => {
-    expect(SHOT.splitAngleRad).toBeGreaterThan(0);
+describe('通常弾2発設計: 正面へ平行に進む2発(RAY強化時・stage6)', () => {
+  it('splitOffsetPx が 0 より大きい(マズルから上下に手数を持つ)', () => {
+    // velocityY=0 の平行2発を上下にずらすオフセット。0 では2発が重なり1発と等価になる。
+    expect(SHOT.splitOffsetPx).toBeGreaterThan(0);
   });
 
-  it('splitAngleRad が π/2(90°)未満(真上下でなく前方カバーを残す)', () => {
-    expect(SHOT.splitAngleRad).toBeLessThan(Math.PI / 2);
+  it('2発の間隔(splitOffsetPx × 2)がプレイヤー本体高さ未満(機体内に収まる控えめな間隔)', () => {
+    // 2発の縦間隔(上オフセット + 下オフセット)がプレイヤー高さ(40px)を超えると
+    // マズルが機体外に出て不自然になる。機体内に収まる値であることを検証する。
+    expect(SHOT.splitOffsetPx * 2).toBeLessThan(PLAYER.height);
   });
 
-  it('splitAngleRad は Math.PI/10(約18°)の緩い斜め', () => {
-    // 真上下(π/2)にすると正面の敵に当たらないため、π/10 ≈ 18° の緩い斜めにする。
-    expect(SHOT.splitAngleRad).toBeCloseTo(Math.PI / 10, 10);
+  it('splitOffsetPx は 10(設計値通り)', () => {
+    expect(SHOT.splitOffsetPx).toBe(10);
   });
 });

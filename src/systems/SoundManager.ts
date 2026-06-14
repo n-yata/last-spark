@@ -1,4 +1,4 @@
-import { SE, BGM, type SeKey, type BgmKey, type BgmTrack } from '../config/audio';
+import { SE, BGM, BEAM_SOUND, type SeKey, type BgmKey, type BgmTrack } from '../config/audio';
 import { SaveManager } from '../persistence/SaveManager';
 import type { GameSettings } from '../types/save';
 import {
@@ -52,6 +52,8 @@ export class SoundManager {
   private bgmNodes = new Set<OscillatorNode>();
   /** 持続ドローン(低音パッド)のノード。トラックに drone がある間だけ存在する。 */
   private bgmDrone?: { osc: OscillatorNode; gain: GainNode };
+  /** 持続ビーム音(RAY強化)のノード群。ビーム射出中だけ存在する。 */
+  private beam?: { sources: AudioScheduledSourceNode[]; gains: GainNode[]; mainGain: GainNode };
   private unlockBound = false;
 
   /**
@@ -173,6 +175,90 @@ export class SoundManager {
       osc.onended = () => {
         osc.disconnect();
         envelope.disconnect();
+      };
+    }
+  }
+
+  /**
+   * 持続ビーム音(RAY強化のチャージ攻撃)を開始する。stopBeam() まで鳴り続ける。
+   * 低層(重み)+高層(完全5度上=パワー感)+ノイズ(ジリつき)を seGain 経由で重ね、
+   * 単発SE(shootCharged)とは別系統の「強さ」を表す持続音にする。多重発動は保険で停止してから張り直す。
+   */
+  startBeam(): void {
+    if (this.disabled || !this.ctx || !this.seGain) return;
+    this.resume();
+    if (this.beam) this.stopBeam(); // 通常は単一ビームだが念のため
+    const spec = BEAM_SOUND;
+    const t0 = this.ctx.currentTime;
+    const peak = clamp01(spec.volume);
+
+    const mainGain = this.ctx.createGain();
+    mainGain.gain.setValueAtTime(0, t0);
+    mainGain.gain.linearRampToValueAtTime(peak, t0 + spec.attackMs / 1000);
+    mainGain.connect(this.seGain);
+
+    const sources: AudioScheduledSourceNode[] = [];
+    const gains: GainNode[] = [mainGain];
+
+    // 低層・高層の 2 声(完全5度のパワーコード感で「強さ」を出す)。
+    for (const [wave, freq] of [
+      [spec.lowWave, spec.lowFreq],
+      [spec.highWave, spec.highFreq],
+    ] as const) {
+      const osc = this.ctx.createOscillator();
+      osc.type = wave;
+      osc.frequency.setValueAtTime(Math.max(1, freq), t0);
+      osc.connect(mainGain);
+      osc.start(t0);
+      sources.push(osc);
+    }
+
+    // ノイズ層(ビームのジリつき)。ループ再生で持続させる。
+    if (spec.noiseVolume > 0 && this.noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      noise.loop = true;
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(clamp01(spec.noiseVolume), t0);
+      noise.connect(noiseGain);
+      noiseGain.connect(mainGain);
+      noise.start(t0);
+      sources.push(noise);
+      gains.push(noiseGain);
+    }
+
+    this.beam = { sources, gains, mainGain };
+  }
+
+  /** 持続ビーム音を短いリリースで停止し、ノードを片付ける。鳴っていなければ no-op。 */
+  stopBeam(): void {
+    if (!this.ctx || !this.beam) return;
+    const { sources, gains, mainGain } = this.beam;
+    this.beam = undefined;
+    const t0 = this.ctx.currentTime;
+    const rel = BEAM_SOUND.releaseMs / 1000;
+    try {
+      // 現在値からゼロへ滑らかに落とす(プチノイズ回避)。
+      mainGain.gain.cancelScheduledValues(t0);
+      mainGain.gain.setValueAtTime(mainGain.gain.value, t0);
+      mainGain.gain.linearRampToValueAtTime(0, t0 + rel);
+    } catch {
+      /* ランプ設定失敗は無視(進行を止めない) */
+    }
+    const stopAt = t0 + rel;
+    for (const src of sources) {
+      try {
+        src.stop(stopAt);
+      } catch {
+        /* 既に停止済みなら無視 */
+      }
+    }
+    // リリース後にノードを解放する(最後のソースの onended で一括片付け)。
+    const last = sources[sources.length - 1];
+    if (last) {
+      last.onended = () => {
+        for (const src of sources) src.disconnect();
+        for (const g of gains) g.disconnect();
       };
     }
   }

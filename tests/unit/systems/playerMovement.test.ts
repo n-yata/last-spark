@@ -92,21 +92,27 @@ describe('cutJumpVelocity', () => {
   });
 });
 
-describe('shouldLandOnOneWay(すり抜け床の着地判定)', () => {
+describe('shouldLandOnOneWay(すり抜け床の着地判定 / 前フレーム足元基準)', () => {
   const platformTop = 300;
-  it('下降中(velY>=0)かつ足元が床上端付近なら着地する(true)', () => {
+  it('下降中(velY>=0)かつ前フレーム足元が床上端付近なら着地する(true)', () => {
     expect(shouldLandOnOneWay(302, 120, platformTop)).toBe(true);
     expect(shouldLandOnOneWay(300, 0, platformTop)).toBe(true);
   });
   it('上昇中(velY<0)は床上端付近でも着地しない(下から通過)', () => {
     expect(shouldLandOnOneWay(300, -200, platformTop)).toBe(false);
   });
-  it('床より十分下に潜っている時は着地しない(下から通過中)', () => {
+  it('前フレームに床より十分下に潜っていた時は着地しない(下から通過中)', () => {
     expect(shouldLandOnOneWay(360, 120, platformTop)).toBe(false);
   });
   it('境界: 許容(tolerance)ちょうどは着地、超過は非着地', () => {
     expect(shouldLandOnOneWay(platformTop + 6, 50, platformTop, 6)).toBe(true);
     expect(shouldLandOnOneWay(platformTop + 7, 50, platformTop, 6)).toBe(false);
+  });
+  it('高速落下でも前フレーム足元が床上なら着地する(トンネリング回帰: 大ジャンプの戻り)', () => {
+    // 前フレーム足元(298)は床上端(300)より上。下向き高速(620px/s ≒ 10px/frame)でも、
+    // 前フレーム基準なので深くめり込む前に着地が有効化される。
+    // 旧実装(現在足元基準)なら今フレーム足元が許容窓(306)を飛び越し false=すり抜けになっていた。
+    expect(shouldLandOnOneWay(298, 620, platformTop)).toBe(true);
   });
 });
 

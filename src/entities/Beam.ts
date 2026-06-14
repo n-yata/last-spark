@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { PLAYER, SHOT } from '../config/balance';
 import type { Damageable } from '../types/combat';
 import { shouldHazardTick } from '../systems/hazardRules';
+import { getSound } from '../systems/SoundManager';
 
 // RAY 強化(stage6・休眠コア共鳴後)のチャージ攻撃=持続レーザービーム。一定時間(beamLifespanMs)、
 // プレイヤーのマズルから向いている方向へ伸びる帯を描画し、その間に触れた敵・ボスへ per-target の
@@ -77,6 +78,8 @@ export class Beam extends Phaser.GameObjects.Rectangle {
       ease: 'Sine.Out',
     });
     this.scene.events.on(Phaser.Scenes.Events.UPDATE, this.boundUpdate);
+    // 射出中ずっと鳴る持続音を開始(destroy で停止)。通常チャージの単発SEとは別系統で「強さ」を表す。
+    getSound().startBeam();
   }
 
   /**
@@ -110,8 +113,9 @@ export class Beam extends Phaser.GameObjects.Rectangle {
     this.setPosition(muzzleX + dir * (SHOT.beamLength / 2), this.owner.y);
   }
 
-  /** 破棄時に UPDATE 購読・tween・参照を確実に解放する(リーク防止)。 */
+  /** 破棄時に UPDATE 購読・tween・参照・持続ビーム音を確実に解放する(リーク防止)。 */
   override destroy(fromScene?: boolean): void {
+    getSound().stopBeam(); // 射出終了で持続音を停止(早期破棄=シーン終了/被弾リスタートにも追従)。
     this.scene?.events.off(Phaser.Scenes.Events.UPDATE, this.boundUpdate);
     this.fadeTween?.remove();
     this.fadeTween = undefined;
