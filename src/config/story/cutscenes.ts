@@ -34,15 +34,16 @@ const STAGE1_INTRO: Cutscene = {
 const STAGE3_RESCUE: Cutscene = {
   key: 'stage3-rescue',
   lines: [
-    { kind: 'terraLine', text: '……ロボット？' },
-    { kind: 'rayInner', text: '……小さい。こんなに、小さいのか' },
-    { kind: 'terraLine', text: '怖くない？' },
-    { kind: 'rayInner', text: '怖い。でも、離さない' },
+    { kind: 'terraLine', text: 'ロボット……？' },
+    { kind: 'rayInner', text: '小さい。こんなに、小さいのか' },
+    // レイは喋れない。救ってくれたのかという問いに、頷くことでしか返せない（沈黙と行動で示す＝物語の核心）。
+    { kind: 'terraLine', text: 'わたしを、助けてくれたの？' },
+    { kind: 'rayInner', text: 'うなずく。それしか、できない' },
     { kind: 'terraLine', text: '名前は、テラっていうの。あなたは？' },
-    { kind: 'rayInner', text: '……答え方が、分からない' },
+    { kind: 'rayInner', text: '答え方が、分からない' },
     // 胸の刻印は英字「RAY」のまま。テラがそれを読んで「レイ」と呼ぶ（名前の由来 ray of light と繋がる）。
     { kind: 'direction', text: 'テラが、レイの胸の印に気づく' },
-    { kind: 'terraLine', text: '……R・A・Y。レイだ！　レイって、いうんだね' },
+    { kind: 'terraLine', text: 'R・A・Y……レイだ。レイって、いうんだね' },
     { kind: 'rayInner', text: 'レイ。それが、私の名前' },
     { kind: 'rayInner', text: 'この子を守る。理由は分からない。でも、そう感じる' },
   ],
