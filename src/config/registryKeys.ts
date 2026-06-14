@@ -17,4 +17,6 @@ export const HUD = {
   movePadBaseY: 'hud.movepad.baseY',
   movePadCurX: 'hud.movepad.curX',
   movePadCurY: 'hud.movepad.curY',
+  // UIScene のポーズボタン → GameScene へのポーズ要求(疎結合のトリガ)。
+  pauseRequested: 'hud.pause.requested',
 } as const;

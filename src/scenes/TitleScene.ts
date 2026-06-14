@@ -6,8 +6,10 @@ import { isAllStagesCleared } from '../systems/progress';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { scaled, scaledFontPx } from '../config/uiScale';
+import { createOptionsMenu } from '../ui/optionsMenu';
 // 型のみの import はビルド時に消去される。
 import type { StageSelect } from '../stageSelect/stageSelect';
+import type { OptionsMenu } from '../ui/optionsMenu';
 
 // タイトル画面。ロゴ + スタート導線。クリア済みフラグと最速タイムを表示する。
 // 「STAGE SELECT」導線を動的 import で追加し、任意のステージから始められる(一般向け機能)。
@@ -18,6 +20,8 @@ export class TitleScene extends Phaser.Scene {
   private startZone?: Phaser.GameObjects.Zone;
   // ステージ選択のコントローラ。
   private stageSelect?: StageSelect;
+  // オプションメニュー(音量・操作説明)。開いている間はスタートを抑止する。
+  private optionsMenu?: OptionsMenu;
 
   constructor() {
     super(SCENE_KEYS.title);
@@ -29,6 +33,7 @@ export class TitleScene extends Phaser.Scene {
     fadeIn(this);
     // シーン再入(クリア→タイトル復帰など)に備えて状態を初期化する。
     this.stageSelect = undefined;
+    this.optionsMenu = undefined;
 
     // 背景: 暗め基調 + 発光アクセント(廃墟のシルエット風グラデーション)
     this.drawBackdrop(width, height);
@@ -38,6 +43,10 @@ export class TitleScene extends Phaser.Scene {
     this.startZone = this.add.zone(0, 0, width, height).setOrigin(0).setInteractive();
     this.startZone.on(Phaser.Input.Events.POINTER_DOWN, () => this.startGame());
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
+    // シーン再入(クリア→タイトル復帰)でリスナーが重複しないよう、終了時に必ず外す。
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off('keydown', this.onKeyDown, this);
+    });
 
     // ロゴ
     this.add
@@ -103,16 +112,48 @@ export class TitleScene extends Phaser.Scene {
       );
     });
 
+    // 「OPTIONS」導線。STAGE SELECT(右下)と対になるよう左下に控えめに配置する。
+    // startZone の後に追加するため topOnly(既定)で前面となりスタートに巻き込まれない。
+    const optionsBtn = this.add
+      .text(scaled(16), height - scaled(16), '⚙ OPTIONS', {
+        fontFamily: 'monospace',
+        fontSize: scaledFontPx(16),
+        color: '#7fe9dd',
+      })
+      .setOrigin(0, 1)
+      .setInteractive({ useHandCursor: true });
+    optionsBtn.on(Phaser.Input.Events.POINTER_OVER, () => optionsBtn.setColor('#fff27a'));
+    optionsBtn.on(Phaser.Input.Events.POINTER_OUT, () => optionsBtn.setColor('#7fe9dd'));
+    optionsBtn.on(Phaser.Input.Events.POINTER_DOWN, () => this.openOptions());
+
     // タイトル BGM(初回タップで AudioContext が解放されると鳴り出す)
     getSound().playBgm('title');
   }
 
-  // キーボード操作: ステージ選択を開いている間は開始を抑止する(誤発進防止)。
+  // キーボード操作: ステージ選択/オプションを開いている間は開始を抑止する(誤発進防止)。
   private onKeyDown(): void {
-    if (this.stageSelect?.isOverlayOpen()) {
+    if (this.stageSelect?.isOverlayOpen() || this.optionsMenu?.isOpen()) {
       return;
     }
     this.startGame();
+  }
+
+  // オプションメニュー(ステージ移動なし)を開く。表示中はスタート判定を無効化する。
+  private openOptions(): void {
+    if (this.optionsMenu?.isOpen()) {
+      return;
+    }
+    getSound().playSe('uiTap');
+    this.startZone?.disableInteractive();
+    this.optionsMenu = createOptionsMenu({
+      scene: this,
+      enableStageNav: false,
+      onClose: () => {
+        this.optionsMenu?.destroy();
+        this.optionsMenu = undefined;
+        this.startZone?.setInteractive();
+      },
+    });
   }
 
   private startGame(stageId = 'stage1'): void {
