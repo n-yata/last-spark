@@ -23,22 +23,22 @@ export interface EnemySpawn {
 }
 
 /**
- * ログトリガー(科学者の遺品・旧式端末)の配置。x,y は中心。
- * slot はログ断片のスロット(序盤/ボス前/ボス後)で、確定テキストの引き当てに使う。
- * 実体テキストは config/story/stageN.ts が持つ(ジオメトリとテキストを分離する)。
- */
-export interface LogTriggerSpawn {
-  slot: 'early' | 'preBoss' | 'postBoss';
-  x: number;
-  y: number;
-}
-
-/**
  * 梯子の矩形領域。x,y は左上、width/height は px。重なり判定にのみ使う(物理衝突なし)。
  * 制約: height は `LADDER.boardDownReach`(降り乗り込みの進入量)より十分大きくすること。
  * 極端に低い梯子は、降り乗り込んだ瞬間に最下部離脱条件へ達して把持できない恐れがある。
  */
 export interface LadderRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * ダメージ床(毒だまり等)の矩形。x,y は左上、width/height は px。重なり判定にのみ使う(物理衝突なし)。
+ * 落下死の奈落と違い、上に乗れる地面の上へ薄く敷く。触れている間スリップダメージを受ける(stage4)。
+ */
+export interface HazardRect {
   x: number;
   y: number;
   width: number;
@@ -67,9 +67,9 @@ export interface StageData {
   platforms: PlatformRect[];
   /** 梯子(任意)。未定義なら梯子なしステージ。 */
   ladders?: LadderRect[];
+  /** ダメージ床(任意)。未定義ならハザードなしステージ。stage4 の毒だまりに使う。 */
+  hazards?: HazardRect[];
   enemies: EnemySpawn[];
-  /** ログトリガー(任意)。未定義ならログなしステージ。 */
-  logTriggers?: LogTriggerSpawn[];
   /**
    * このカメラ右端 X を超えるとボス戦に突入する(最短地点)。
    * 実際の発火は SpawnSystem が「ボス全身が画面内に見える位置」まで遅らせるため、
@@ -163,24 +163,18 @@ const STAGE1: StageData = {
     // 終盤の高台(任意)
     { x: 3300, y: GROUND_TOP - 120, width: 180, height: 24 },
   ],
+  // Stage 1 は「目覚め・孤独」。最も素朴で開けた構成にし、敵をまばらにして空虚さ＝孤独を
+  // 構成で出す(②設計の手触り)。他ステージより敵密度を意図的に低くする(序盤の turret・中盤の
+  // walker を 1 体ずつ間引き、静かな空白を作る)。
   enemies: [
     { pattern: 'walker', x: 820, y: GROUND_TOP - 60 },
-    // 足場なし=地面に接地(本体半身=16)。
-    { pattern: 'turret', x: 980, y: GROUND_TOP - 16 },
     { pattern: 'walker', x: 1800, y: GROUND_TOP - 60 },
-    { pattern: 'walker', x: 2080, y: GROUND_TOP - 160 },
     // 高台(top=GROUND_TOP-220)の上に接地。
     { pattern: 'turret', x: 2440, y: GROUND_TOP - 236 },
     { pattern: 'walker', x: 2860, y: GROUND_TOP - 170 },
     { pattern: 'walker', x: 3200, y: GROUND_TOP - 60 },
     // 高台(top=GROUND_TOP-120)の上に接地。
     { pattern: 'turret', x: 3380, y: GROUND_TOP - 136 },
-  ],
-  // 序盤=導入区間、ボス前=ボストリガー(4200)手前に配置。
-  // postBoss はボス撃破後エリアの動線が必要なため block 2(ボス後フロー)で追加する。
-  logTriggers: [
-    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
-    { slot: 'preBoss', x: 4060, y: GROUND_TOP - 40 },
   ],
   bossTriggerX: 4200,
   // ボスはトリガー地点(プレイヤー x≈3720, カメラ右端4200)のすぐ先に出現させ、
@@ -240,10 +234,6 @@ const STAGE2: StageData = {
     // 足場なし=地面に接地(本体半身=16)。
     { pattern: 'turret', x: 3350, y: GROUND_TOP - 16 },
   ],
-  logTriggers: [
-    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
-    { slot: 'preBoss', x: 3560, y: GROUND_TOP - 40 },
-  ],
   bossTriggerX: 3700,
   // 飛行ボスは空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
   bossSpawn: { x: 3950, y: GROUND_TOP - FLYING_BOSS.hoverAltitude },
@@ -291,12 +281,6 @@ const STAGE3: StageData = {
     // 足場なし=地面に接地(本体半身=16)。
     { pattern: 'turret', x: 3480, y: GROUND_TOP - 16 },
   ],
-  // 序盤=収容区画入口、ボス前=ボストリガー(3900)手前、ボス後=アリーナ内(ケージ手前・任意接触)。
-  logTriggers: [
-    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
-    { slot: 'preBoss', x: 3760, y: GROUND_TOP - 40 },
-    { slot: 'postBoss', x: 4300, y: GROUND_TOP - 40 },
-  ],
   bossTriggerX: 3900,
   // 収容番人は重装ミサイル型(接地)。本体下端=地面で接地させる。系統 'warden' に対し
   // WardenBoss が固有設定(CONTAINMENT_WARDEN)・リグ('bossWarden')を内包するため、
@@ -321,12 +305,11 @@ const STAGE4: StageData = {
   id: 'stage4',
   playerStart: { x: 120, y: GROUND_TOP - 20 },
   platforms: [
-    // 地面セグメント 1(スタート〜汚染溜まりの奈落手前)
-    { x: 0, y: GROUND_TOP, width: 1600, height: GROUND_THICK },
-    // 汚染溜まりの奈落: 1600–1668(幅 68px。ジャンプで越える)
-    // 地面セグメント 2(奈落の先〜2 つ目の奈落手前)
-    { x: 1668, y: GROUND_TOP, width: 1232, height: GROUND_THICK },
-    // 2 つ目の奈落: 2900–2968
+    // 地面セグメント 1+2(スタート〜2 つ目の奈落手前)。元の 1 つ目の奈落(1600–1668)は地面で埋め、
+    // 落下死ではなく「汚染溜まり」(hazards)に置換する=人間が壊した死んだ世界が足元で牙をむく
+    // (揺らぎを足元で体感。殺意の罠ではなく荒廃そのもの)。
+    { x: 0, y: GROUND_TOP, width: 2900, height: GROUND_THICK },
+    // 2 つ目の奈落: 2900–2968(幅 68px。これは従来どおり落下死。汚染床と実奈落の手触りを両立させる)
     // 地面セグメント 3(ボスアリーナ手前まで)
     { x: 2968, y: GROUND_TOP, width: 732, height: GROUND_THICK },
     // 地面セグメント 4(ボスアリーナ。連続した足場)
@@ -338,6 +321,13 @@ const STAGE4: StageData = {
     { x: 2080, y: GROUND_TOP - 130, width: 200, height: 24 },
     { x: 2480, y: GROUND_TOP - 210, width: 180, height: 24 },
     { x: 3160, y: GROUND_TOP - 140, width: 200, height: 24 },
+  ],
+  // 汚染溜まり(地面の上に薄く敷く)。人間の荒廃の遺産であって殺意の罠ではない。歩いて渡れば痛い・
+  // ジャンプで越えれば無傷の選択を足元に作る。(1)元の奈落跡(1600–1668)を汚染床化、(2)走行区間の
+  // 途中(2240付近)にもう 1 つ置き「汚染地帯=死んだ世界」を足元で体感させる。
+  hazards: [
+    { x: 1600, y: GROUND_TOP - 14, width: 68, height: 16 },
+    { x: 2240, y: GROUND_TOP - 14, width: 110, height: 16 },
   ],
   enemies: [
     { pattern: 'walker', x: 780, y: GROUND_TOP - 60 },
@@ -352,13 +342,6 @@ const STAGE4: StageData = {
     { pattern: 'walker', x: 3360, y: GROUND_TOP - 60 },
     // 足場なし=地面に接地(本体半身=16)。
     { pattern: 'turret', x: 3520, y: GROUND_TOP - 16 },
-  ],
-  // ボス後演出シーンを持たない(=撃破後フリーロームなし)ため、ログ3本はすべてボス前の
-  // 走行区間で拾える位置に置く。postBoss(科学者の最後の気づき)は、ボストリガー(3900)直前に配置する。
-  logTriggers: [
-    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
-    { slot: 'preBoss', x: 2740, y: GROUND_TOP - 40 },
-    { slot: 'postBoss', x: 3760, y: GROUND_TOP - 40 },
   ],
   bossTriggerX: 3900,
   // 環境管理機は接地型。本体下端=地面で接地させる。
@@ -396,11 +379,16 @@ const STAGE5: StageData = {
     // 地面セグメント 4(ボスアリーナ。連続した足場で空中ボスの急降下をさばく)
     { x: 3800, y: GROUND_TOP, width: STAGE5_WIDTH - 3800, height: GROUND_THICK },
 
-    // 機械の密度が高い外縁部の構造物(任意の足場)
+    // 機械の密度が高い外縁部の構造物(任意の足場)。Stage 5 は「決意・機械密集」がテーマ。
+    // 既存足場の隙間に段差の異なる足場を増やして密集感(冷たく硬い手触り)を出す(②設計)。
+    // すべて一方通行の任意足場で、地上ルートは塞がない(クリア可能性を維持)。
     { x: 560, y: GROUND_TOP - 130, width: 180, height: 24 },
+    { x: 860, y: GROUND_TOP - 200, width: 150, height: 24 },
     { x: 1180, y: GROUND_TOP - 180, width: 180, height: 24 },
+    { x: 1600, y: GROUND_TOP - 130, width: 160, height: 24 },
     { x: 2100, y: GROUND_TOP - 140, width: 200, height: 24 },
     { x: 2520, y: GROUND_TOP - 220, width: 180, height: 24 },
+    { x: 2840, y: GROUND_TOP - 200, width: 150, height: 24 },
     { x: 3220, y: GROUND_TOP - 150, width: 200, height: 24 },
   ],
   enemies: [
@@ -416,13 +404,6 @@ const STAGE5: StageData = {
     { pattern: 'walker', x: 3460, y: GROUND_TOP - 60 },
     // 足場なし=地面に接地(本体半身=16)。
     { pattern: 'turret', x: 3620, y: GROUND_TOP - 16 },
-  ],
-  // ボス後演出シーンを持たない(=撃破後フリーロームなし)ため、ログ3本はすべてボス前の
-  // 走行区間で拾える位置に置く。postBoss(遺言・クライマックス)はボストリガー(4000)直前に配置する。
-  logTriggers: [
-    { slot: 'early', x: 360, y: GROUND_TOP - 40 },
-    { slot: 'preBoss', x: 2780, y: GROUND_TOP - 40 },
-    { slot: 'postBoss', x: 3860, y: GROUND_TOP - 40 },
   ],
   bossTriggerX: 4000,
   // 使者は飛行型。空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
@@ -480,8 +461,6 @@ const STAGE6: StageData = {
     // 足場なし=地面に接地(本体半身=16)。
     { pattern: 'turret', x: 3820, y: GROUND_TOP - 16 },
   ],
-  // story.md 準拠で Stage 6 は序盤ログのみ(ボス前・ボス後ログなし)。走行序盤で拾える位置に置く。
-  logTriggers: [{ slot: 'early', x: 360, y: GROUND_TOP - 40 }],
   bossTriggerX: 4200,
   // ECLIPSE本体は浮遊する巨大コア。空中(地面より高い位置)に静止して出現する。
   // center_y はコア下端が地面付近に来る高さ(groundY - height/2 より少し上)に置く。

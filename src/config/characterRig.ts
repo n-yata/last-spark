@@ -14,7 +14,8 @@ export type PartShape =
   | 'helmet' // 丸みのあるヘルメット頭(発光バイザー)
   | 'cannon' // アームキャノン(銃口リング付き)
   | 'leg' // 脚(先細りの脚部)
-  | 'sensor' // センサー頭(walker 用の小さな箱+目)
+  | 'sensor' // センサー頭(walker 用の小さな箱+一文字の目)
+  | 'cyclops' // 単眼サーチライト頭(哨戒機=空から見張る「眼」。大きな丸い単眼レンズ)
   | 'barrel' // 砲身(turret 用)
   | 'base' // 台座(turret 用の据置ベース)
   | 'dome'; // ドーム(turret 用の旋回部)
@@ -147,8 +148,10 @@ const bossRig: RigSpec = {
   ],
 };
 
-// 飛行ボス(76x64): 脚なしの空中機。中央コア + 単眼センサー頭 + 左右ウィング + 下部キャノン。
-// swingRad/walkCycleMs=0 で歩行スイングを止め、shoot 時のみキャノンがリコイルする。
+// 飛行ボス(76x64): 脚なしの空中機。中央コア + 単眼サーチライト頭 + 左右ウィング + 下部キャノン。
+// 頭は cyclops(ひとつの大きな丸い単眼レンズ)で「空から世界を見張る眼=監視」を体現する
+// (walker の sensor=一文字の目とは別形状)。swingRad/walkCycleMs=0 で歩行スイングを止め、
+// shoot 時のみキャノンがリコイルする。
 const BF = PALETTE.bossFlying;
 const bossFlyingRig: RigSpec = {
   family: 'bossFlying',
@@ -159,7 +162,7 @@ const bossFlyingRig: RigSpec = {
     { key: PART.bossFlying.wingFront, shape: 'roundedBox', w: 34, h: 14, fill: BF.metal, accent: BF.accent2, x: 30, y: -2, originX: 0.5, originY: 0.5, role: 'torso' },
     { key: PART.bossFlying.core, shape: 'roundedBox', w: 46, h: 38, fill: BF.base, accent: BF.accent, accent2: BF.accent2, x: 0, y: 0, originX: 0.5, originY: 0.5, role: 'torso' },
     { key: PART.bossFlying.cannon, shape: 'cannon', w: 28, h: 16, fill: BF.light, accent: BF.accent, x: 14, y: 10, originX: 0.2, originY: 0.5, role: 'armFront' },
-    { key: PART.bossFlying.head, shape: 'sensor', w: 24, h: 14, fill: BF.light, accent: BF.accent2, x: 0, y: -22, originX: 0.5, originY: 0.5, role: 'head' },
+    { key: PART.bossFlying.head, shape: 'cyclops', w: 24, h: 14, fill: BF.light, accent: BF.accent, accent2: BF.accent2, x: 0, y: -22, originX: 0.5, originY: 0.5, role: 'head' },
   ],
 };
 

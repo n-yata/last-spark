@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS, FLYING_BOSS, ENVOY, getStageTuning } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, ENVOY, HAZARD, getStageTuning } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stage1';
@@ -14,7 +14,7 @@ import { WardenBoss } from '../entities/WardenBoss';
 import { PurifierBoss } from '../entities/PurifierBoss';
 import { CoreBoss } from '../entities/CoreBoss';
 import { Projectile } from '../entities/Projectile';
-import { LogTrigger } from '../entities/LogTrigger';
+import { Hazard } from '../entities/Hazard';
 import { InputController } from '../systems/InputController';
 import { CombatSystem } from '../systems/CombatSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
@@ -67,10 +67,10 @@ export class GameScene extends Phaser.Scene {
   private ended = false;
   /** 現在ステージの確定テキスト(未登録ステージなら undefined)。 */
   private story?: StageStory;
-  private logTriggers!: Phaser.Physics.Arcade.Group;
+  /** ダメージ床(汚染溜まり等。stage4 のみ)。 */
+  private hazards!: Phaser.Physics.Arcade.Group;
   /** 内心トリガの一度きり発火フラグ。 */
   private firstEnemyInnerDone = false;
-  private firstLogDone = false;
   /** セーブ管理(クリア記録)。再生成を避け単一インスタンスで保持する。 */
   private saveManager = new SaveManager();
   // --- ボス後・救出フロー(stage3 など postBossCutsceneKey を持つステージ) ---
@@ -96,7 +96,6 @@ export class GameScene extends Phaser.Scene {
     // spawnBoss の早期 return で次ステージのボスが出ないため、必ずクリアする。
     this.boss = undefined;
     this.firstEnemyInnerDone = false;
-    this.firstLogDone = false;
     this.inPostBoss = false;
     this.cageBars = undefined;
     // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
@@ -110,7 +109,7 @@ export class GameScene extends Phaser.Scene {
     this.createGroups();
     this.createPlayer();
     this.createSystems();
-    this.buildLogTriggers();
+    this.buildHazards();
     this.buildCage();
     this.setupCamera();
 
@@ -190,38 +189,27 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(STORY.pending, [...queue, ...requests]);
   }
 
-  private buildLogTriggers(): void {
-    this.logTriggers = this.physics.add.group();
-    for (const spec of this.stage.logTriggers ?? []) {
-      const trigger = new LogTrigger(this, spec.x, spec.y, spec.slot);
-      this.logTriggers.add(trigger);
-      // Group.add() がボディ設定をグループ既定値(重力ON)で上書きし、玉が床を
-      // すり抜けて落下するため、本来の静止設定を再適用する(Enemy と同様)。
-      trigger.configureBody();
-    }
-    this.physics.add.overlap(this.player, this.logTriggers, (_player, obj) => {
-      this.onLogOverlap(obj as LogTrigger);
-    });
-  }
-
   /**
-   * ログトリガー接触: 該当ログ本文をその場で表示する。
-   * 最初のログだけは RAY の内心(発見 → 本文 → 読了)を前後に添える。
-   * 注記: 最初のログの「読了後」内心(firstLogRead)は story.inner に定義があるステージのみ表示される。
+   * ダメージ床(stage4 の汚染溜まり)を生成し、プレイヤーとの重なりで周期ダメージを与える。
+   * これは人間の荒廃の遺産=死んだ世界そのもの(殺意の罠ではない)で、腐食性の汚染が機械の RAY も
+   * 蝕む。落下死の奈落と違い、上に乗れる地面の上へ薄く敷く。各 Hazard が自前のクールダウン(tryHit)を
+   * 持ち、overlap が毎フレーム呼んでも多重ヒットしない。ダメージは弾/接触と同じ共通経路へ通す
+   * (Player の無敵時間・被弾エフェクト・死亡処理を再利用する)。
    */
-  private onLogOverlap(trigger: LogTrigger): void {
-    if (!trigger.tryConsume()) return;
-    const requests: TextRequest[] = [];
-    if (!this.firstLogDone && this.story) {
-      this.firstLogDone = true;
-      // 「誰かがいた/これを書いた」(発見) → ログ本文 → 「読んだ後」の内心、の順。
-      requests.push(...resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'firstLogFound' }));
-      requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
-      requests.push(...resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'firstLogRead' }));
-    } else if (this.story) {
-      requests.push(...resolveStoryEvent(this.story, { type: 'logFound', slot: trigger.slot }));
+  private buildHazards(): void {
+    this.hazards = this.physics.add.group();
+    for (const rect of this.stage.hazards ?? []) {
+      const hazard = new Hazard(this, rect);
+      this.hazards.add(hazard);
+      // Group.add() がボディ設定をグループ既定値(重力ON)で上書きするため、静止設定を再適用する。
+      hazard.configureBody();
     }
-    this.pushStory(requests);
+    this.physics.add.overlap(this.player, this.hazards, (_player, obj) => {
+      const hazard = obj as Hazard;
+      if (hazard.tryHit(this.time.now)) {
+        this.combat.applyPlayerDamage(HAZARD.pollutionDamage);
+      }
+    });
   }
 
   /** 収容ケージ(stage3 など)の見た目を作る。撃破後に解錠アニメを再生する。 */

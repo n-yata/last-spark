@@ -6,15 +6,9 @@ const STORY: StageStory = {
   stageId: 'stageX',
   intro: 'イントロ1\nイントロ2',
   eclipseVoice: '排除する',
-  logs: {
-    early: '序盤ログ',
-    preBoss: 'ボス前ログ',
-    postBoss: 'ボス後ログ',
-  },
   inner: {
     stageStart: '起きた',
-    firstLogFound: '誰かがいた',
-    firstLogRead: '俺のために',
+    bossDefeated: '俺のために',
   },
 };
 
@@ -32,18 +26,6 @@ describe('resolveStoryEvent', () => {
     expect(out.map((r) => r.kind)).toEqual(['stageIntro']);
   });
 
-  it('logFound は該当スロットの科学者ログを返す', () => {
-    const out = resolveStoryEvent(STORY, { type: 'logFound', slot: 'preBoss' });
-    expect(out).toHaveLength(1);
-    expect(out[0].kind).toBe('scientistLog');
-    expect(out[0].text).toBe('ボス前ログ');
-  });
-
-  it('logFound で存在しないスロットは空配列', () => {
-    const sparse: StageStory = { ...STORY, logs: { early: 'のみ' } };
-    expect(resolveStoryEvent(sparse, { type: 'logFound', slot: 'postBoss' })).toEqual([]);
-  });
-
   it('bossIntro は ECLIPSE の語りかけを返す', () => {
     const out = resolveStoryEvent(STORY, { type: 'bossIntro' });
     expect(out).toHaveLength(1);
@@ -52,7 +34,7 @@ describe('resolveStoryEvent', () => {
   });
 
   it('inner は sceneKey の内心を返す', () => {
-    const out = resolveStoryEvent(STORY, { type: 'inner', sceneKey: 'firstLogRead' });
+    const out = resolveStoryEvent(STORY, { type: 'inner', sceneKey: 'bossDefeated' });
     expect(out).toHaveLength(1);
     expect(out[0].kind).toBe('rayInner');
     expect(out[0].text).toBe('俺のために');
@@ -65,15 +47,12 @@ describe('resolveStoryEvent', () => {
   it('pauseGame は kind の既定スタイルに一致する', () => {
     const intro = resolveStoryEvent(STORY, { type: 'stageStart' })[0];
     expect(intro.pauseGame).toBe(TEXT_STYLES.stageIntro.pauseGame);
-    const log = resolveStoryEvent(STORY, { type: 'logFound', slot: 'early' })[0];
-    expect(log.pauseGame).toBe(false);
     const inner = resolveStoryEvent(STORY, { type: 'inner', sceneKey: 'stageStart' })[0];
     expect(inner.pauseGame).toBe(false);
   });
 
   it('一時停止するのは開始テキストのみで、ステージ中テキストは全て非停止', () => {
     expect(TEXT_STYLES.stageIntro.pauseGame).toBe(true);
-    expect(TEXT_STYLES.scientistLog.pauseGame).toBe(false);
     expect(TEXT_STYLES.eclipseVoice.pauseGame).toBe(false);
     expect(TEXT_STYLES.rayInner.pauseGame).toBe(false);
     expect(TEXT_STYLES.terraLine.pauseGame).toBe(false);
@@ -81,7 +60,6 @@ describe('resolveStoryEvent', () => {
 
   it('開始テキストは中央、ステージ中テキストは上部に出す', () => {
     expect(TEXT_STYLES.stageIntro.position).toBe('center');
-    expect(TEXT_STYLES.scientistLog.position).toBe('top');
     expect(TEXT_STYLES.eclipseVoice.position).toBe('top');
     expect(TEXT_STYLES.rayInner.position).toBe('top');
     expect(TEXT_STYLES.terraLine.position).toBe('top');

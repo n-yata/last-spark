@@ -26,32 +26,20 @@ describe('getStageStory', () => {
     const s = getStageStory('stage1')!;
     expect(s.eclipseVoice).toBe('ここは、かんりされている。入ってくるものは、けす');
     expect(s.intro).toContain('こわれた町。さびと、つる草におおわれた、むかしの町。');
-    expect(s.logs.early).toContain('うごきテストのきろく №001');
-    expect(s.logs.preBoss).toContain('まだ外に出るな。');
-    expect(s.logs.postBoss).toContain('おれがだれかは、言わない。');
     expect(s.inner.stageStart).toBe('……おれは、目をさました');
     expect(s.inner.firstEnemyDefeated).toBe('動けた。——おれは、何者だ');
-    expect(s.inner.firstLogFound).toBe('だれかが、ここにいた');
   });
 
   it('stage2 の確定テキストが story.md と一致する', () => {
     const s = getStageStory('stage2')!;
     expect(s.eclipseVoice).toBe('このたてものは、ECLIPSEのものだ。入ってくるものは、けす');
-    expect(s.logs.early).toContain('研究ノート');
-    expect(s.logs.preBoss).toContain('ECLIPSEは止まらない。');
-    expect(s.logs.postBoss).toContain('気もちのテストのきろく');
     expect(s.inner.stageStart).toBe('上に、何かある。引きよせられる——どうして');
-    expect(s.inner.firstLogFound).toBe('……だれかが、これを書いた');
-    expect(s.inner.firstLogRead).toBe('おれのために、だれかが——');
   });
 
   it('stage3 の確定テキストが story.md と一致する', () => {
     const s = getStageStory('stage3')!;
     expect(s.intro).toContain('人をとじこめる、しせつ。生きている人の、けはいがする。');
     expect(s.eclipseVoice).toBe('そいつは、おれたちのものだ。かえせ');
-    expect(s.logs.early).toContain('かんさつのきろく');
-    expect(s.logs.preBoss).toContain('息子は、えがおがすきだった。');
-    expect(s.logs.postBoss).toContain('この世界に、えがおをとりもどせ');
     expect(s.inner.stageStart).toBe('生きている。人の、においがする');
     expect(s.inner.terraFound).toBe('……この子が、とじこめられている');
   });
@@ -60,9 +48,6 @@ describe('getStageStory', () => {
     const s = getStageStory('stage4')!;
     expect(s.intro).toContain('よごれた土地。大地はかれ、空気はにごっている。');
     expect(s.eclipseVoice).toBe('お前もきかいだ。なぜ、むだなことをえらぶ');
-    expect(s.logs.early).toContain('かんきょうデータのきろく');
-    expect(s.logs.preBoss).toContain('自由をうばうけんりが、きかいにあるか。');
-    expect(s.logs.postBoss).toContain('その両方ができるものが、かならずいると、おれはしんじた。');
     expect(s.inner.stageStart).toBe('……これが、人間のしたことか');
     expect(s.inner.eclipseReaction).toBe('ECLIPSEは……正しいのか');
     expect(s.inner.bossDefeated).toBe('それでも——TERRAの顔が、うかぶ');
@@ -72,12 +57,6 @@ describe('getStageStory', () => {
     const s = getStageStory('stage5')!;
     expect(s.intro).toContain('ECLIPSEのそとがわ。きかいが、どんどん多くなる。');
     expect(s.eclipseVoice).toBe('気もちは、こしょうだ。地球は、お前をいらない');
-    expect(s.logs.early).toContain('もうすぐ終わる。お前は、ここまで来た。');
-    expect(s.logs.preBoss).toContain('りくつには、気もちで答えろ。');
-    // postBoss は遺言(クライマックス)。「おれの息子は、もういない。でも、お前がいる」を含む。
-    expect(s.logs.postBoss).toContain('おれの息子は、もういない。');
-    expect(s.logs.postBoss).toContain('でも、お前がいる。');
-    expect(s.inner.firstLogRead).toBe('……この人が、おれを作った');
     expect(s.inner.eclipseReaction).toBe('気もちが、力になる。おれには——それがある');
     expect(s.inner.bossDefeated).toBe('おれは、感じるために作られた。それだけで——十分だ');
   });
@@ -86,22 +65,9 @@ describe('getStageStory', () => {
     const s = getStageStory('stage6')!;
     expect(s.intro).toContain('いちばんおくのへや。ここが、ECLIPSEのまんなかだ。');
     expect(s.eclipseVoice).toBe('地球を守るために、お前をけす');
-    // Stage 6 は序盤ログのみ(科学者の最後のメッセージ)。
-    expect(s.logs.early).toContain('RAY、お前をほこりに思う');
-    expect(s.logs.preBoss).toBeUndefined();
-    expect(s.logs.postBoss).toBeUndefined();
     expect(s.inner.stageStart).toBe('ここだ。ここで——終わる');
     expect(s.inner.eclipseReaction).toBe('これが、おれの答えだ');
     expect(s.inner.bossDefeated).toBe('……終わった');
-  });
-
-  it('stage1〜5 は全3スロットのログ本文が確定版として存在する(stage6 は序盤のみ)', () => {
-    for (const id of ['stage1', 'stage2', 'stage3', 'stage4', 'stage5']) {
-      const s = getStageStory(id)!;
-      expect(s.logs.early).toBeTruthy();
-      expect(s.logs.preBoss).toBeTruthy();
-      expect(s.logs.postBoss).toBeTruthy();
-    }
   });
 });
 
@@ -170,50 +136,5 @@ describe('ステージ開始演出フローのステージ条件', () => {
       expect(s.introCutsceneKey).toBeDefined();
       expect(s.introCutsceneCoversStartText).toBeFalsy();
     }
-  });
-});
-
-describe('ログトリガー配置', () => {
-  it('stage1 / stage2 / stage3 / stage4 / stage5 に early・preBoss のトリガーが配置されている', () => {
-    for (const id of ['stage1', 'stage2', 'stage3', 'stage4', 'stage5']) {
-      const slots = (getStageData(id).logTriggers ?? []).map((t) => t.slot);
-      expect(slots).toContain('early');
-      expect(slots).toContain('preBoss');
-    }
-  });
-
-  it('preBoss トリガーはボストリガー手前に置かれている', () => {
-    for (const id of ['stage1', 'stage2', 'stage3', 'stage4', 'stage5']) {
-      const stage = getStageData(id);
-      const preBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'preBoss');
-      expect(preBoss).toBeDefined();
-      expect(preBoss!.x).toBeLessThan(stage.bossTriggerX);
-    }
-  });
-
-  it('stage4 / stage5 はボス後演出を持たないため、postBoss ログもボストリガー手前(走行中に拾える位置)に置かれている', () => {
-    for (const id of ['stage4', 'stage5']) {
-      const stage = getStageData(id);
-      const postBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'postBoss');
-      expect(postBoss).toBeDefined();
-      expect(postBoss!.x).toBeLessThan(stage.bossTriggerX);
-    }
-  });
-
-  it('stage6 は序盤ログのみ(ボス前・ボス後なし)で、ボストリガー手前に置かれている', () => {
-    const stage = getStageData('stage6');
-    const slots = (stage.logTriggers ?? []).map((t) => t.slot);
-    expect(slots).toEqual(['early']);
-    const early = (stage.logTriggers ?? []).find((t) => t.slot === 'early');
-    expect(early!.x).toBeLessThan(stage.bossTriggerX);
-  });
-
-  it('stage3 の postBoss ログはアリーナ内(ボストリガーより後ろ)に置かれている', () => {
-    const stage = getStageData('stage3');
-    const postBoss = (stage.logTriggers ?? []).find((t) => t.slot === 'postBoss');
-    expect(postBoss).toBeDefined();
-    expect(postBoss!.x).toBeGreaterThan(stage.bossTriggerX);
-    // ケージはさらに奥(ボス後ログを拾ってからケージへ向かう動線)。
-    expect(stage.cage!.x).toBeGreaterThan(postBoss!.x);
   });
 });

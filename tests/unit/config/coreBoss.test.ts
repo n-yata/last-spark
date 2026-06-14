@@ -52,11 +52,4 @@ describe('stage6(ECLIPSE支配中枢)のステージ条件', () => {
   it('stage5 は stage6 へ連結している(最終ステージへの接続)', () => {
     expect(getStageData('stage5').nextStageId).toBe('stage6');
   });
-
-  it('Stage 6 は序盤ログのみ(ボス前・ボス後ログなし。story.md 準拠)', () => {
-    const slots = (getStageData('stage6').logTriggers ?? []).map((t) => t.slot);
-    expect(slots).toContain('early');
-    expect(slots).not.toContain('preBoss');
-    expect(slots).not.toContain('postBoss');
-  });
 });

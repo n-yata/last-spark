@@ -8,7 +8,7 @@ import type { StoryTextKind, TextRequest } from '../types/story';
 // ストーリーテキストのオーバーレイ描画。UIScene 上に常駐し、TextRequest のキューを順に再生する。
 // - 開始テキスト(stageIntro): GameScene を pause し画面中央に出す。タップで進み、これが
 //   ステージ開始の合図になる(ゲームが止まっているので移動/ショットの誤タップは起きない)。
-// - それ以外のステージ中テキスト(科学者ログ/ECLIPSE/RAY内心/TERRA): プレイ継続のまま
+// - それ以外のステージ中テキスト(ECLIPSE/RAY内心/TERRA): プレイ継続のまま
 //   画面上部に表示し、本文長に応じた時間で自動消去する(操作の邪魔になりにくい)。
 // 種別の見た目(色・フォント)で「誰の言葉か」を瞬時に区別できるようにする(話者ラベルは出さない)。
 
@@ -21,8 +21,6 @@ interface KindVisual {
 }
 
 const VISUALS: Record<StoryTextKind, KindVisual> = {
-  // 科学者: 人間の温もり(暖色)。手書き風フォント未調達のため serif で代替(後で差し替え可)。
-  scientistLog: { color: '#ffcf8f', fontFamily: 'Georgia, serif', fontStyle: 'normal', backdrop: true },
   // ECLIPSE: 機械の冷たさ(冷色・等幅)。
   eclipseVoice: { color: '#7fe9ff', fontFamily: 'monospace', fontStyle: 'normal', backdrop: true },
   // RAY内心: 白・イタリック・半透明。

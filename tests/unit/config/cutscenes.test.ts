@@ -105,15 +105,13 @@ describe('getCutscene', () => {
     expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('止まれない'))).toBe(true);
   });
 
-  it('stage6-ending が登録され、管理解除→人間描写→TERRAセリフ→エンディング本文の順を持つ', () => {
+  it('stage6-ending が登録され、管理解除→TERRAセリフ→エンディング本文の順を持つ', () => {
     const cs = getCutscene('stage6-ending');
     expect(cs).toBeDefined();
     const lines = cs!.lines;
     // ステップ1: 管理解除(ナレーション)で始まる。
     expect(lines[0]).toEqual({ kind: 'narration', text: 'ECLIPSEのかんりが、とけた' });
-    // ステップ2: 人間を初めて直接描写するト書きを含む。
-    expect(lines.some((l) => l.kind === 'direction' && l.text.includes('人間たちがすがたを見せる'))).toBe(true);
-    // ステップ3: TERRA とのセリフ交換(確定版)を含む。
+    // ステップ: TERRA とのセリフ交換(確定版)を含む。
     expect(lines.some((l) => l.kind === 'terraLine' && l.text.includes('次は何する'))).toBe(true);
     expect(lines.some((l) => l.kind === 'rayInner' && l.text.includes('おれたちが、決める'))).toBe(true);
     // ステップ4: エンディング本文(ナレーション)で締める。
@@ -122,7 +120,15 @@ describe('getCutscene', () => {
     expect(last.text).toContain('終わりではなく、始まり。');
   });
 
+  it('stage6-ending は群衆を出さない(人類はほぼ絶滅・二人だけ)', () => {
+    // 「建物から人間たちが姿を見せる」群衆描写は再設計で廃止。画面に出せない群衆をテキストで語らない。
+    const cs = getCutscene('stage6-ending')!;
+    expect(cs.lines.some((l) => l.text.includes('人間たちがすがたを見せる'))).toBe(false);
+    expect(cs.lines.some((l) => l.text.includes('すがたを見せる'))).toBe(false);
+  });
+
   it('stage6-ending は苦い勝利(争いの痕跡)のト書きを含む', () => {
+    // 争いの痕跡(落書き・バリケード)は story.md が「テキスト描写は可」とするため残す(群衆とは別)。
     const cs = getCutscene('stage6-ending')!;
     expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('あらそったあと'))).toBe(true);
   });

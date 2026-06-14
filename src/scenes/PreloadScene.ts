@@ -96,6 +96,9 @@ export class PreloadScene extends Phaser.Scene {
     this.makeOrb(TEX.projectileNormal, SHOT.normalSize, 0x9fffe8);
     this.makeOrb(TEX.projectileCharged, SHOT.chargedSize, 0xfff27a);
     this.makeOrb(TEX.projectileEnemy, SHOT.normalSize + 2, 0xff7a90);
+    // 汚染霧弾(stage4 環境管理機が「浄化」の名目で撒く汚染): 汚染トーン(背景 #151a0c)と地続きの
+    // 毒々しい黄緑。「この機械の汚染がこの世界を枯らした」を視覚で伝える(通常の敵弾=ピンクと区別)。
+    this.makeOrb(TEX.projectilePollution, SHOT.normalSize + 2, 0xaef03a);
     // ミサイル(stage3 収容番人): 弾頭 + 噴射炎の縦長シルエットで通常弾と区別する。
     this.makeMissile(TEX.projectileMissile, SHOT.missileSize, 0xffb347, 0xff5a3c);
 
@@ -245,6 +248,30 @@ export class PreloadScene extends Phaser.Scene {
         g.fillRoundedRect(w * 0.14, h * 0.32, w * 0.72, h * 0.36, 3);
         g.fillStyle(accent, 1);
         g.fillRoundedRect(w * 0.2, h * 0.38, w * 0.6, h * 0.24, 2);
+        break;
+      }
+      case 'cyclops': {
+        // 単眼サーチライト頭(哨戒機)。小箱 + 中央の大きな丸い単眼レンズ。
+        // 外側ハロ → リング(主発光) → 暗い眼窩 → 明るい芯(副発光=サーチライトの光点)。
+        g.fillStyle(fill, 1);
+        g.fillRoundedRect(0, 0, w, h, 3);
+        g.fillStyle(hi, 0.5);
+        g.fillRect(w * 0.08, h * 0.1, w * 0.84, h * 0.18);
+        g.fillStyle(lo, 0.45);
+        g.fillRect(0, h * 0.76, w, h * 0.24);
+        const eyeR = Math.min(w, h * 1.4) * 0.34;
+        const ex = w / 2;
+        const ey = h * 0.52;
+        g.fillStyle(accent, 0.28);
+        g.fillCircle(ex, ey, eyeR + 2.5); // 漏れ出る光のハロ
+        g.fillStyle(accent, 1);
+        g.fillCircle(ex, ey, eyeR); // レンズ外周(主発光)
+        g.fillStyle(this.shade(fill, -0.3), 1);
+        g.fillCircle(ex, ey, Math.max(1.5, eyeR - 2)); // 暗い眼窩
+        g.fillStyle(accent2, 1);
+        g.fillCircle(ex, ey, Math.max(1, eyeR * 0.42)); // サーチライトの芯(副発光)
+        g.lineStyle(1.5, accent, 0.6);
+        g.strokeRoundedRect(0.75, 0.75, w - 1.5, h - 1.5, 3);
         break;
       }
       case 'barrel': {

@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { PURIFIER, SHOT, STAGE, type PurifierBossConfig } from '../config/balance';
+import { TEX } from '../config/assetKeys';
 import { pickNextPurifierBossAction, bossActionDuration } from '../systems/bossAi';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
 import type { Projectile } from './Projectile';
 
 // stage4 専用・環境管理機(浄化型)ボス。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束・
-// 接地移動はそのまま再利用しつつ、jump の代わりに spray(扇状の範囲攻撃=毒霧スプレー)を持つ。
+// 接地移動はそのまま再利用しつつ、jump の代わりに spray(扇状の範囲攻撃=汚染霧スプレー)を持つ。
 // 「浄化」という名の汚染を扇状にまき散らす皮肉な攻撃を、遅い弾束で表現する。
 
 export class PurifierBoss extends Boss {
@@ -38,7 +39,7 @@ export class PurifierBoss extends Boss {
   }
 
   /**
-   * 扇状の範囲攻撃(毒霧スプレー)。プレイヤー方向の水平を中心に、spray.spreadRad の開き角へ
+   * 扇状の範囲攻撃(汚染霧スプレー)。プレイヤー方向の水平を中心に、spray.spreadRad の開き角へ
    * spray.count 発を均等散布する。単発弾より遅く広く展開し、回避を「位置取り」で迫る。
    * 既存の弾プール/Projectile を流用し、発射後に鉛直速度を与えて扇形にする。
    */
@@ -61,6 +62,9 @@ export class PurifierBoss extends Boss {
       const projectile = this.projectiles.get(muzzleX, clampedMuzzleY) as Projectile | null;
       if (!projectile) continue;
       projectile.fire(muzzleX, clampedMuzzleY, vx, 'normal', 'enemy');
+      // 見た目だけ汚染霧色へ差し替える(弾種=normal・ダメージ・挙動は通常の敵弾と同じ)。
+      // 汚染トーンと地続きの色で「この機械の汚染がこの世界を枯らした」を視覚で繋ぐ(安い手当て)。
+      projectile.setTexture(TEX.projectilePollution);
       // Projectile.fire は鉛直速度を 0 にするため、発射後に扇の鉛直成分を与える。
       projectile.setVelocityY(vy);
     }
