@@ -57,10 +57,13 @@ const PURIFIER_WEIGHTS: PhaseWeights = {
  * 接地/飛行/収容番人/浄化/コアの抽選には混入させない。
  * 難易度調整: 攻撃(lance/blink)偏重で滞空(hover=休み)が少なく手数が多すぎたため、
  * hover の比率を上げて息継ぎを増やす(phase2 で hover が減り攻勢的になる性格は維持)。
+ * 追加調整: 移動頻度が高すぎたため、移動の主因である blink(瞬間移動)の重みを下げ、
+ * その分を hover(滞空=休み)に回す。dive(攻撃急降下)は攻撃なので維持する。
+ * blink は phase2 で phase1 より出やすい(瞬間移動で挟む攻勢的な性格)は維持する。
  */
 const ENVOY_WEIGHTS: PhaseWeights = {
-  phase1: { hover: 20, dive: 20, lance: 30, blink: 20, shoot: 10 },
-  phase2: { hover: 15, dive: 20, lance: 30, blink: 30, shoot: 5 },
+  phase1: { hover: 25, dive: 20, lance: 30, blink: 15, shoot: 10 },
+  phase2: { hover: 23, dive: 20, lance: 30, blink: 22, shoot: 5 },
 };
 
 /**

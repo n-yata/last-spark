@@ -43,9 +43,10 @@ export const SHOT = {
   missileSize: 14,
   missileLaunchSpeed: 520,
   // --- 槍弾(stage5 使者の高速槍弾) ---
-  // 任意角度へ高速で飛ぶ非貫通の槍。通常弾より重い単発(ミサイルと同格の signature 弾)。
+  // 任意角度へ高速で飛ぶ非貫通の槍。lance は ENVOY 専用アクションのため、この値の変更は stage5 のみに影響する。
   // 速度は ENVOY.lance.speed を正本とし発射側(EnvoyBoss)が制御するため、spec の speed は使わない。
-  lanceDamage: 2,
+  // 難易度調整: 被ダメが高すぎたため通常弾と同じ 1 に下げる(脅威は速度・本数・任意角度で維持)。
+  lanceDamage: 1,
   lanceSize: 16,
 } as const;
 
@@ -354,7 +355,7 @@ export interface EnvoyBossConfig extends FlyingBossConfig {
 export const ENVOY = {
   maxHp: 26, // 飛行ボス(24)よりやや硬く、浄化型(28)より柔らかい終盤手前の硬さ
   phase2HpRatio: 0.5,
-  contactDamage: 2,
+  contactDamage: 1, // 難易度調整: 高速接近で接触が頻繁=被ダメが高すぎたため 2→1(無敵時間下で実質の被ダメ速度が半減)
   bulletDamage: 1,
   bulletSpeed: 290, // 速い弾(飛行ボス280より速い)。難易度調整: 見てから避けやすく 320→290
   moveSpeed: 110, // 高速移動(飛行ボス90より速い個性は維持)。難易度調整: 張り付き緩和 130→110
