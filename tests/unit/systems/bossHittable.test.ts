@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLAYER, BOSS, STAGE } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 
 // 「地上のプレイヤーの水平ショットがボスの当たり判定に重なる」ことを保証する回帰テスト。
 // 以前はボスが空中に浮いており、地上ショット(プレイヤー中心の高さ)が下を通過して

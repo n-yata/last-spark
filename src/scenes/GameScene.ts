@@ -5,7 +5,7 @@ import { HUD } from '../config/registryKeys';
 import { STAGE, BOSS, FLYING_BOSS, HAZARD, getStageTuning } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
-import { getStageData, type StageData } from '../config/stage1';
+import { getStageData, type StageData } from '../config/stages';
 import { getStageBackground, type StageBackgroundTheme } from '../config/stageBackground';
 import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';

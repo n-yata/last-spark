@@ -274,7 +274,6 @@ CI(GitHub Actions 想定)で以下を自動実行する:
 |--------|-----------|------|
 | Node.js | v24.11.0 | devcontainer に同梱 |
 | npm | 11.x | Node に同梱 |
-| (任意)Tiled | 最新 | ステージのタイルマップ編集 |
 
 ### セットアップ手順
 
@@ -302,4 +301,3 @@ npm run build         # 本番ビルド(PWA 生成を含む)
 ### 推奨開発ツール
 - **VS Code 拡張**: ESLint / Prettier。
 - **実機確認**: スマホ実機(iOS Safari / Android Chrome)で横向き・両手操作を確認(仮想ボタンの透明度/サイズ調整)。
-- **Tiled**: ステージ(崩れた都市)のタイルマップ作成。

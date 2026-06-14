@@ -149,7 +149,7 @@ State を持つ System クラス:
 - `sceneKeys.ts` / `registryKeys.ts` / `assetKeys.ts` / `storageKeys.ts`: シーンキー / registry キー / アセットキー / localStorage キー(`lastspark:save`)の定数
 - `controlBand.ts` / `touchLayout.ts`: 下部コントロール帯・仮想ボタンのレイアウト定数
 - `characterRig.ts`: キャラ見た目リグの系統別構成データ
-- `stage1.ts`: `StageData` 型と全ステージ定義(`STAGES` / `getStageData` / `nextStageId`)
+- `stages.ts`: `StageData` 型と全ステージ定義(`STAGES` / `getStageData` / `nextStageId`)
 - `stageBackground.ts`: ステージ背景テーマ(`getStageBackground`、純データ+決定論ロジック)
 - `storyEvents.ts`: ステージ進行とストーリーイベントの対応データ
 - `story/`: ステージ別の確定テキスト(`stage1.ts`〜`stage6.ts`、`cutscenes.ts`、`index.ts` の `getStageStory`)
@@ -238,7 +238,7 @@ tests/e2e/
 
 **役割**: Vite がそのまま配信する静的ファイル。ゲームアセットと PWA リソースを配置。
 
-- `assets/cutscenes/`: カットシーン背景の SVG。これ以外のスプライト/地形/HUD/BGM・SE は外部素材を持たず実行時に手続き生成する(`PreloadScene` がテクスチャ生成、`SoundManager` が Web Audio で音を合成)。Tiled タイルマップも使わず、ステージ地形は `config/stage1.ts` の `StageData` から構築する。
+- `assets/cutscenes/`: カットシーン背景の SVG。これ以外のスプライト/地形/HUD/BGM・SE は外部素材を持たず実行時に手続き生成する(`PreloadScene` がテクスチャ生成、`SoundManager` が Web Audio で音を合成)。Tiled タイルマップも使わず、ステージ地形は `config/stages.ts` の `StageData` から構築する。
 - `icons/`: PWA アイコン各サイズ。
 - マニフェスト/Service Worker は `vite-plugin-pwa` が生成・管理する。
 
@@ -316,7 +316,7 @@ scenes/ → persistence/ (OK)
 ## スケーリング戦略
 
 ### 機能の追加
-- **ステージ追加**: `public/assets/tilemaps/` にマップを追加し、`SpawnSystem` が `stageId` で読み込む。コード分割は不要。
+- **ステージ追加**: `config/stages.ts` の `STAGES` テーブルに `StageData` をコード定義で追加し、`SpawnSystem` が `stageId` で `getStageData` を引く。Tiled 等の外部マップは使わない。
 - **新しい敵/ボス**: `src/entities/` にクラス追加。共通挙動が増えたら基底クラス/共通モジュールへ抽出。
 - **武器交換(Post-MVP)**: `Projectile` の種別を拡張。種別が増えたら `src/entities/projectiles/` へサブディレクトリ化。
 

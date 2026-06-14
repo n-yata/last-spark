@@ -186,7 +186,7 @@
 
 **関連用語**: [Scene(シーン)](#sceneシーン), [守護機械(大型警備機)](#守護機械大型警備機)
 
-**実装**: `src/config/stage1.ts`(`STAGES` / `getStageData` / `nextStageId`), `src/scenes/GameScene.ts`, `src/scenes/ClearScene.ts`
+**実装**: `src/config/stages.ts`(`STAGES` / `getStageData` / `nextStageId`), `src/scenes/GameScene.ts`, `src/scenes/ClearScene.ts`
 
 ## 技術用語
 
@@ -256,13 +256,13 @@
 
 **関連用語**: [SaveData](#savedata), [SaveManager](#savemanager)
 
-### タイルマップ
+### ステージデータ(StageData)
 
-**定義**: タイル(小さな画像片)を格子状に並べてステージを構成するデータ形式。Tiled エディタで作成し JSON で出力する。
+**定義**: ステージの地形(足場・梯子・ハザード)・敵配置・ボストリガー・背景色・`nextStageId` 等をまとめた、コード定義のデータ構造。Tiled 等の外部マップエディタは使わない。
 
-**本プロジェクトでの用途**: ステージ(崩れた都市)の地形と敵配置の定義。`SpawnSystem` が読み込む。
+**本プロジェクトでの用途**: 全6ステージを `STAGES` テーブルにコード定義し、`SpawnSystem` が `stageId` で `getStageData` を引いて地形と敵を構築する。
 
-**配置先**: `public/assets/tilemaps/`
+**配置先**: `src/config/stages.ts`
 
 ## 略語・頭字語
 
@@ -611,7 +611,7 @@ isChargedShot(elapsedMs) = (elapsedMs >= SHOT.chargeThresholdMs)
 - [System(システム)](#systemシステム) - アーキテクチャ用語
 
 ### た行
-- [タイルマップ](#タイルマップ) - 技術用語
+- [ステージデータ(StageData)](#ステージデータstagedata) - 技術用語
 - [梯子(ラダー)](#梯子ラダー) - ドメイン用語
 - [チャージゲージ](#チャージゲージ) - ドメイン用語
 - [チャージショット](#チャージショット) - ドメイン用語

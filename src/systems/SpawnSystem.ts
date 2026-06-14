@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
-import { getStageData, type StageData, type EnemySpawn } from '../config/stage1';
+import { getStageData, type StageData, type EnemySpawn } from '../config/stages';
 import {
   BOSS,
   FLYING_BOSS,

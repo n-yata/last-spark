@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { SaveManager } from '../persistence/SaveManager';
-import { STAGE_IDS } from '../config/stage1';
+import { STAGE_IDS } from '../config/stages';
 import { isAllStagesCleared } from '../systems/progress';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';

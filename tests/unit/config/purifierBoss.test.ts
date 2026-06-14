@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PURIFIER, ENVOY, CONTAINMENT_WARDEN, HAZARD, SHOT } from '../../../src/config/balance';
-import { getStageData } from '../../../src/config/stage1';
+import { getStageData } from '../../../src/config/stages';
 
 // stage4「環境管理機(浄化型)」のチューニング検証。固有アクション bloom(動的汚染床)が phase2 で
 // 枚数増・幅拡大・存続延長して「安全地帯をじわじわ奪う」設計になっていること、汚染床ダメージが
