@@ -364,9 +364,8 @@ const STAGE4: StageData = {
 
 // ステージ5「ECLIPSE外縁部」: 揺らぎを理屈でなく選択で越える決意のステージ(docs/story.md)。
 // ボスは「ECLIPSEの使者(高速型)」。スリムで流線型、高速移動・連続攻撃のヒット&アウェイで戦う
-// (飛行型 FlyingBoss を流用し、ENVOY パラメータで速さを表現)。ボス撃破後は休眠コアとの共鳴で
-// RAY が攻撃強化を獲得する演出(stage5-awakening)を再生する。cage を持たないため救出ではなく
-// postBoss 演出フロー(enterPostBossCutscene)を通ってクリアへ進む。獲得した強化は stage6 でのみ有効。
+// (飛行型 FlyingBoss を流用し、ENVOY パラメータで速さを表現)。撃破後は通常クリア経路
+// (finishStageClear)で撃破内心を見せて stage6 へ進む。RAY の攻撃強化は stage6 開始の覚醒演出で獲得する。
 const STAGE5_WIDTH = 4800;
 const STAGE5: StageData = {
   id: 'stage5',
@@ -421,10 +420,8 @@ const STAGE5: StageData = {
   backgroundColor: '#141d2a',
   // ステージ開始演出(TERRA同行)。ECLIPSE が近づく緊張に TERRA が怯える。
   introCutsceneKey: 'stage5-intro',
-  // ボス撃破後、休眠コアとの共鳴で RAY が攻撃強化を獲得する演出。cage を持たないため救出ではなく
-  // postBoss 演出フロー(enterPostBossCutscene)を通る。獲得した強化は stage6 のみ有効(セーブ非保存)。
-  postBossCutsceneKey: 'stage5-awakening',
-  // stage5 クリア後は stage6(ECLIPSE支配中枢=最終ステージ)へ続く。
+  // stage5 は通常クリア経路(finishStageClear)を通り、撃破内心(inner.bossDefeated)を見せてから
+  // stage6(ECLIPSE支配中枢=最終ステージ)へ続く。RAY の攻撃強化は stage6 開始の覚醒演出で獲得する。
   nextStageId: 'stage6',
 };
 
@@ -479,7 +476,10 @@ const STAGE6: StageData = {
   // 支配中枢の冷たい闇(暗い藍。太陽を遮る「影」の核)。最も暗いトーンは保ちつつ、背景テーマの
   // 明度UPに合わせて地平線下が沈みすぎないよう僅かに持ち上げる。
   backgroundColor: '#0e0c18',
-  // ステージ開始演出は持たない(開始テキスト stageIntro と内心で導入する)。
+  // ステージ開始演出。支配中枢へ突入した瞬間、中枢の核が RAY に反応し最後の光を渡す=攻撃強化を
+  // 獲得する覚醒演出(stage6-awakening)。演出後に開始テキスト(stageIntro と内心)へ続く
+  // (introCutsceneCoversStartText は立てない。覚醒と「中枢到達の決意」は別内容で両方見せる)。
+  introCutsceneKey: 'stage6-awakening',
   // 最終ステージ: nextStageId なし。撃破後はエンディング演出へ分岐する。
   endingCutsceneKey: 'stage6-ending',
 };

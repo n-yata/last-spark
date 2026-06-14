@@ -135,30 +135,37 @@ describe('getCutscene', () => {
     expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('争った跡'))).toBe(true);
   });
 
-  // stage5-awakening: ボス撃破後の強化演出(休眠コアとの共鳴)。docs/story.md 厳守の検証。
-  it('stage5-awakening が登録されている', () => {
-    expect(getCutscene('stage5-awakening')).toBeDefined();
+  // stage6-awakening: Stage6 開始時の覚醒演出(支配中枢の核が RAY に反応し最後の力を渡す)。
+  // docs/story.md 厳守の検証。TERRA は安全な場所で待機(同行しない)ため RAY 単独の演出。
+  it('stage6-awakening が登録されている', () => {
+    expect(getCutscene('stage6-awakening')).toBeDefined();
   });
 
-  it('stage5-awakening の冒頭行はボス撃破後内心「この気持ちは、私のものだ。それでいい」', () => {
-    // stage5.ts から移設した撃破内心。演出の最初に見せることで撃破→感慨→強化の流れを作る。
-    const cs = getCutscene('stage5-awakening')!;
-    expect(cs.lines[0]).toEqual({ kind: 'rayInner', text: 'この気持ちは、私のものだ。それでいい' });
+  it('旧キー stage5-awakening は登録されていない(リネーム漏れ検出)', () => {
+    // stage5-awakening は stage6-awakening へリネームされ完全消滅。getCutscene は undefined を返す。
+    expect(getCutscene('stage5-awakening')).toBeUndefined();
   });
 
-  it('stage5-awakening は rayInner と direction のみで構成される(科学者の語り部なし)', () => {
+  it('stage6-awakening の冒頭行はト書き「支配中枢の最奥。脈打つ核が、レイに反応する」', () => {
+    // TERRA は同行しないため演出はレイ単独。冒頭は状況を示す direction から始まる。
+    const cs = getCutscene('stage6-awakening')!;
+    expect(cs.lines[0]).toEqual({ kind: 'direction', text: '支配中枢の最奥。脈打つ核が、レイに反応する' });
+  });
+
+  it('stage6-awakening は rayInner と direction のみで構成される(テラ不在・科学者の語り部なし)', () => {
     // docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。
+    // TERRA は安全な場所で待機するため terraLine は含まない。
     // 許可される kind は rayInner(レイの内心)と direction(ト書き)のみ。
-    // terraLine(テラのセリフ)・narration(ナレーション=科学者/システム文)は含まない。
-    const cs = getCutscene('stage5-awakening')!;
+    // narration(ナレーション=科学者/システム文)も含まない。
+    const cs = getCutscene('stage6-awakening')!;
     for (const line of cs.lines) {
       expect(['rayInner', 'direction']).toContain(line.kind);
     }
   });
 
-  it('stage5-awakening に禁止語(科学者・メモリ・設計者・記録)が含まれない', () => {
+  it('stage6-awakening に禁止語(科学者・メモリ・設計者・記録)が含まれない', () => {
     // docs/story.md で科学者設定は廃止済み。これらの語はストーリー世界観を壊す。
-    const cs = getCutscene('stage5-awakening')!;
+    const cs = getCutscene('stage6-awakening')!;
     const allText = cs.lines.map((l) => l.text).join('');
     expect(allText).not.toContain('科学者');
     expect(allText).not.toContain('メモリ');

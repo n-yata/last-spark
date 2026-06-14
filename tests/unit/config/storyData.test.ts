@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getStageStory } from '../../../src/config/story';
 import { getStageData } from '../../../src/config/stages';
-import { getCutscene } from '../../../src/config/story/cutscenes';
 
 // 確定テキスト(docs/story.md)の取りこぼし・誤編集を検出するデータ整合テスト。
 // 表示そのものは実機確認だが、データが確定版どおりであることはここで保証する。
@@ -63,13 +62,10 @@ describe('getStageStory', () => {
     // 内心（気持ち）を名指しせず、観測した「守る行動」を故障と断じる。
     expect(s.eclipseVoice).toBe('その個体を守る意味はない。お前の動きは、故障だ。');
     expect(s.inner.eclipseReaction).toBe('故障でもいい。私は、この子を守ると決めた。');
-    // ボス撃破後内心は stage5.ts から強化演出(stage5-awakening)冒頭の rayInner へ移設された。
-    // stage5 は postBossCutsceneKey を持ち finishStageClear を通らないため、
-    // 撃破内心は演出スクリプトの中で見せる設計になっている。
+    // ボス撃破後内心は stage5.ts の inner.bossDefeated で finishStageClear 経由で表示される。
+    // stage5 は通常クリア経路を通るため、撃破内心は stage5.ts が正本。
     // 出自（なぜ作られたか）は語らない。
-    const awakening = getCutscene('stage5-awakening')!;
-    const firstRayInner = awakening.lines.find((l) => l.kind === 'rayInner');
-    expect(firstRayInner?.text).toBe('この気持ちは、私のものだ。それでいい');
+    expect(s.inner.bossDefeated).toBe('この気持ちは、私のものだ。それでいい');
   });
 
   it('stage6 の確定テキストが③確定版と一致する', () => {
@@ -93,7 +89,7 @@ describe('ボス後演出フローのステージ条件', () => {
   });
 
   it('cage を伴う救出演出(postBoss)を持つのは stage3 のみ: 他ステージは cage を持たない', () => {
-    // stage3 は救出フロー(cage あり)。stage5 はボス撃破後強化演出を持つが cage は持たない。
+    // stage3 は救出フロー(cage あり)。stage5 は通常クリア経路(cage なし)。
     // stage1 / stage2 / stage4 / stage6 はボス後演出自体を持たない。
     for (const id of ['stage1', 'stage2', 'stage4', 'stage6']) {
       const s = getStageData(id);
@@ -102,11 +98,17 @@ describe('ボス後演出フローのステージ条件', () => {
     }
   });
 
-  it('stage5 は cage を持たない強化演出(postBossCutsceneKey)を持つ', () => {
-    // stage5-awakening: 休眠コアとの共鳴による強化演出。救出フロー(cage)ではない。
-    const s = getStageData('stage5');
-    expect(s.postBossCutsceneKey).toBe('stage5-awakening');
-    expect(s.cage).toBeUndefined();
+  it('postBossCutsceneKey を持つのは stage3 のみ: stage5 は通常クリア経路へ復帰', () => {
+    // stage5 は強化演出(postBossCutsceneKey)を持たず、finishStageClear の通常経路を通る。
+    // RAY の攻撃強化は stage6 開始の覚醒演出(introCutsceneKey)で獲得する設計に変更済み。
+    // 全ステージ走査: postBossCutsceneKey を持つのは救出フロー(cage あり)の stage3 のみ。
+    const stage5 = getStageData('stage5');
+    expect(stage5.postBossCutsceneKey).toBeUndefined();
+    expect(stage5.cage).toBeUndefined();
+    // 全ステージを走査して postBossCutsceneKey の保持者が stage3 のみであることを保証する。
+    for (const id of ['stage1', 'stage2', 'stage4', 'stage5', 'stage6']) {
+      expect(getStageData(id).postBossCutsceneKey).toBeUndefined();
+    }
   });
 
   it('stage2→stage3→stage4→stage5→stage6 と連結している', () => {
@@ -150,11 +152,19 @@ describe('ステージ開始演出フローのステージ条件', () => {
     expect(getStageData('stage1').introCutsceneCoversStartText).toBe(true);
   });
 
-  it('stage4 / stage5 は演出と開始テキストが別内容: introCutsceneCoversStartText を立てない(演出→開始テキスト)', () => {
-    for (const id of ['stage4', 'stage5']) {
+  it('stage4 / stage5 / stage6 は演出と開始テキストが別内容: introCutsceneCoversStartText を立てない(演出→開始テキスト)', () => {
+    // stage6 は覚醒演出(stage6-awakening)と開始テキスト(中枢到達の決意)を両方見せる設計。
+    // introCutsceneCoversStartText は立てない(stage4/5 と同列)。
+    for (const id of ['stage4', 'stage5', 'stage6']) {
       const s = getStageData(id);
       expect(s.introCutsceneKey).toBeDefined();
       expect(s.introCutsceneCoversStartText).toBeFalsy();
     }
+  });
+
+  it('stage6 は stage6-awakening の開始演出を持つ', () => {
+    // Stage6 開始時に覚醒演出を再生し、RAY が最後の力を受け取る(攻撃強化獲得)。
+    const s = getStageData('stage6');
+    expect(s.introCutsceneKey).toBe('stage6-awakening');
   });
 });

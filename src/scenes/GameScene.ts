@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
-import { HUD, PROGRESS } from '../config/registryKeys';
+import { HUD } from '../config/registryKeys';
 import { STAGE, BOSS, FLYING_BOSS, HAZARD, getStageTuning } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
@@ -46,12 +46,6 @@ export interface GameSceneData {
    * 物語は初回に見せれば十分で、リトライのたびに長尺の演出を強いると再挑戦のテンポを損なうため。
    */
   skipCutscene?: boolean;
-  /**
-   * タイトル発の起動(START / ステージ選択)か。true のとき RAY 強化フラグ(PROGRESS.playerEmpowered)を
-   * クリアして素の状態で開始する。クリア継続(ClearScene)・リトライ(GameOverScene)では渡さないため、
-   * stage5 で獲得した強化が stage6 のプレイ系列(リトライ含む)で維持される。
-   */
-  fromStageSelect?: boolean;
 }
 
 /** collider の processCallback が受け取りうるオブジェクト型(Phaser の ArcadePhysicsCallback 準拠)。 */
@@ -109,11 +103,6 @@ export class GameScene extends Phaser.Scene {
   init(data: GameSceneData): void {
     this.stageId = data?.stageId ?? DEFAULT_STAGE_ID;
     this.skipCutscene = data?.skipCutscene ?? false;
-    // タイトル発の起動(START / ステージ選択)では強化フラグを必ず落とし、素の状態で始める。
-    // 継続・リトライでは落とさないため、stage5 獲得の強化が stage6 系列(リトライ含む)で維持される。
-    if (data?.fromStageSelect) {
-      this.registry.set(PROGRESS.playerEmpowered, false);
-    }
   }
 
   create(): void {
@@ -339,48 +328,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /**
-   * ボス撃破後の演出フェーズ(cage なし。stage5 の強化演出 stage5-awakening 用)。ボスを片付け、
-   * 撃破の余韻を見せてからカットシーンを再生し、完了時に強化フラグを付与してクリアへ遷移する。
-   * 物理ステップ中の scene.pause() を避けるためタイマー経由で状態を変更する(救出/開始演出と同方式)。
-   */
-  private enterPostBossCutscene(dyingBoss: Boss): void {
-    dyingBoss.destroy();
-    this.registry.set(HUD.bossActive, false);
-    const scriptKey = this.stage.postBossCutsceneKey;
-    if (!scriptKey) {
-      this.finalizePostBossClear();
-      return;
-    }
-    this.player.setVelocityX(0);
-    this.time.delayedCall(500, () => {
-      this.scene.pause(SCENE_KEYS.ui);
-      this.scene.launch(SCENE_KEYS.cutscene, {
-        scriptKey,
-        onComplete: () => this.finalizePostBossClear(),
-      });
-      this.scene.pause();
-    });
-  }
-
-  /**
-   * ボス後演出(stage5 強化演出)の完了後: RAY 強化フラグを付与し、一時停止を解いてクリアへ遷移する。
-   * 強化フラグは stage6 開始時に createPlayer が読む(セーブ非保存・registry のみ)。
-   */
-  private finalizePostBossClear(): void {
-    this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
-    // stage5 クリア演出(休眠コア共鳴)で RAY が攻撃強化を獲得する。
-    this.registry.set(PROGRESS.playerEmpowered, true);
-    this.ended = true;
-    this.inputController.destroy();
-    this.scene.stop(SCENE_KEYS.ui);
-    transitionTo(this, SCENE_KEYS.clear, {
-      clearTimeMs: this.pendingClearTimeMs,
-      stageId: this.stageId,
-      nextStageId: this.stage.nextStageId,
-    });
-  }
-
   private buildPlatforms(): void {
     // 地面(全面衝突)と浮遊足場(ワンウェイ)を別グループに分ける。
     // 判定は従来どおり高さ: height>40 を地面、それ以下を足場とみなす。
@@ -450,9 +397,10 @@ export class GameScene extends Phaser.Scene {
     this.player.setProjectiles(this.playerShots);
     this.player.setBeams(this.playerBeams);
     this.player.setLadders(this.stage.ladders ?? []);
-    // 強化フラグ(stage5 クリア演出で付与)は読むだけ・消費しない。リトライで create が再実行されても
-    // registry は維持されるため、毎回読んで強化を復活させる(stage6 系列での維持)。単体選択は init で落とす。
-    if (this.registry.get(PROGRESS.playerEmpowered) === true) {
+    // RAY の攻撃強化は stage6(支配中枢)の静的属性。stage6 開始の覚醒演出(stage6-awakening)で
+    // 物語上獲得する力を、ステージそのものの性質として付与する。createPlayer は毎回 stageId から
+    // 再導出するため、リトライ(演出スキップ)や stage6 の単体選択でも確実に強化が乗る(演出の有無と独立)。
+    if (this.stageId === 'stage6') {
       this.player.setEmpowered(true);
     }
     // 地面は全面衝突、足場はワンウェイ(上から着地・下から通過、梯子中は貫通)。
@@ -705,17 +653,13 @@ export class GameScene extends Phaser.Scene {
     getSound().playSe('bossDefeated');
     this.registry.set(HUD.bossHp, 0);
 
-    // ボス後演出を持つステージ: 即クリアせず、撃破演出後に演出フェーズへ。
-    // cage を持つ(stage3)は救出フロー、持たない(stage5 の強化演出)は postBoss 演出フローへ分岐する。
+    // ボス後演出を持つステージ(現状 stage3 のケージ救出のみ): 即クリアせず、撃破演出後に救出フェーズへ。
     if (this.stage.postBossCutsceneKey) {
       this.inPostBoss = true;
       this.pendingClearTimeMs = clearTimeMs;
       // 死亡ボスを update ループから切り離し(参照を断ち)、演出後に破棄する。
       this.boss = undefined;
-      const afterDeath = this.stage.cage
-        ? () => this.enterRescuePhase(boss)
-        : () => this.enterPostBossCutscene(boss);
-      this.effects.bossDeathSequence(boss.x, boss.y, afterDeath);
+      this.effects.bossDeathSequence(boss.x, boss.y, () => this.enterRescuePhase(boss));
       return;
     }
 
@@ -782,8 +726,6 @@ export class GameScene extends Phaser.Scene {
   private finalizeEnding(clearTimeMs: number): void {
     this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
     this.scene.stop(SCENE_KEYS.ui);
-    // 全クリア後はタイトルへ戻る。次プレイに強化が漏れないよう registry の強化フラグをクリアする。
-    this.registry.set(PROGRESS.playerEmpowered, false);
     this.saveManager.markStageCleared(this.stageId, clearTimeMs);
     transitionTo(this, SCENE_KEYS.title);
   }
