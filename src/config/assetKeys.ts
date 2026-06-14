@@ -10,6 +10,8 @@ export const TEX = {
   projectileNormal: 'tex-projectile-normal',
   projectileCharged: 'tex-projectile-charged',
   projectileEnemy: 'tex-projectile-enemy',
+  // stage4 環境管理機(浄化型)が「浄化」の名目で撒く汚染霧スプレー専用。汚染トーン(背景 #151a0c)と地続き。
+  projectilePollution: 'tex-projectile-pollution',
   projectileMissile: 'tex-projectile-missile',
   ground: 'tex-ground',
   platform: 'tex-platform',

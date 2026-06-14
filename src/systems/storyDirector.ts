@@ -6,11 +6,10 @@ import type { StageStory, StoryEvent, StoryTextKind, StoryTextStyle, TextRequest
 /**
  * kind ごとの既定スタイル(表示位置・一時停止要否)。StoryOverlay も同じ値を参照する。
  * 一時停止するのはステージ開始テキスト(stageIntro)のみ。中央に出してタップで進め、
- * これがステージ開始の合図になる。それ以外のステージ中テキスト(科学者ログ/ECLIPSE/
- * RAY内心/TERRA)は動きを止めず画面上部に出し、本文長に応じて自動で消える。
+ * これがステージ開始の合図になる。それ以外のステージ中テキスト(ECLIPSE/RAY内心/TERRA)は
+ * 動きを止めず画面上部に出し、本文長に応じて自動で消える。
  */
 export const TEXT_STYLES: Record<StoryTextKind, StoryTextStyle> = {
-  scientistLog: { position: 'top', pauseGame: false },
   eclipseVoice: { position: 'top', pauseGame: false },
   rayInner: { position: 'top', pauseGame: false },
   stageIntro: { position: 'center', pauseGame: true },
@@ -46,10 +45,6 @@ export function resolveStoryEvent(story: StageStory, event: StoryEvent): TextReq
       const inner = story.inner.stageStart;
       if (inner) out.push(request('rayInner', inner));
       return out;
-    }
-    case 'logFound': {
-      const log = story.logs[event.slot];
-      return log ? [request('scientistLog', log)] : [];
     }
     case 'bossIntro': {
       return [request('eclipseVoice', story.eclipseVoice)];
