@@ -102,4 +102,14 @@ export const PART = {
     spear: 'part-bossenvoy-spear',
     head: 'part-bossenvoy-head',
   },
+  // stage4 環境管理機(PURIFIER): 背中に巨大な汚染タンクを背負った接地機。幅広胴 + 太短脚 +
+  // 低い作業頭(sensor) + 散布ノズル(cannon)。戦闘用ヘルメット+キャノンの 'boss' とは別人格。
+  bossPurifier: {
+    tank: 'part-bosspurifier-tank',
+    torso: 'part-bosspurifier-torso',
+    head: 'part-bosspurifier-head',
+    nozzle: 'part-bosspurifier-nozzle',
+    legBack: 'part-bosspurifier-legback',
+    legFront: 'part-bosspurifier-legfront',
+  },
 } as const;

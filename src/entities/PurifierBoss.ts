@@ -40,8 +40,8 @@ export class PurifierBoss extends Boss {
   private bloomCtx?: BloomContext;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    // 接地型(重力あり)。専用リグは未調達のため接地ボスリグ('boss')を流用する(Phase E で bossPurifier に差し替え)。
-    super(scene, x, y, { config: PURIFIER, rigFamily: 'boss', gravity: true });
+    // 接地型(重力あり)。専用リグ bossPurifier(汚染タンクを背負った接地機)を使う('boss' 流用を解消)。
+    super(scene, x, y, { config: PURIFIER, rigFamily: 'bossPurifier', gravity: true });
   }
 
   /** bloom の外部参照を注入する。未注入なら bloom は no-op(安全側)。 */

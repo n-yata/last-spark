@@ -6,7 +6,7 @@
 // 寸法は balance.ts の width/height から比率で導出している(はみ出しすぎない範囲)。
 
 import { PART } from './assetKeys';
-import { PLAYER, ENEMY, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, ENVOY } from './balance';
+import { PLAYER, ENEMY, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, ENVOY, PURIFIER } from './balance';
 
 /** パーツの描画形状。PreloadScene がこの種別に応じて Graphics で描き分ける。 */
 export type PartShape =
@@ -62,7 +62,15 @@ export interface RigPartSpec {
 
 /** 1 系統のリグ仕様。parts は背面→前面(描画順 = z 順)で並べる。 */
 export interface RigSpec {
-  family: 'player' | 'walker' | 'turret' | 'boss' | 'bossFlying' | 'bossWarden' | 'bossEnvoy';
+  family:
+    | 'player'
+    | 'walker'
+    | 'turret'
+    | 'boss'
+    | 'bossFlying'
+    | 'bossWarden'
+    | 'bossEnvoy'
+    | 'bossPurifier';
   /** 歩行スイングの基準振幅(rad)。系統ごとの脚の振り幅。 */
   swingRad: number;
   /** 歩行周期(ms)。小さいほど速く脚を動かす。 */
@@ -89,6 +97,8 @@ const PALETTE = {
   bossWarden: { metal: 0x3a4654, base: 0x55636f, light: 0x8a98a6, accent: 0xffc233, accent2: 0x46e0c0 },
   // 使者(ENVOY): 冷たい白青 × 警告の紫赤(stage5背景 0x0c1119・ラスボスphase2眼 0xff5a5a と接続)。
   bossEnvoy: { metal: 0x0a1420, base: 0x16304a, light: 0x3a6a9a, accent: 0x8ad8ff, accent2: 0xff5a8a },
+  // 環境管理機(PURIFIER): 浄化を装う白緑 × 漏出する毒の黄緑(汚染弾/Hazard 0xaef03a と地続き)。
+  bossPurifier: { metal: 0x1a2410, base: 0x2e4a1c, light: 0x6e8a3a, accent: 0xaef03a, accent2: 0xd8f0a0 },
 } as const;
 
 // プレイヤー(28x40): ヘルメット頭 + 胴 + 片腕アームキャノン + 二脚。
@@ -205,6 +215,25 @@ const bossEnvoyRig: RigSpec = {
   ],
 };
 
+// 環境管理機(96x92): 背中に巨大な汚染タンクを背負った接地機。stage1 ボスの戦闘用ヘルメット+
+// キャノンとは別人格で「重い・作業機械・漏れ出す毒」を表す。背面タンク(z最背面・縦長) + 幅広胴 +
+// 太短脚×2 + 低い作業頭(sensor=一文字の作業センサー) + 散布ノズル(cannon・spray/bloom 時にリコイル)。
+// 新 PartShape は作らず既存形状で構成。タンクが漏らす毒色(accent=0xaef03a)を汚染弾/Hazard と地続きにする。
+const PU = PALETTE.bossPurifier;
+const bossPurifierRig: RigSpec = {
+  family: 'bossPurifier',
+  swingRad: 0.28, // 重いタンクを背負ったのっそりした接地歩行
+  walkCycleMs: 760,
+  parts: [
+    { key: PART.bossPurifier.tank, shape: 'roundedBox', w: 34, h: 64, fill: PU.base, accent: PU.accent, accent2: PU.accent2, x: -30, y: -6, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossPurifier.legBack, shape: 'leg', w: 26, h: 22, fill: PU.metal, accent: PU.accent, x: -14, y: 22, originX: 0.5, originY: 0, role: 'legBack' },
+    { key: PART.bossPurifier.torso, shape: 'roundedBox', w: 60, h: 50, fill: PU.base, accent: PU.accent, accent2: PU.accent2, x: 0, y: 0, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossPurifier.legFront, shape: 'leg', w: 26, h: 22, fill: PU.metal, accent: PU.accent, x: 16, y: 22, originX: 0.5, originY: 0, role: 'legFront' },
+    { key: PART.bossPurifier.head, shape: 'sensor', w: 30, h: 18, fill: PU.light, accent: PU.accent2, x: 6, y: -30, originX: 0.5, originY: 0.5, role: 'head' },
+    { key: PART.bossPurifier.nozzle, shape: 'cannon', w: 40, h: 24, fill: PU.light, accent: PU.accent, x: 24, y: 6, originX: 0.2, originY: 0.5, role: 'armFront' },
+  ],
+};
+
 /** 系統名 → リグ仕様。CharacterRig / PreloadScene が参照する。 */
 export const RIGS = {
   player: playerRig,
@@ -214,6 +243,7 @@ export const RIGS = {
   bossFlying: bossFlyingRig,
   bossWarden: bossWardenRig,
   bossEnvoy: bossEnvoyRig,
+  bossPurifier: bossPurifierRig,
 } as const;
 
 export type RigFamily = keyof typeof RIGS;
@@ -232,4 +262,5 @@ export const RIG_BODY_SIZE = {
   bossFlying: { width: FLYING_BOSS.width, height: FLYING_BOSS.height },
   bossWarden: { width: CONTAINMENT_WARDEN.width, height: CONTAINMENT_WARDEN.height },
   bossEnvoy: { width: ENVOY.width, height: ENVOY.height },
+  bossPurifier: { width: PURIFIER.width, height: PURIFIER.height },
 } as const;

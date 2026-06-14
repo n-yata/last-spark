@@ -54,4 +54,23 @@ describe('characterRig(リグ構成)', () => {
     const flyingKeys = new Set(RIGS.bossFlying.parts.map((p) => p.key));
     expect(envoy.parts.every((p) => !flyingKeys.has(p.key))).toBe(true);
   });
+
+  it('環境管理機(bossPurifier)は専用リグで、stage1 ボス(boss)流用ではない', () => {
+    const pu = RIGS.bossPurifier;
+    // 接地機なので二脚を持ち、歩行スイングがある(飛行系と違う)。
+    expect(pu.parts.some((p) => p.role === 'legBack')).toBe(true);
+    expect(pu.parts.some((p) => p.role === 'legFront')).toBe(true);
+    expect(pu.swingRad).toBeGreaterThan(0);
+    // 頭は戦闘用ヘルメットではなく低い作業頭(sensor)。
+    expect(pu.parts.find((p) => p.role === 'head')!.shape).toBe('sensor');
+    expect(pu.parts.some((p) => p.shape === 'helmet')).toBe(false);
+    // 背面に汚染タンク(最背面=parts 先頭、本体より後方=負の x、縦長)を背負う。
+    const tank = pu.parts[0];
+    expect(tank.key).toBe(RIGS.bossPurifier.parts.find((p) => p.key.includes('tank'))!.key);
+    expect(tank.x).toBeLessThan(0);
+    expect(tank.h).toBeGreaterThan(tank.w);
+    // stage1 ボス(boss)とはパーツキーを共有しない(独立リグ=placeholder 解消)。
+    const bossKeys = new Set(RIGS.boss.parts.map((p) => p.key));
+    expect(pu.parts.every((p) => !bossKeys.has(p.key))).toBe(true);
+  });
 });

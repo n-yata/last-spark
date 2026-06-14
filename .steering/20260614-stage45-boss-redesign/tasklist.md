@@ -91,12 +91,16 @@
 
 ## フェーズ E: PURIFIER ビジュアル実装
 
-- [ ] `characterRig.ts` に `bossPurifier` リグを追加
-  - [ ] `RigSpec.family` 型・`PALETTE`・`RIGS`・`RIG_BODY_SIZE` に追加
-  - [ ] タンク背負いの接地機シルエットを構成
-  - [ ] `assetKeys.ts` に bossPurifier パーツキー追加
-- [ ] `stage1.ts` の Stage4 に `bossRig: 'bossPurifier'` を指定
-- [ ] 動作確認（placeholder 解消）
+- [x] `characterRig.ts` に `bossPurifier` リグを追加
+  - [x] `RigSpec.family` 型・`PALETTE`・`RIGS`・`RIG_BODY_SIZE` に追加（PURIFIER を balance から import）
+  - [x] タンク背負いの接地機シルエットを構成（背面タンク=roundedBox縦長(z最背面) / 幅広胴=roundedBox / 太短脚×2=leg / 低い作業頭=sensor / 散布ノズル=cannon(armFront・攻撃時リコイル)。新 PartShape は追加せず。色は浄化を装う白緑×漏出毒の黄緑=Hazard 0xaef03a と地続き）
+  - [x] `assetKeys.ts` に bossPurifier パーツキー追加
+  - [x] `PurifierBoss` の rigFamily を 'boss' → 'bossPurifier' に変更（placeholder 解消）
+  - [x] characterRig.test に bossPurifier 構造テスト追加（二脚/歩行スイング/sensor頭/背面タンク/boss非共有）
+- [x] ~~`stage1.ts` の Stage4 に `bossRig: 'bossPurifier'` を指定~~（実装方針変更により不要: Phase C の EnvoyBoss と同じく専用クラス PurifierBoss が自身のリグ系統を保持する規約に従う。stage.bossRig は generic Boss 分岐専用で指定すると dead config になる）
+- [x] 動作確認（placeholder 解消）
+  - playwright introspection で bossPurifier 採用を確認: 6パーツ(part-bosspurifier-tank/legback/torso/legfront/head/nozzle)が指定実寸(tank34x64縦長/torso60x50/脚26x22/頭30x18/ノズル40x24)で生成・visible・attach。'boss' 流用解消。エラーゼロ
+  - 注: ピクセルスクショは Phase C 同様カメラ制約で取得できず、実寸一致 data 検証＋構造テストで担保（最終目視は Phase F の通しプレイ）
 
 ## フェーズ F: 品質チェックと仕上げ
 
