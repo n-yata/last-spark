@@ -2,6 +2,12 @@
 // 切り出して出力した records を、実行時 fetch せず定数化したもの(単一の真実)。SpriteRig がこの座標で
 // 上半身/前腕/前脚/後脚を元の立ち絵どおりに組み立て、脚を股関節・腕を肩で振る。
 //
+// 【現在は休眠中】RAY だけイラスト品質だと敵/世界(手続き画風)から浮くため、プレイヤーは手続きの
+//   CharacterRig に戻している(この raySprite/SpriteRig/art-src/cut-ray.mjs は将来の再利用のため温存)。
+//   再有効化手順: ①`node scripts/cut-ray.mjs` でパーツ webp を再生成 →
+//   ②PreloadScene で RAY_SPRITE の load.image を復活 → ③Player の rig を SpriteRig + RAY_MUZZLE に戻す。
+//   敵/ボス/地形/背景も同画風へ上げてから有効化するのが望ましい(単体だと浮く)。
+//
 // 座標は原画(ray-side.png, 1536x1024)ピクセル。bbox はキャラの不透明範囲。
 // hipX/hipY=脚の股関節ピボット、shoulderX/Y=腕の肩ピボット、muzzle=キャノン先端(発射位置)。
 

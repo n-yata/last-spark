@@ -26,8 +26,7 @@ import {
   type Box,
 } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
-import { SpriteRig } from './SpriteRig';
-import { RAY_MUZZLE } from '../config/raySprite';
+import { CharacterRig } from './CharacterRig';
 import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
 import { Beam } from './Beam';
@@ -53,7 +52,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private beams?: Phaser.GameObjects.Group;
   /** ビーム発動中の再発火を抑止する終了時刻(ms)。発動中(now < beamActiveUntil)は新規ショットを受けない。 */
   private beamActiveUntil = 0;
-  private readonly rig: SpriteRig;
+  private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.player);
@@ -63,9 +62,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     body.setSize(PLAYER.width, PLAYER.height);
     body.setCollideWorldBounds(false);
     this.setDepth(10);
-    // 物理は据え置き、見た目はカットアウト・リグ(外部生成キービジュアル)へ委譲する(自スプライトは非表示)。
+    // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
     this.setVisible(false);
-    this.rig = new SpriteRig(scene, 10);
+    this.rig = new CharacterRig(scene, 'player', 10);
   }
 
   /** 発射に使う弾プールを設定する。 */
@@ -288,7 +287,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.lastShotAt = now;
     const kind = action === 'fireCharged' ? 'charged' : 'normal';
     const dir = facingSign(this.facing);
-    const muzzleX = this.x + dir * RAY_MUZZLE.dx;
+    const muzzleX = this.x + dir * (PLAYER.width / 2 + 6);
     const speed = createProjectileSpec(kind).speed;
 
     // 強化時の通常弾は正面へ平行に進む2発(マズルを上下に ±splitOffsetPx ずらす)。それ以外は
@@ -298,7 +297,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.empowered && kind === 'normal' ? [-SHOT.splitOffsetPx, SHOT.splitOffsetPx] : [0];
     const vx = dir * speed;
     for (const offsetY of offsetsY) {
-      const muzzleY = this.y + RAY_MUZZLE.dy + offsetY;
+      const muzzleY = this.y + offsetY;
       const projectile = this.projectiles.get(muzzleX, muzzleY) as Projectile | null;
       if (!projectile) continue;
       projectile.fire(muzzleX, muzzleY, vx, kind, 'player', { velocityY: 0 });

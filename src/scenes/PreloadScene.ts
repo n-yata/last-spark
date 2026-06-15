@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
-import { TEX, CUTSCENE_TEX, TITLE_TEX, RAY_SPRITE } from '../config/assetKeys';
+import { TEX, CUTSCENE_TEX, TITLE_TEX } from '../config/assetKeys';
 import { PLAYER, ENEMY, BOSS, SHOT } from '../config/balance';
 import { allRigParts, type RigPartSpec } from '../config/characterRig';
 import { scaledFontPx } from '../config/uiScale';
@@ -30,11 +30,8 @@ export class PreloadScene extends Phaser.Scene {
     // TitleScene が実寸基準で cover 配置するため width/height 指定は不要。
     this.load.image(TITLE_TEX.background, 'assets/title/title-bg.webp');
 
-    // プレイヤー RAY のカットアウト・リグ用パーツ(上半身/前腕/前脚/後脚)。SpriteRig が組み立てる。
-    this.load.image(RAY_SPRITE.body, 'assets/characters/parts/ray-body.webp');
-    this.load.image(RAY_SPRITE.armFront, 'assets/characters/parts/ray-arm-front.webp');
-    this.load.image(RAY_SPRITE.legFront, 'assets/characters/parts/ray-leg-front.webp');
-    this.load.image(RAY_SPRITE.legBack, 'assets/characters/parts/ray-leg-back.webp');
+    // (RAY のカットアウト・リグ用パーツ読込は現在停止中。プレイヤーは手続き CharacterRig に戻した
+    //  ＝世界の画風と統一するため。再有効化は config/raySprite.ts のヘッダ手順を参照。)
   }
 
   create(): void {
