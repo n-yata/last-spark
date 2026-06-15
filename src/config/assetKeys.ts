@@ -61,6 +61,7 @@ export const TITLE_TEX = {
 // 関節歩行させる(手続き PART.player に替わるプレイヤー専用の見た目)。geometry は config/raySprite。
 export const RAY_SPRITE = {
   body: 'tex-ray-body',
+  armFront: 'tex-ray-arm-front',
   legFront: 'tex-ray-leg-front',
   legBack: 'tex-ray-leg-back',
 } as const;

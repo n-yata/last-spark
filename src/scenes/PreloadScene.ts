@@ -30,8 +30,9 @@ export class PreloadScene extends Phaser.Scene {
     // TitleScene が実寸基準で cover 配置するため width/height 指定は不要。
     this.load.image(TITLE_TEX.background, 'assets/title/title-bg.webp');
 
-    // プレイヤー RAY のカットアウト・リグ用パーツ(上半身/前脚/後脚)。SpriteRig が組み立てる。
+    // プレイヤー RAY のカットアウト・リグ用パーツ(上半身/前腕/前脚/後脚)。SpriteRig が組み立てる。
     this.load.image(RAY_SPRITE.body, 'assets/characters/parts/ray-body.webp');
+    this.load.image(RAY_SPRITE.armFront, 'assets/characters/parts/ray-arm-front.webp');
     this.load.image(RAY_SPRITE.legFront, 'assets/characters/parts/ray-leg-front.webp');
     this.load.image(RAY_SPRITE.legBack, 'assets/characters/parts/ray-leg-back.webp');
   }

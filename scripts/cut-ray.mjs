@@ -1,11 +1,12 @@
-// RAY 横向きキービジュアル(public/assets/characters/ray-side.png)を、カットアウト・リグ用の
-// 3パーツ(上半身 / 前脚 / 後脚)へ切り分けるアセットパイプライン。
-// 脚は股で交差するため矩形では分離できない。アルファを行ごとに走査し、
-// 「左クラスタ=後脚 / 右クラスタ=前脚」だけを残すマスクで塗り分けてから切り出す。
-// 出力: public/assets/characters/parts/{ray-body,ray-leg-front,ray-leg-back}.png と
-// 組み立て/関節ピボット情報の records.json(SpriteRig 用の単一の真実)。
-//
-// 一時依存 sharp を使う(npm i sharp --no-save)。再生成専用・CI 不要のスクリプト。
+// RAY 横向きキービジュアル(art-src/ray-side.png)を、カットアウト・リグ用の4パーツ
+// (上半身 / 前腕キャノン / 前脚 / 後脚)へ切り分けるアセットパイプライン。
+// 腕も脚も胴と地続きなので矩形では切れない。アルファを走査し、
+//  - 脚: 行ごとに左クラスタ=後脚 / 右クラスタ=前脚 のマスクで分離
+//  - 前腕: 肩より前(右)へ突き出た「腕の帯」の張り出し部分だけをマスクで分離
+// し、本体(上半身)からはそれらの画素を除いて二重描画(ゴースト)を防ぐ。
+// 併せてキャノン先端(発射位置)も検出して records に出す。
+// 出力: public/assets/characters/parts/*.webp(lossless) + console に幾何(records)。
+// 一時依存 sharp(npm i sharp --no-save)。再生成専用・CI 不要。
 
 import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
@@ -13,7 +14,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-// ソース絵は art-src/(非配布)。出力パーツのみ public/ へ(WebP・ゲームが load.image する)。
 const SRC = join(ROOT, 'art-src/ray-side.png');
 const OUT_DIR = join(ROOT, 'public/assets/characters/parts');
 const ALPHA = 40;
@@ -33,8 +33,8 @@ function rowRuns(y) {
   if (start >= 0) runs.push([start, W - 1]);
   return runs.filter(([a, b]) => b - a >= 4);
 }
+const rightX = (y) => { const r = rowRuns(y); return r.length ? r[r.length - 1][1] : -1; };
 
-// 全体 bbox
 let minX = W, maxX = 0, minY = H, maxY = 0;
 for (let y = 0; y < H; y++) {
   const runs = rowRuns(y);
@@ -45,70 +45,80 @@ for (let y = 0; y < H; y++) {
 const figH = maxY - minY;
 const cx = (minX + maxX) / 2;
 
-// 脚が明確に2本へ割れる最初の行(clean split)。胴の余白(腕の隙間)を拾わないよう中央より下から。
 let splitY = -1;
 for (let y = minY + Math.floor(figH * 0.45); y <= maxY; y++) {
-  const big = rowRuns(y).filter(([a, b]) => b - a >= 12);
-  if (big.length >= 2) {
-    const sorted = big.sort((p, q) => p[0] - q[0]);
-    const gap = sorted[1][0] - sorted[0][1];
-    if (gap >= 6) { splitY = y; break; }
-  }
+  const big = rowRuns(y).filter(([a, b]) => b - a >= 12).sort((p, q) => p[0] - q[0]);
+  if (big.length >= 2 && big[1][0] - big[0][1] >= 6) { splitY = y; break; }
 }
 if (splitY < 0) splitY = minY + Math.floor(figH * 0.55);
 
-// 脚マスク: 各行で run を左右に振り分け、片脚ぶんだけを別バッファへコピー。
-// side='back'(左, mid<cx) / 'front'(右, mid>=cx)。
-function buildLeg(side) {
-  // pass1: bbox
+// --- 前腕(キャノン)の帯を検出 ---
+const cannonTipX = (() => { let m = 0; for (let y = minY; y <= splitY; y++) m = Math.max(m, rightX(y)); return m; })();
+// 腕(キャノン)の帯 = rightX が胴前縁より十分突出する連続行。
+const armThresh = cx + (cannonTipX - cx) * 0.35;
+let armTop = -1, armBot = -1;
+for (let y = minY; y <= splitY; y++) {
+  if (rightX(y) >= armThresh) { if (armTop < 0) armTop = y; armBot = y; }
+}
+// 胴前縁(=肩の付け根x): 腕帯のテーパーを拾わないよう、帯から十分離れた腹部(armBot+30以降)と
+// 胸(armTopの少し上)の安定領域から取る。
+let torsoFrontX = 0;
+for (let y = armBot + 30; y <= splitY; y++) torsoFrontX = Math.max(torsoFrontX, rightX(y));
+if (armTop - 8 >= minY) torsoFrontX = Math.max(torsoFrontX, rightX(armTop - 8));
+const shoulderX = torsoFrontX;
+const ARM_OVERLAP = 18;
+const armLeft = Math.max(minX, shoulderX - ARM_OVERLAP);
+const isArmPixel = (x, y) => y >= armTop && y <= armBot && x >= armLeft;
+
+function buildMasked(pred) {
   let lMinX = W, lMaxX = 0, lMinY = H, lMaxY = 0;
-  for (let y = splitY; y <= maxY; y++) {
-    for (const [a, b] of rowRuns(y)) {
-      const mid = (a + b) / 2;
-      const isBack = mid < cx;
-      if ((side === 'back') !== isBack) continue;
-      lMinX = Math.min(lMinX, a); lMaxX = Math.max(lMaxX, b);
-      lMinY = Math.min(lMinY, y); lMaxY = Math.max(lMaxY, y);
-    }
+  for (let y = minY; y <= maxY; y++) for (const [a, b] of rowRuns(y)) for (let x = a; x <= b; x++) {
+    if (!pred(x, y)) continue;
+    lMinX = Math.min(lMinX, x); lMaxX = Math.max(lMaxX, x); lMinY = Math.min(lMinY, y); lMaxY = Math.max(lMaxY, y);
   }
   const w = lMaxX - lMinX + 1, h = lMaxY - lMinY + 1;
-  const buf = Buffer.alloc(w * h * 4, 0); // 透明で初期化
-  for (let y = lMinY; y <= lMaxY; y++) {
-    for (const [a, b] of rowRuns(y)) {
-      const mid = (a + b) / 2;
-      const isBack = mid < cx;
-      if ((side === 'back') !== isBack) continue;
-      for (let x = a; x <= b; x++) {
-        const s = (y * W + x) * C, d = ((y - lMinY) * w + (x - lMinX)) * 4;
-        buf[d] = data[s]; buf[d + 1] = data[s + 1]; buf[d + 2] = data[s + 2]; buf[d + 3] = data[s + 3];
-      }
-    }
+  const buf = Buffer.alloc(w * h * 4, 0);
+  for (let y = lMinY; y <= lMaxY; y++) for (const [a, b] of rowRuns(y)) for (let x = a; x <= b; x++) {
+    if (!pred(x, y)) continue;
+    const s = (y * W + x) * C, d = ((y - lMinY) * w + (x - lMinX)) * 4;
+    buf[d] = data[s]; buf[d + 1] = data[s + 1]; buf[d + 2] = data[s + 2]; buf[d + 3] = data[s + 3];
   }
-  // 股関節ピボット: この脚の最上行の中心x。
-  const topRun = rowRuns(lMinY).filter(([a, b]) => ((a + b) / 2 < cx) === (side === 'back'));
-  const hipX = topRun.length ? Math.round((topRun[0][0] + topRun[topRun.length - 1][1]) / 2) : Math.round((lMinX + lMaxX) / 2);
-  return { side, left: lMinX, top: lMinY, width: w, height: h, hipX, hipY: lMinY, buf };
+  return { left: lMinX, top: lMinY, width: w, height: h, buf };
 }
 
-const back = buildLeg('back');
-const front = buildLeg('front');
+const legPred = (side) => (x, y) => {
+  if (y < splitY) return false;
+  for (const [a, b] of rowRuns(y)) if (x >= a && x <= b) return (((a + b) / 2 < cx) === (side === 'back'));
+  return false;
+};
+const hipOf = (leg, side) => {
+  const top = rowRuns(leg.top).filter(([a, b]) => (((a + b) / 2 < cx) === (side === 'back')));
+  const hx = top.length ? Math.round((top[0][0] + top[top.length - 1][1]) / 2) : Math.round(leg.left + leg.width / 2);
+  return { hipX: hx, hipY: leg.top };
+};
 
-// 上半身: bbox 上端〜脚分岐(少し食い込ませて接合)。
+const legBack = buildMasked(legPred('back')); const lb = hipOf(legBack, 'back');
+const legFront = buildMasked(legPred('front')); const lf = hipOf(legFront, 'front');
+const armFront = buildMasked(isArmPixel);
 const BODY_OVERLAP = 16;
-const bodyRect = { left: minX, top: minY, width: maxX - minX + 1, height: splitY + BODY_OVERLAP - minY };
+const bodyBottom = splitY + BODY_OVERLAP;
+const body = buildMasked((x, y) => y <= bodyBottom && !isArmPixel(x, y));
 
 await mkdir(OUT_DIR, { recursive: true });
-// パーツは WebP(lossless=アルファ境界を保つ)。ゲームが load.image で読む。
-await sharp(SRC).extract({ left: bodyRect.left, top: bodyRect.top, width: bodyRect.width, height: bodyRect.height }).webp({ lossless: true }).toFile(join(OUT_DIR, 'ray-body.webp'));
-const saveLeg = (leg, name) =>
-  sharp(leg.buf, { raw: { width: leg.width, height: leg.height, channels: 4 } }).webp({ lossless: true }).toFile(join(OUT_DIR, name));
-await saveLeg(front, 'ray-leg-front.webp');
-await saveLeg(back, 'ray-leg-back.webp');
+const save = (p, name) => sharp(p.buf, { raw: { width: p.width, height: p.height, channels: 4 } }).webp({ lossless: true }).toFile(join(OUT_DIR, name));
+await save(body, 'ray-body.webp');
+await save(armFront, 'ray-arm-front.webp');
+await save(legFront, 'ray-leg-front.webp');
+await save(legBack, 'ray-leg-back.webp');
 
-// 切り分け幾何。src/config/raySprite.ts の RAY_GEOM はこの出力に同期させること(実行時 fetch しない)。
-const strip = ({ left, top, width, height, hipX, hipY }) => ({ left, top, width, height, hipX, hipY });
+const muzzle = { x: cannonTipX, y: Math.round((armTop + armBot) / 2) };
+const strip = (p, extra = {}) => ({ left: p.left, top: p.top, width: p.width, height: p.height, ...extra });
 const records = {
-  src: { width: W, height: H }, bbox: { minX, maxX, minY, maxY }, splitY,
-  body: bodyRect, legFront: strip(front), legBack: strip(back),
+  bbox: { minX, maxX, minY, maxY }, splitY, cx: Math.round(cx),
+  body: strip(body),
+  armFront: strip(armFront, { shoulderX, shoulderY: Math.round((armTop + armBot) / 2) }),
+  legFront: strip(legFront, lf),
+  legBack: strip(legBack, lb),
+  muzzle,
 };
 console.log(JSON.stringify(records, null, 2));
