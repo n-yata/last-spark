@@ -7,8 +7,9 @@ import { Enemy } from './Enemy';
 
 // stage6 専用・ECLIPSE本体(ラスボス)。Boss を継承し、被ダメ/けぞり/フェーズ/撃破を再利用しつつ、
 // (1)人型でない巨大コアの専用ビジュアル、(2)固有アクション summon(配下 Enemy の動的召喚)を足す。
-// 浮遊して静止し(重力なし・移動なし)、phase1 は配下召喚で支援型、phase2 は召喚を止めコアが
-// 直接 shoot に集中する直接攻撃型に切り替わる(2フェーズ)。配下は既存 Enemy/敵グループを流用する。
+// 浮遊して静止し(重力なし・移動なし)、phase1 は配下召喚で支援型、phase2 は shoot 主軸の直接攻撃型
+// に切り替わる(2フェーズ)。ただし phase2 でも summon を継続し、HP が減っても雑魚召喚は止まらない
+// (重み付けは CORE_WEIGHTS が担う)。配下は既存 Enemy/敵グループを流用する。
 
 /** 配下召喚に必要な外部参照。GameScene が spawnBoss 時に注入する。 */
 export interface SummonContext {

@@ -423,7 +423,8 @@ export interface CoreBossConfig extends BossConfig {
 
 /**
  * stage6 専用・ECLIPSE本体(ラスボス)の設定。人型でない巨大コア。浮遊して静止し(moveSpeed=0)、
- * phase1 は配下召喚(summon)で支援型に、phase2 は召喚を止めコアが直接攻撃する2フェーズ構成。
+ * phase1 は配下召喚(summon)で支援型に、phase2 は shoot 主軸の直接攻撃型に切り替わる2フェーズ構成。
+ * ただし phase2 でも summon を継続し、HP が減っても雑魚召喚が止まらない(盤面圧で実質的に硬くする)。
  * 全6ステージ中で最も硬く・最も重い攻撃を持つ最終戦として、既存ボスより上の値に設定する。
  * jump は持たない(浮遊体)。重み付けは bossAi の CORE_WEIGHTS が担う。
  */
@@ -447,7 +448,7 @@ export const ECLIPSE_CORE = {
   phase2SpeedFactor: 0.52, // phase2(コア直接攻撃)で行動間隔を大きく詰め、攻勢を最大化する。難易度調整: 終盤の攻勢を強める 0.6→0.52
   // --- 召喚固有 ---
   summonCount: 3, // 1 回の召喚で配下 3 体。難易度調整: phase1 の盤面圧を上げる 2→3
-  summonMaxActive: 6, // 場の配下上限(超過時は召喚をスキップして溢れを防ぐ)。難易度調整: 召喚増に合わせ 4→6
+  summonMaxActive: 8, // 場の配下上限(超過時は召喚をスキップして溢れを防ぐ)。難易度調整: 4→6→8。phase2 でも召喚を継続するため、上限が低いとすぐ張り付き召喚がスキップされ「出続ける」体感が薄れる。上限を引き上げ盤面に常時雑魚が居る圧を作る
 } as const satisfies CoreBossConfig;
 
 /**

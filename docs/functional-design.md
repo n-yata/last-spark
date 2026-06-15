@@ -350,7 +350,8 @@ class WardenBoss extends Boss {}
 // 浄化型ボス(stage4・環境管理機)。接地型のまま spray(扇状の範囲攻撃)を持つ
 class PurifierBoss extends Boss {}
 // ECLIPSE本体(stage6 ラスボス)。非人型の巨大コア。重力なしで浮遊・静止し、
-// phase1=summon(配下 Enemy の動的召喚)で支援型、phase2=召喚を止め shoot に集中する直接攻撃型
+// phase1=summon(配下 Enemy の動的召喚)で支援型、phase2=shoot 主軸の直接攻撃型。
+// ただし phase2 でも summon を継続し、HP が減っても雑魚召喚は止まらない(盤面圧で実質的に硬くする)
 class CoreBoss extends Boss {}
 ```
 
