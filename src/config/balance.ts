@@ -419,6 +419,13 @@ export interface CoreBossConfig extends BossConfig {
   summonCount: number;
   /** 場に同時存在できる配下の上限(これを超えると summon しても生成しない=画面が溢れない)。 */
   summonMaxActive: number;
+  /**
+   * 召喚時にプレイヤー(RAY)中心から確保する最小距離(px)。この半径内には配下を湧かせない。
+   * 召喚と同時に配下がプレイヤーへ重なって発生する「避けられない接触ダメージ」を防ぐ。
+   */
+  summonSafeRadius: number;
+  /** 同じ側に複数体を並べて召喚するときの体間隔(px)。外側へこの距離ずつ離す。 */
+  summonSpacing: number;
 }
 
 /**
@@ -429,7 +436,7 @@ export interface CoreBossConfig extends BossConfig {
  * jump は持たない(浮遊体)。重み付けは bossAi の CORE_WEIGHTS が担う。
  */
 export const ECLIPSE_CORE = {
-  maxHp: 56, // ラスボス。全ボス中最も硬い(使者26 < 浄化28 < 番人30 < コア56)。難易度調整: stage6 で RAY が覚醒し通常弾2発化＋持続ビームで火力が倍化するため、溶けないよう 40→56 に増強
+  maxHp: 64, // ラスボス。全ボス中最も硬い(使者26 < 浄化28 < 番人30 < コア64)。難易度調整: stage6 で RAY が覚醒し通常弾2発化＋持続ビームで火力が倍化するため、溶けないよう 40→56→64 と増強
   phase2HpRatio: 0.5,
   contactDamage: 3, // コア本体への接触は重い
   bulletDamage: 3, // 難易度調整: 強化後プレイヤー(maxHp16)への脅威を上げる 2→3
@@ -449,6 +456,10 @@ export const ECLIPSE_CORE = {
   // --- 召喚固有 ---
   summonCount: 3, // 1 回の召喚で配下 3 体。難易度調整: phase1 の盤面圧を上げる 2→3
   summonMaxActive: 8, // 場の配下上限(超過時は召喚をスキップして溢れを防ぐ)。難易度調整: 4→6→8。phase2 でも召喚を継続するため、上限が低いとすぐ張り付き召喚がスキップされ「出続ける」体感が薄れる。上限を引き上げ盤面に常時雑魚が居る圧を作る
+  // プレイヤー中心から 140px 以内には湧かせない。プレイヤー(幅28)・配下(幅30〜32)が重ならず、
+  // かつ無敵時間(800ms)・移動速度(160px/s)で離脱できる距離を確保し、召喚即接触の理不尽を防ぐ。
+  summonSafeRadius: 140,
+  summonSpacing: 120, // 同じ側に2体目以降を並べるときの体間隔(外側へずらす)
 } as const satisfies CoreBossConfig;
 
 /**

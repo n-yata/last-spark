@@ -6,6 +6,7 @@ import { isAllStagesCleared } from '../systems/progress';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { scaled, scaledFontPx } from '../config/uiScale';
+import { TITLE_TEX } from '../config/assetKeys';
 import { createOptionsMenu } from '../ui/optionsMenu';
 // 型のみの import はビルド時に消去される。
 import type { StageSelect } from '../stageSelect/stageSelect';
@@ -35,8 +36,8 @@ export class TitleScene extends Phaser.Scene {
     this.stageSelect = undefined;
     this.optionsMenu = undefined;
 
-    // 背景: 暗め基調 + 発光アクセント(廃墟のシルエット風グラデーション)
-    this.drawBackdrop(width, height);
+    // 背景: キービジュアルの一枚絵があれば cover 配置で敷く。未ロード時は簡易シルエットへ。
+    this.drawBackground(width, height);
 
     // スタート判定は全画面ゾーンで受ける。最背面(最初に追加)に置くことで、後から重ねる
     // STAGE SELECT ボタンが Phaser の topOnly(既定 true)で前面となり、スタートに巻き込まれない。
@@ -65,7 +66,8 @@ export class TitleScene extends Phaser.Scene {
         fontSize: scaledFontPx(18),
         color: '#7fe9dd',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setShadow(0, scaled(2), '#05080d', scaled(5), true, true);
 
     // スタート導線(点滅)
     const start = this.add
@@ -74,7 +76,9 @@ export class TitleScene extends Phaser.Scene {
         fontSize: scaledFontPx(26),
         color: '#fff27a',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setStroke('#05080d', scaled(3))
+      .setShadow(0, scaled(2), '#000000', scaled(6), true, true);
     this.tweens.add({
       targets: start,
       alpha: 0.2,
@@ -97,7 +101,8 @@ export class TitleScene extends Phaser.Scene {
           color: allClear ? '#fff27a' : '#9fffe8',
           fontStyle: allClear ? 'bold' : 'normal',
         })
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setShadow(0, scaled(2), '#05080d', scaled(5), true, true);
     }
 
     // 「STAGE SELECT」導線を追加する。UI は表示確定後に動的 import で遅延ロードし、
@@ -121,6 +126,7 @@ export class TitleScene extends Phaser.Scene {
         color: '#7fe9dd',
       })
       .setOrigin(0, 1)
+      .setShadow(0, scaled(2), '#05080d', scaled(5), true, true)
       .setInteractive({ useHandCursor: true });
     optionsBtn.on(Phaser.Input.Events.POINTER_OVER, () => optionsBtn.setColor('#fff27a'));
     optionsBtn.on(Phaser.Input.Events.POINTER_OUT, () => optionsBtn.setColor('#7fe9dd'));
@@ -162,6 +168,26 @@ export class TitleScene extends Phaser.Scene {
     // scene.start に data を渡さないと Phaser は前回の data(継続時の stageId)を
     // 保持して init に渡すため、明示的に stageId を指定してクリア後の引き継ぎを断つ。
     transitionTo(this, SCENE_KEYS.game, { stageId });
+  }
+
+  /**
+   * 背景を敷く。キービジュアル(TITLE_TEX.background)がロード済みなら cover 配置
+   * (画面比が論理解像度と異なっても隙間を作らず、はみ出しはトリミング)。さらに上下へ
+   * 薄い暗幕を重ね、絵の明部(夜明け・発光)に乗るロゴ/導線テキストの視認性を確保する。
+   * 未ロード時は従来の簡易シルエット(drawBackdrop)へフォールバックする。
+   */
+  private drawBackground(width: number, height: number): void {
+    const bgKey = TITLE_TEX.background;
+    if (this.textures.exists(bgKey)) {
+      const src = this.textures.get(bgKey).getSourceImage();
+      const scale = Math.max(width / src.width, height / src.height);
+      this.add.image(width / 2, height / 2, bgKey).setScale(scale);
+      // ロゴ帯(上部)と導線帯(中央〜下部)を軽く沈めて文字を読みやすくする暗幕。
+      this.add.rectangle(0, 0, width, height * 0.46, 0x05080d, 0.4).setOrigin(0);
+      this.add.rectangle(0, height * 0.6, width, height * 0.4, 0x05080d, 0.35).setOrigin(0);
+      return;
+    }
+    this.drawBackdrop(width, height);
   }
 
   private drawBackdrop(width: number, height: number): void {
