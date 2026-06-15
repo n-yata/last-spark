@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ECLIPSE_CORE, STAGE, ENEMY, NEUTRAL_STAGE_TUNING, type CoreBossConfig, type StageTuning } from '../config/balance';
 import { pickNextCoreBossAction, bossActionDuration } from '../systems/bossAi';
+import { computeSummonXs } from '../systems/coreSummon';
 import type { EnemyPattern } from '../types/enemy';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
 import { Enemy } from './Enemy';
@@ -113,7 +114,8 @@ export class CoreBoss extends Boss {
 
   /**
    * 配下 Enemy を動的に召喚する。場の配下が上限(summonMaxActive)未満のときだけ生成し、
-   * 画面が配下で溢れるのを防ぐ。生成位置はプレイヤー周辺の地上に左右へ散らす。
+   * 画面が配下で溢れるのを防ぐ。生成位置は computeSummonXs が決め、プレイヤー(RAY)中心から
+   * summonSafeRadius 以内には湧かせない(召喚と同時に重なって発生する避けられない接触ダメージを防ぐ)。
    * 既存の Enemy 生成手順(setProjectiles → group.add → configureBody)を踏襲する。
    */
   private summonMinions(playerX: number): void {
@@ -124,13 +126,20 @@ export class CoreBoss extends Boss {
 
     const spawnable = this.core.summonMaxActive - activeMinions;
     const count = Math.min(this.core.summonCount, spawnable);
+    // プレイヤーへ重ならない配置 X を先にまとめて計算する(安全距離の担保は純粋関数側で行う)。
+    const xs = computeSummonXs(
+      playerX,
+      count,
+      this.arenaMinX,
+      this.arenaMaxX,
+      this.core.summonSafeRadius,
+      this.core.summonSpacing,
+    );
     for (let i = 0; i < count; i += 1) {
       // walker と turret を交互に。walker は接近、turret は射撃で挟む。
       const pattern: EnemyPattern = i % 2 === 0 ? 'walker' : 'turret';
       const conf = pattern === 'turret' ? ENEMY.turret : ENEMY.walker;
-      // プレイヤーの左右に散らし、アリーナ内(コアの可動域)に収める。地上に接地させる。
-      const offset = (i - (count - 1) / 2) * 160 + (i % 2 === 0 ? -40 : 40);
-      const x = Phaser.Math.Clamp(playerX + offset, this.arenaMinX, this.arenaMaxX);
+      const x = xs[i];
       const y = STAGE.groundY - conf.height / 2;
       const minion = new Enemy(this.scene, x, y, pattern, ctx.tuning ?? NEUTRAL_STAGE_TUNING);
       minion.setProjectiles(ctx.enemyShots);

@@ -24,6 +24,13 @@ describe('ECLIPSE_CORE(ECLIPSE本体)のチューニング', () => {
     expect(ECLIPSE_CORE.summonCount).toBeLessThanOrEqual(ECLIPSE_CORE.summonMaxActive);
   });
 
+  it('召喚の安全距離・体間隔が正(プレイヤーへ重ねず=召喚即接触の理不尽を防ぐ)', () => {
+    expect(ECLIPSE_CORE.summonSafeRadius).toBeGreaterThan(0);
+    expect(ECLIPSE_CORE.summonSpacing).toBeGreaterThan(0);
+    // 安全距離はプレイヤー半幅(14)+配下半幅(最大16)より十分大きく、本体が重ならないこと。
+    expect(ECLIPSE_CORE.summonSafeRadius).toBeGreaterThan(14 + 16);
+  });
+
   it('巨大コア(他ボスより大きい本体)', () => {
     const otherWidths = [BOSS.width, FLYING_BOSS.width, ENVOY.width];
     for (const w of otherWidths) {
