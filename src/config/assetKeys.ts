@@ -27,8 +27,9 @@ export const TEX = {
 export type TextureKey = (typeof TEX)[keyof typeof TEX];
 
 // 演出シーン(CutsceneScene)の背景静止画キー。プレースホルダのシルエットと違い、
-// これらは public/assets/cutscenes/ の SVG を PreloadScene が load.svg で読み込む。
-// scriptKey ごとに 1 枚。Stage 4-6 の演出を足す際はここへキーを追加する。
+// これらは public/assets/cutscenes/ の実ファイルを PreloadScene が読み込む。大半は
+// 外部生成のキービジュアル(WebP)を load.image で、stage6-ending のみ未生成のため SVG を
+// load.svg で読む。scriptKey ごとに 1 枚。Stage 追加時はここへキーを追加する。
 export const CUTSCENE_TEX = {
   stage1Intro: 'tex-cutscene-stage1-intro',
   stage3Rescue: 'tex-cutscene-stage3-rescue',
