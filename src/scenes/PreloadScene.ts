@@ -2,9 +2,8 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX, CUTSCENE_TEX, TITLE_TEX } from '../config/assetKeys';
 import { PLAYER, ENEMY, BOSS, SHOT } from '../config/balance';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/dimensions';
 import { allRigParts, type RigPartSpec } from '../config/characterRig';
-import { cappedDpr, scaledFontPx } from '../config/uiScale';
+import { scaledFontPx } from '../config/uiScale';
 
 // アセットのロード。本 MVP は本番スプライト未用意のため、Graphics で
 // プレースホルダのテクスチャを生成する(世界観=暗め基調+発光アクセントを配色で表現)。
@@ -19,19 +18,13 @@ export class PreloadScene extends Phaser.Scene {
     // 演出シーンの背景静止画(実ファイルアセット)。CutsceneScene は cover 配置で全画面に敷く
     // (テクスチャ実寸基準なので表示倍率は自動で一致する)。scriptKey ごとに 1 枚。
     // base:'./' のため index.html 相対の 'assets/...' で参照する。
-    // 大半は外部生成のキービジュアル(ラスター/WebP)を load.image で読む。エンディングのみ
-    // まだ SVG のため、ベクターを高DPIで滲ませない cappedDpr 倍ラスタライズで load.svg する。
+    // 全カットシーンを外部生成のキービジュアル(ラスター/WebP)に統一し、load.image で読む。
     this.load.image(CUTSCENE_TEX.stage1Intro, 'assets/cutscenes/stage1-intro.webp');
     this.load.image(CUTSCENE_TEX.stage3Rescue, 'assets/cutscenes/stage3-rescue.webp');
     this.load.image(CUTSCENE_TEX.stage4Intro, 'assets/cutscenes/stage4-intro.webp');
     this.load.image(CUTSCENE_TEX.stage5Intro, 'assets/cutscenes/stage5-intro.webp');
     this.load.image(CUTSCENE_TEX.stage6Awakening, 'assets/cutscenes/stage6-awakening.webp');
-
-    const dpr = cappedDpr();
-    this.load.svg(CUTSCENE_TEX.stage6Ending, 'assets/cutscenes/stage6-ending.svg', {
-      width: GAME_WIDTH * dpr,
-      height: GAME_HEIGHT * dpr,
-    });
+    this.load.image(CUTSCENE_TEX.stage6Ending, 'assets/cutscenes/stage6-ending.webp');
 
     // タイトル背景の一枚絵(ラスター)。元は 16:9 のキービジュアルで、WebP 圧縮済み。
     // TitleScene が実寸基準で cover 配置するため width/height 指定は不要。
