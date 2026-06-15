@@ -77,12 +77,14 @@ const ENVOY_WEIGHTS: PhaseWeights = {
 /**
  * ECLIPSE本体(stage6 ラスボス)のフェーズ別重み(相対値)。浮遊して静止するコアのため
  * move/jump は持たない。phase1=支援型(配下召喚 summon を主軸に shoot/idle を織り交ぜる)、
- * phase2=直接攻撃型(summon を完全に止め、コアが shoot に集中して圧をかける)。
- * summon は phase1 のみに置き、phase2 へは混入させない(フェーズで攻撃様式を切り替える設計)。
+ * phase2=直接攻撃型(shoot を主軸にコアが圧をかける)。
+ * 強化: phase2 でも summon を継続し、HP が減っても雑魚召喚が止まらないようにする
+ * (プレイヤーが雑魚処理に追われ続け、ボスへの火力が分散する = 実質的な硬さ)。phase2 は
+ * shoot を最多に保ち「直接攻撃型」の性格を維持しつつ、summon を織り交ぜて盤面圧をかける。
  */
 const CORE_WEIGHTS: PhaseWeights = {
   phase1: { summon: 40, shoot: 35, idle: 25 },
-  phase2: { shoot: 75, idle: 25 },
+  phase2: { summon: 30, shoot: 50, idle: 20 },
 };
 
 /** 直前と同一アクションに掛ける重み係数(連続抑制)。 */
