@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
-import { TEX, CUTSCENE_TEX } from '../config/assetKeys';
+import { TEX, CUTSCENE_TEX, TITLE_TEX } from '../config/assetKeys';
 import { PLAYER, ENEMY, BOSS, SHOT } from '../config/balance';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/dimensions';
 import { allRigParts, type RigPartSpec } from '../config/characterRig';
@@ -47,6 +47,10 @@ export class PreloadScene extends Phaser.Scene {
       width: svgW,
       height: svgH,
     });
+
+    // タイトル背景の一枚絵(ラスター)。元は 16:9 のキービジュアルで、WebP 圧縮済み。
+    // TitleScene が実寸基準で cover 配置するため width/height 指定は不要。
+    this.load.image(TITLE_TEX.background, 'assets/title/title-bg.webp');
   }
 
   create(): void {

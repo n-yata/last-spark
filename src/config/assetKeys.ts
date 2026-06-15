@@ -48,6 +48,13 @@ export const CUTSCENE_BACKGROUND: Record<string, string> = {
   'stage6-ending': CUTSCENE_TEX.stage6Ending,
 };
 
+// タイトル画面の背景静止画キー。CUTSCENE_TEX(SVGベクター)と違い、これは
+// public/assets/title/ のラスター画像(WebP)を PreloadScene が load.image で読み込む。
+// 未ロード時は TitleScene が従来の簡易シルエット背景へフォールバックする。
+export const TITLE_TEX = {
+  background: 'tex-title-background',
+} as const;
+
 // キャラのパーツ(関節)テクスチャキー。CharacterRig が組み立て、PreloadScene が
 // characterRig 定義に基づいて手続き生成する。系統(player/walker/turret/boss)ごとに
 // 必要なパーツのみを持つ。将来のアトラス差し替え時もここを単一変更点とする。
