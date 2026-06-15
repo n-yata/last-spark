@@ -99,6 +99,15 @@
 - `tasklist.md`: タスクリスト
 - `retrospective.md`: 実装後の振り返り（モード3で作成）
 
+### .claude カタログの維持
+
+`.claude/` 配下の command / skill / agent は `.claude/README.md` に目次化している。
+**command / skill / agent を追加・削除・リネームしたら、`.claude/README.md` も必ず同じ変更で更新する**こと（更新漏れでカタログが陳腐化するのを防ぐ）。
+
+- **追加時**: README.md の該当セクション（Commands / Skills / Agents）に「名前・概要・起動方法」を記載する。概要を省略せず、何をするものか1〜2文で必ず書く。
+- **削除・リネーム時**: README.md の該当エントリも追従し、旧名称の残骸を残さない。
+- 概要は各 `SKILL.md` / command の frontmatter `description` と整合させる（正本は frontmatter、README は案内板）。
+
 ## 開発プロセス
 
 ### 初回セットアップ

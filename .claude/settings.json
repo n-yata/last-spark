@@ -1,12 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Skill(prd-writing)",
+      "Skill(prd)",
       "Skill(functional-design)",
       "Skill(architecture-design)",
       "Skill(repository-structure)",
       "Skill(development-guidelines)",
-      "Skill(glossary-creation)"
+      "Skill(glossary)"
     ],
     "deny": [],
     "ask": []

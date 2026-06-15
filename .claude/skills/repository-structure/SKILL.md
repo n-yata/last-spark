@@ -1,6 +1,6 @@
 ---
 name: repository-structure
-description: リポジトリ構造定義書を作成するための詳細ガイドとテンプレート。リポジトリ構造定義時にのみ使用。
+description: リポジトリ構造定義書(docs/repository-structure.md)を作成・更新するための詳細ガイドとテンプレート。技術スタックを反映した具体的なディレクトリ構造を定義する。リポジトリ構造定義書の作成・改訂時にのみ使用。
 allowed-tools: Read, Write
 ---
 

@@ -1,6 +1,6 @@
 ---
-name: glossary-creation
-description: 用語集を作成するための詳細ガイドとテンプレート。用語集作成時にのみ使用。
+name: glossary
+description: 用語集(docs/glossary.md)を作成・更新するための詳細ガイドとテンプレート。プロジェクト固有の用語・ユビキタス言語を体系的に定義する。用語集の作成・改訂・用語追加時にのみ使用。
 allowed-tools: Read, Write
 ---
 
