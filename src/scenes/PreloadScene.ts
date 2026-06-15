@@ -16,36 +16,21 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // 演出シーンの背景静止画(実ファイルアセット)。SVG はベクターなので高DPI(Retina)で
-    // 滲まないよう論理解像度の cappedDpr 倍でラスタライズする。CutsceneScene は cover 配置で
-    // 全画面に敷く(テクスチャ実寸基準なので表示倍率は自動で一致する)。scriptKey ごとに 1 枚。
+    // 演出シーンの背景静止画(実ファイルアセット)。CutsceneScene は cover 配置で全画面に敷く
+    // (テクスチャ実寸基準なので表示倍率は自動で一致する)。scriptKey ごとに 1 枚。
     // base:'./' のため index.html 相対の 'assets/...' で参照する。
+    // 大半は外部生成のキービジュアル(ラスター/WebP)を load.image で読む。エンディングのみ
+    // まだ SVG のため、ベクターを高DPIで滲ませない cappedDpr 倍ラスタライズで load.svg する。
+    this.load.image(CUTSCENE_TEX.stage1Intro, 'assets/cutscenes/stage1-intro.webp');
+    this.load.image(CUTSCENE_TEX.stage3Rescue, 'assets/cutscenes/stage3-rescue.webp');
+    this.load.image(CUTSCENE_TEX.stage4Intro, 'assets/cutscenes/stage4-intro.webp');
+    this.load.image(CUTSCENE_TEX.stage5Intro, 'assets/cutscenes/stage5-intro.webp');
+    this.load.image(CUTSCENE_TEX.stage6Awakening, 'assets/cutscenes/stage6-awakening.webp');
+
     const dpr = cappedDpr();
-    const svgW = GAME_WIDTH * dpr;
-    const svgH = GAME_HEIGHT * dpr;
-    this.load.svg(CUTSCENE_TEX.stage1Intro, 'assets/cutscenes/stage1-intro.svg', {
-      width: svgW,
-      height: svgH,
-    });
-    this.load.svg(CUTSCENE_TEX.stage3Rescue, 'assets/cutscenes/stage3-rescue.svg', {
-      width: svgW,
-      height: svgH,
-    });
-    this.load.svg(CUTSCENE_TEX.stage4Intro, 'assets/cutscenes/stage4-intro.svg', {
-      width: svgW,
-      height: svgH,
-    });
-    this.load.svg(CUTSCENE_TEX.stage5Intro, 'assets/cutscenes/stage5-intro.svg', {
-      width: svgW,
-      height: svgH,
-    });
-    this.load.svg(CUTSCENE_TEX.stage6Awakening, 'assets/cutscenes/stage6-awakening.svg', {
-      width: svgW,
-      height: svgH,
-    });
     this.load.svg(CUTSCENE_TEX.stage6Ending, 'assets/cutscenes/stage6-ending.svg', {
-      width: svgW,
-      height: svgH,
+      width: GAME_WIDTH * dpr,
+      height: GAME_HEIGHT * dpr,
     });
 
     // タイトル背景の一枚絵(ラスター)。元は 16:9 のキービジュアルで、WebP 圧縮済み。
