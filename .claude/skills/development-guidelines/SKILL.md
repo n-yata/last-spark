@@ -1,6 +1,6 @@
 ---
 name: development-guidelines
-description: チーム全体で統一された開発プロセスとコーディング規約を確立するための包括的なガイドとテンプレート。開発ガイドライン作成時、コード実装時に使用する。
+description: 開発ガイドライン(docs/development-guidelines.md)を作成・更新するための包括的なガイドとテンプレート、およびコーディング規約・命名規則・Git運用・テスト戦略の参照元。開発ガイドラインの作成・改訂時、またはコーディング規約・コミット規約を確認したいときに使用する。
 allowed-tools: Read, Write, Edit
 ---
 

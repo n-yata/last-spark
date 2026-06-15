@@ -38,7 +38,7 @@ ls docs/ideas/
 
 ### ステップ1: プロダクト要求定義書の作成
 
-1. **prd-writingスキル**をロード
+1. **prdスキル**をロード
 2. `docs/ideas/`の内容を元に`docs/product-requirements.md`を作成
 3. 壁打ちで出たアイデアを具体化：
    - 詳細なユーザーストーリー
@@ -75,7 +75,7 @@ ls docs/ideas/
 
 ### ステップ6: 用語集の作成
 
-1. **glossary-creationスキル**をロード
+1. **glossaryスキル**をロード
 2. 既存のドキュメントを読む
 3. スキルのテンプレートに従って`docs/glossary.md`を作成
 

@@ -1,6 +1,6 @@
 ---
 name: functional-design
-description: 機能設計書を作成するための詳細ガイドとテンプレート。機能設計書作成時にのみ使用。
+description: 機能設計書(docs/functional-design.md)を作成・更新するための詳細ガイドとテンプレート。PRDの要件を技術的にどう実現するかを設計する。機能設計書の作成・改訂時にのみ使用。
 allowed-tools: Read, Write
 ---
 
