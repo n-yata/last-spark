@@ -27,6 +27,7 @@ import {
 } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
 import { SpriteRig } from './SpriteRig';
+import { RAY_MUZZLE } from '../config/raySprite';
 import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
 import { Beam } from './Beam';
@@ -287,7 +288,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.lastShotAt = now;
     const kind = action === 'fireCharged' ? 'charged' : 'normal';
     const dir = facingSign(this.facing);
-    const muzzleX = this.x + dir * (PLAYER.width / 2 + 6);
+    const muzzleX = this.x + dir * RAY_MUZZLE.dx;
     const speed = createProjectileSpec(kind).speed;
 
     // 強化時の通常弾は正面へ平行に進む2発(マズルを上下に ±splitOffsetPx ずらす)。それ以外は
@@ -297,7 +298,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.empowered && kind === 'normal' ? [-SHOT.splitOffsetPx, SHOT.splitOffsetPx] : [0];
     const vx = dir * speed;
     for (const offsetY of offsetsY) {
-      const muzzleY = this.y + offsetY;
+      const muzzleY = this.y + RAY_MUZZLE.dy + offsetY;
       const projectile = this.projectiles.get(muzzleX, muzzleY) as Projectile | null;
       if (!projectile) continue;
       projectile.fire(muzzleX, muzzleY, vx, kind, 'player', { velocityY: 0 });
