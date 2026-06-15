@@ -7,6 +7,7 @@ import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stages';
 import { getStageBackground, type StageBackgroundTheme } from '../config/stageBackground';
+import { resolveGraphicsQuality } from '../config/graphicsQuality';
 import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
@@ -488,12 +489,38 @@ export class GameScene extends Phaser.Scene {
     // カメラのベース塗り。背景レイヤーが可視域を覆うため、これは主に地面下/奈落の保険。
     // 既存のステージ指定色(stage4=汚染の淀み 等)を尊重しつつ、未指定はテーマの地平線色を使う。
     cam.setBackgroundColor(this.stage.backgroundColor ?? this.bgTheme.skyBottom);
+    this.applyPostFx();
     this.applyCameraLayout();
     // RESIZE でキャンバスが伸縮しても、ワールドの縦の見え方(高さ540相当)を一定に保つ
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
     });
+  }
+
+  /**
+   * ゲーム本体カメラにポストFXを当て、カットシーン(厚塗り)との質感差を縮める。
+   * HUD/ストーリーテキストは別シーン(UIScene=別カメラ)のため、ここで当てても影響しない。
+   * postFX は WebGL 専用。Canvas フォールバックや高密度端末では graphicsQuality が段階的に
+   * 無効化して 60fps を守る。色調補正→ブルーム→ビネットの順に重ねる。
+   */
+  private applyPostFx(): void {
+    if (this.sys.renderer.type !== Phaser.WEBGL) return;
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const quality = resolveGraphicsQuality({ webgl: true, dpr });
+    const cam = this.cameras.main;
+    if (quality.colorGrade) {
+      // 暗め基調を締める: わずかに暗く + コントラストUP + 彩度を少し上げて発光を引き立てる。
+      cam.postFX.addColorMatrix().brightness(0.97).contrast(1.08).saturate(0.08);
+    }
+    if (quality.bloom) {
+      // 発光アクセント(コア/弾/窓灯)をにじませ映画的に。強度は控えめでトーンを壊さない。
+      cam.postFX.addBloom(0xffffff, 1, 1, 0.9, 0.55, 4);
+    }
+    if (quality.vignette) {
+      // 四隅を沈め、中央へ視線を集める。
+      cam.postFX.addVignette(0.5, 0.5, 0.78, 0.4);
+    }
   }
 
   private applyCameraLayout(): void {
