@@ -56,6 +56,15 @@ export const TITLE_TEX = {
   background: 'tex-title-background',
 } as const;
 
+// プレイヤー RAY の外部生成キービジュアル(横向き)を切り分けたカットアウト・リグ用パーツ。
+// public/assets/characters/parts/ の WebP を load.image で読み、SpriteRig が組み立てて
+// 関節歩行させる(手続き PART.player に替わるプレイヤー専用の見た目)。geometry は config/raySprite。
+export const RAY_SPRITE = {
+  body: 'tex-ray-body',
+  legFront: 'tex-ray-leg-front',
+  legBack: 'tex-ray-leg-back',
+} as const;
+
 // キャラのパーツ(関節)テクスチャキー。CharacterRig が組み立て、PreloadScene が
 // characterRig 定義に基づいて手続き生成する。系統(player/walker/turret/boss)ごとに
 // 必要なパーツのみを持つ。将来のアトラス差し替え時もここを単一変更点とする。
