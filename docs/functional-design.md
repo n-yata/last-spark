@@ -60,6 +60,7 @@ Phaser の Scene を画面/状態の単位とする。
 | `ClearScene` | ボス撃破時のクリア演出。クリア状況(ステージ単位)を保存しタイトル/次ステージへ。最終ステージ全クリアで「ALL CLEAR」を表示 |
 | `CutsceneScene`(オーバーレイ) | 演出シーン。静止画的演出+交互テキスト(TERRA/RAY)+ト書き+ナレーションをタップ送りで再生し、完了後に指定遷移を呼ぶ。Stage 1 開始演出・Stage 3 救出後演出・Stage 4-5 開始演出・Stage 6 エンディングで使用(BGM は起動データで差し替え可能) |
 | `OrientationScene`(オーバーレイ) | 縦持ち検知時に「横向きにしてください」案内を最前面表示 |
+| `PauseScene`(オーバーレイ) | タイトル/プレイ中(ポーズ)双方から開く統合オプションメニュー。音量(BGM/SE 5段階・ミュート)、ポーズ/再開、操作説明、ステージ移動(リトライ/タイトルへ戻る/ステージ選択)を1つのオーバーレイに集約。`GameScene` 上では物理を止めて `launch` し、破壊的遷移は resume 後に実行する |
 
 ## データモデル定義
 
@@ -553,6 +554,16 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 - プレイヤーのコア/弾/敵コア: ネオン発光色(グロー/明度差で表現)。
 - チャージ完了: 発光色を強めて成立を明示。
 
+### オプションメニュー(統合設定UI)
+
+タイトル画面とプレイ中(ポーズ)の双方から開く共通オーバーレイ(`PauseScene` + `src/ui/optionsMenu.ts`)。設定の実体は `GameSettings` で、`SaveManager` により永続化し `SoundManager.applySettings` で即時反映する。
+
+- **音量**: BGM/SE を連続スライダーではなく 5 段階ボタン(`src/ui/volumeSteps.ts`)で調整し、ミュートを切替。量子化・上下限・往復一致を純関数化してテスト可能にし、タッチ/マウス/キーボードのいずれでも操作できる(Phaser に標準スライダーが無い問題の現実解)。
+- **ポーズ/再開**: プレイ中は `PauseButton` から開き、ゲームを一時停止する。停止は物理ステップ境界に逃がし、再開・破壊的遷移(リトライ/タイトル等)は必ずポーズ解除後に行う。
+- **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
+- **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。
+- メニュー生成は `stageSelect` の UI 流儀を踏襲し `optionsMenu.ts` 内のパネル生成関数として実装する(純ロジックは `volumeSteps.ts` / `controlsData.ts` に分離)。
+
 ## アセット / ファイル構造(ランタイム読み込み)
 
 ```
@@ -571,6 +582,7 @@ public/assets/
 - **Arcade Physics 限定**: 重い物理(Matter)は使わず AABB のみでモバイル 60fps を狙う。
 - **オフスクリーン非更新**: 画面外の敵は更新/描画を抑制(必要範囲のみアクティブ化)。
 - **Service Worker キャッシュ**: 2回目以降の起動を高速化。
+- **ポストFX の段階的有効化**: プレイ画面(`GameScene` 本体カメラ)に色調補正/ブルーム/ビネットを適用し、カットシーン(厚塗り一枚絵)との質感差を縮める。ただし postFX は WebGL 専用で bloom は塗りつぶし負荷が高いため、`src/config/graphicsQuality.ts` の `resolveGraphicsQuality({webgl, dpr})` で有効可否を集約判定する。Canvas フォールバック時は全FX無効、生 DPR が `BLOOM_MAX_DPR`(=2)を超える高密度端末では bloom のみ無効化し、軽量な色調補正/ビネットを残して 60fps を守る。HUD/ストーリーテキストは別カメラ(`UIScene`)描画のため postFX の影響を受けない。
 
 ## セキュリティ考慮事項
 

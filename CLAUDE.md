@@ -149,12 +149,15 @@
    - worktree でディレクトリごと物理的に分離することで、複数セッションの並行作業によるチェックアウト競合・変更の混在を防ぐ
 
 2. **作業完了時**: 以下の順で実施する
-   1. `master` を pull して最新化
-   2. `feature` ブランチに最新 `master` を取り込む(コンフリクトがあれば解消)
-   3. コミット前に**クルトワ(security-engineer)のセキュリティレビュー**を実施(後述の既存ルール)
-   4. `feature` ブランチを push
-   5. PR を作成する(`gh pr create`)
-   6. `master` へマージする。**マージ方式は Merge commit**
+   1. **コミット前に振り返り(`retrospective.md`)を作成する**。残すべき学び・申し送りがあれば `.steering/[YYYYMMDD]-[作業名]/retrospective.md` に書き、**実装の変更一式と同じ `feature` ブランチのコミット・PR に含める**。学びが何もない軽微作業(typo修正等)は作成不要。
+      - **マージ後に `master` 本体ツリーへ後追いで置かない**(別ブランチ・別タイミングでの後追い作成は、worktree 片付け後の未追跡漏れ＝コミット漏れの原因になる)。振り返りは必ず作業ブランチが生きているうちに、そのブランチのコミットへ含めること。
+   2. `master` を pull して最新化
+   3. `feature` ブランチに最新 `master` を取り込む(コンフリクトがあれば解消)
+   4. コミット前に**クルトワ(security-engineer)のセキュリティレビュー**を実施(後述の既存ルール)
+   5. 変更一式(実装 + `retrospective.md`)をコミットする
+   6. `feature` ブランチを push
+   7. PR を作成する(`gh pr create`)
+   8. `master` へマージする。**マージ方式は Merge commit**
 
 3. **マージ完了後**: `feature` ブランチを削除する(ローカル・リモート両方)。**併せて作業に使った `git worktree` も必ず削除する**。
    - 削除例: `git worktree remove ../last-spark-<説明>` (`master` へのマージ完了を確認してから実行する)
