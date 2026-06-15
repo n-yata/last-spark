@@ -17,15 +17,15 @@ describe('getCutscene', () => {
     expect(getCutscene('stage1-intro')).toBeDefined();
   });
 
-  it('stage1-intro は目覚めの内心と開始テキスト3行を含む(③確定版)', () => {
+  it('stage1-intro は目覚めの内心と開始テキスト3行を含む(確定版)', () => {
     const cs = getCutscene('stage1-intro')!;
     const texts = cs.lines.map((l) => l.text);
     // 内心「目覚め」。
     expect(texts).toContain('……私は、目を覚ました');
-    // ステージ開始テキスト Stage 1 の確定3行。
-    expect(texts).toContain('壊れた町。さびと、つたに覆われている');
-    expect(texts).toContain('この町は、見張られているようだ');
-    expect(texts).toContain('私は、なぜここにいるのだろう');
+    // 情景＋謎＋「なぜ動いているのか」（命令の起点）。
+    expect(texts).toContain('壊れた町。さびと、つたが、すべてを覆っている');
+    expect(texts).toContain('だれかに、見張られている');
+    expect(texts).toContain('私は、なぜ動いているのだろう。それさえ、分からない');
   });
 
   it('全カットシーンが専用背景テクスチャを持つ(動的描画フォールバックに依存しない)', () => {
@@ -109,16 +109,19 @@ describe('getCutscene', () => {
     expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('止まれない'))).toBe(true);
   });
 
-  it('stage6-ending が登録され、管理解除→テラセリフ→エンディング本文の順を持つ', () => {
+  it('stage6-ending が登録され、管理解除→テラ再合流→エンディング本文の順を持つ', () => {
     const cs = getCutscene('stage6-ending');
     expect(cs).toBeDefined();
     const lines = cs!.lines;
-    // ステップ1: 管理解除(ナレーション)で始まる。敵名は出さない。
-    expect(lines[0]).toEqual({ kind: 'narration', text: 'あの声の管理が、解けた' });
+    // ステップ1: 管理解除(ナレーション)で始まる。ここで「管理者」の名で締める。
+    expect(lines[0]).toEqual({ kind: 'narration', text: '管理者の支配が、解けた' });
+    // ステップ2: 待っていたテラと再合流（離脱の一拍を回収）。
+    expect(lines.some((l) => l.kind === 'terraLine' && l.text === 'レイ！')).toBe(true);
+    expect(lines.some((l) => l.kind === 'rayInner' && l.text.includes('無事だった'))).toBe(true);
     // ステップ: テラとのセリフ交換(確定版)を含む。
-    expect(lines.some((l) => l.kind === 'terraLine' && l.text.includes('次は何する'))).toBe(true);
+    expect(lines.some((l) => l.kind === 'terraLine' && l.text.includes('次は、何する'))).toBe(true);
     expect(lines.some((l) => l.kind === 'rayInner' && l.text.includes('私たちが決める'))).toBe(true);
-    // ステップ4: エンディング本文(ナレーション)で締める。
+    // 最後: エンディング本文(ナレーション)で締める。
     const last = lines[lines.length - 1];
     expect(last.kind).toBe('narration');
     expect(last.text).toContain('終わりではなく、始まり。');
@@ -131,14 +134,20 @@ describe('getCutscene', () => {
     expect(cs.lines.some((l) => l.text.includes('すがたを見せる'))).toBe(false);
   });
 
-  it('stage6-ending は苦い勝利(争いの痕跡)のト書きを含む', () => {
-    // 争いの痕跡(落書き・バリケード)は story.md が「テキスト描写は可」とするため残す(群衆とは別)。
+  it('stage6-ending は描画制約で出せない props(落書き・バリケード等)をト書きで描写しない', () => {
+    // 鉄則「見せられないものを語らない」。背景は単色＋図形のみで落書き・バリケード・残骸は画面に出せない。
+    // 苦い勝利は props でなく事実・口調で表す（「この星は、まだ傷だらけだ」）。
     const cs = getCutscene('stage6-ending')!;
-    expect(cs.lines.some((l) => l.kind === 'direction' && l.text.includes('争った跡'))).toBe(true);
+    const allText = cs.lines.map((l) => l.text).join('');
+    expect(allText).not.toContain('落書き');
+    expect(allText).not.toContain('バリケード');
+    expect(allText).not.toContain('争った跡');
+    // 苦さは事実・口調で表現する。
+    expect(cs.lines.some((l) => l.kind === 'rayInner' && l.text.includes('まだ傷だらけ'))).toBe(true);
   });
 
   // stage6-awakening: Stage6 開始時の覚醒演出(支配中枢の核が RAY に反応し最後の力を渡す)。
-  // docs/story.md 厳守の検証。TERRA は安全な場所で待機(同行しない)ため RAY 単独の演出。
+  // docs/story.md 厳守の検証。冒頭にテラ離脱の一拍(「ここで待ってて」)を置き、以降はレイ単独の演出。
   it('stage6-awakening が登録されている', () => {
     expect(getCutscene('stage6-awakening')).toBeDefined();
   });
@@ -148,20 +157,22 @@ describe('getCutscene', () => {
     expect(getCutscene('stage5-awakening')).toBeUndefined();
   });
 
-  it('stage6-awakening の冒頭行はト書き「支配中枢の最奥。脈打つ核が、レイに反応する」', () => {
-    // TERRA は同行しないため演出はレイ単独。冒頭は状況を示す direction から始まる。
+  it('stage6-awakening の冒頭はテラ離脱の一拍(「ここで待ってる」)で始まる', () => {
+    // TERRA は安全な場所で待機(同行しない)。冒頭でその離脱を一拍描き、以降はレイ単独。
     const cs = getCutscene('stage6-awakening')!;
-    expect(cs.lines[0]).toEqual({ kind: 'direction', text: '支配中枢の最奥。脈打つ核が、レイに反応する' });
+    expect(cs.lines[0]).toEqual({ kind: 'terraLine', text: 'ここで待ってる。レイ、必ず戻ってきて' });
+    // 核の反応＝覚醒のト書きを含む。
+    expect(
+      cs.lines.some((l) => l.kind === 'direction' && l.text.includes('脈打つ核が、レイに反応する')),
+    ).toBe(true);
   });
 
-  it('stage6-awakening は rayInner と direction のみで構成される(テラ不在・科学者の語り部なし)', () => {
-    // docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。
-    // TERRA は安全な場所で待機するため terraLine は含まない。
-    // 許可される kind は rayInner(レイの内心)と direction(ト書き)のみ。
-    // narration(ナレーション=科学者/システム文)も含まない。
+  it('stage6-awakening は terraLine(離脱の一拍)・rayInner・direction のみで構成される(科学者の語り部なし)', () => {
+    // docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。narration(科学者/システム文)は含まない。
+    // 冒頭のテラ離脱(terraLine)以外はレイの内心(rayInner)とト書き(direction)。
     const cs = getCutscene('stage6-awakening')!;
     for (const line of cs.lines) {
-      expect(['rayInner', 'direction']).toContain(line.kind);
+      expect(['terraLine', 'rayInner', 'direction']).toContain(line.kind);
     }
   });
 

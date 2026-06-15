@@ -25,9 +25,9 @@ const STAGE1_INTRO: Cutscene = {
   key: 'stage1-intro',
   lines: [
     { kind: 'rayInner', text: '……私は、目を覚ました' },
-    { kind: 'direction', text: '壊れた町。さびと、つたに覆われている' },
-    { kind: 'rayInner', text: 'この町は、見張られているようだ' },
-    { kind: 'rayInner', text: '私は、なぜここにいるのだろう' },
+    { kind: 'direction', text: '壊れた町。さびと、つたが、すべてを覆っている' },
+    { kind: 'rayInner', text: 'だれかに、見張られている' },
+    { kind: 'rayInner', text: '私は、なぜ動いているのだろう。それさえ、分からない' },
   ],
 };
 
@@ -75,14 +75,17 @@ const STAGE5_INTRO: Cutscene = {
   ],
 };
 
-// Stage 6「ECLIPSE支配中枢」開始の覚醒演出シーン(stage6-awakening)。支配中枢の最奥へ突入した瞬間、
+// Stage 6「支配中枢」開始の覚醒演出シーン(stage6-awakening)。支配中枢の最奥へ突入した瞬間、
 // 脈打つ核が RAY に反応し、最後の光を渡す=攻撃強化を獲得する。TERRA は安全な場所で待機(同行しない)
-// ため、レイ単独の演出。docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。「私と同じ何か」の
+// ため、冒頭に「ここで待ってて」のテラ離脱の一拍を置き、以降はレイ単独の演出にする(再合流は
+// stage6-ending)。docs/story.md 厳守: 科学者は登場させない(科学者ログ全廃方針)。「私と同じ何か」の
 // 気配を説明せず匂わせるだけに留め、謎は謎のまま残す。この演出後、finishIntro が開始テキスト(中枢到達の
 // 決意)へ続く(introCutsceneCoversStartText は立てない)。ト書き(direction)は CutsceneScene が括弧で囲う。
 const STAGE6_AWAKENING: Cutscene = {
   key: 'stage6-awakening',
   lines: [
+    { kind: 'terraLine', text: 'ここで待ってる。レイ、必ず戻ってきて' },
+    { kind: 'rayInner', text: 'テラを、安全な場所に残した。ここから先は、一人だ' },
     { kind: 'direction', text: '支配中枢の最奥。脈打つ核が、レイに反応する' },
     { kind: 'rayInner', text: 'この光……私と、同じものか' },
     { kind: 'direction', text: '眠っていた最後の光が、レイへ流れ込む' },
@@ -90,27 +93,30 @@ const STAGE6_AWAKENING: Cutscene = {
   ],
 };
 
-// Stage 6「ECLIPSE支配中枢」結末演出シーン(エンディング)。ラスボス撃破後に再生する。
-// docs/story.md「Stage 6 結末演出の詳細構成」+「TERRAのセリフ > Stage 6 — 結末演出シーン」確定版を
-// そのまま転記する。(1)管理解除 →(2)TERRAとのセリフ交換(自由な空) →(3)争いの痕跡(ト書き) →
-// (4)エンディング本文、の4ステップを 1 スクリプトに連結する。苦い勝利(楽園ではない・再生の始まり)。
-// ※群衆は出さない(人類はほぼ絶滅・RAYとTERRAの二人だけ)。「建物から人間たちが姿を見せる」描写は廃止。
+// Stage 6「支配中枢」結末演出シーン(エンディング)。ラスボス撃破後に再生する。
+// (1)管理解除 →(2)テラ再合流 →(3)自由な空のセリフ交換 →(4)苦い勝利 →(5)始まりの本文、を 1 スクリプトに連結。
+// 苦い勝利(楽園ではない・再生の始まり)。
+// ※描画制約厳守: 背景は単色・図形のみで「落書き・崩れたバリケード」等は画面に出せないため、
+//   ト書きで描写しない(鉄則「見せられないものを語らない」)。苦い勝利は props でなく口調・事実で表す。
+// ※群衆は出さない(人類はほぼ絶滅・RAYとTERRAの二人だけ)。
 const STAGE6_ENDING: Cutscene = {
   key: 'stage6-ending',
   lines: [
-    // ステップ1: 管理解除。
-    { kind: 'narration', text: 'あの声の管理が、解けた' },
-    // ステップ2: テラとのセリフ交換(だれにも管理されない自由な空)。
-    { kind: 'terraLine', text: 'レイ、空が——' },
+    // ステップ1: 管理解除(管理者の名で締める)。
+    { kind: 'narration', text: '管理者の支配が、解けた' },
+    // ステップ2: テラ再合流(待機していたテラが戻る＝離脱の一拍を回収)。
+    { kind: 'terraLine', text: 'レイ！' },
+    { kind: 'rayInner', text: 'テラが、走ってくる。無事だった' },
+    // ステップ3: 自由な空のセリフ交換(だれにも管理されない空)。
+    { kind: 'terraLine', text: '空が……動いてる' },
     { kind: 'rayInner', text: 'だれにも管理されていない空だ' },
     { kind: 'terraLine', text: 'きれい' },
-    { kind: 'rayInner', text: '……ああ' },
-    // 苦い勝利: 楽園ではない。壁に残る争いの痕跡（群衆は出さない・ト書き描写は story.md 容認）。
-    { kind: 'direction', text: '壊れた町の壁に、落書き。崩れたバリケード。人間どうしが争った跡' },
-    { kind: 'rayInner', text: 'これが、私が守ろうとした世界だ' },
-    { kind: 'terraLine', text: 'ねえ、レイ。次は何する？' },
+    { kind: 'rayInner', text: 'ああ' },
+    // ステップ4: 苦い勝利(楽園ではない)。props を描かず、事実と口調で表す。
+    { kind: 'rayInner', text: 'この星は、まだ傷だらけだ。すぐには、元に戻らない' },
+    // ステップ5: テラのアーク完成(一緒に未来を選ぶ相棒)→「選ぶ」でテーマ決着。
+    { kind: 'terraLine', text: 'ねえ、レイ。次は、何する？' },
     { kind: 'rayInner', text: '次は、私たちが決める' },
-    // ステップ4: エンディング本文（人類はほぼ絶滅・やり直しはこの二人から）。
     { kind: 'narration', text: '終わりではなく、始まり。\nここから、私たちが歩き出す。' },
   ],
 };
