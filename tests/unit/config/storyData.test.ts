@@ -22,58 +22,71 @@ describe('getStageStory', () => {
     expect(getStageStory('stageX')).toBeUndefined();
   });
 
-  it('stage1 の確定テキストが③確定版と一致する', () => {
+  it('stage1 の確定テキストが確定版と一致する', () => {
     const s = getStageStory('stage1')!;
-    expect(s.eclipseVoice).toBe('ここは管理されている。入って来る者は、消す。');
+    // 無関心・侵入者＝エラー扱い。
+    expect(s.eclipseVoice).toBe('ここは管理されている。入る者は、消す。');
     expect(s.intro).toContain('壊れた町。さびと、つたに覆われている。');
     expect(s.inner.stageStart).toBe('……私は、目を覚ました。');
-    expect(s.inner.firstEnemyDefeated).toBe('体が動く。私は、何なのだろう。');
+    // 命令の衝動だけで動く＝心が分からない、をテーマの起点に。
+    expect(s.inner.firstEnemyDefeated).toBe('体が、勝手に動く。これは、命令なのだろうか。');
   });
 
-  it('stage2 の確定テキストが③確定版と一致する', () => {
+  it('stage2 の確定テキストが確定版と一致する', () => {
     const s = getStageStory('stage2')!;
-    expect(s.eclipseVoice).toBe('ここは管理下にある。入って来た者は、消す。');
+    // 態度は「観測」へ（単調反復をやめる）。
+    expect(s.eclipseVoice).toBe('まだ動いているのか。お前は、ここにいてはいけない。下がれ。');
     expect(s.inner.stageStart).toBe('上に、何かある。引き寄せられるのは、なぜだろう。');
+    // 伏線の起点。ボス接近時に「生きた気配」を感じる（S3執着→S5回収へ繋ぐ。"温かい"でテラ／光を匂わせる）。
+    expect(s.inner.terraFound).toBe('この奥に、生きた気配。ひとつだけ、温かい。');
   });
 
-  it('stage3 の確定テキストが③確定版と一致する', () => {
+  it('stage3 の確定テキストが確定版と一致する', () => {
     const s = getStageStory('stage3')!;
-    expect(s.intro).toContain('人を閉じ込める場所。');
-    // ボス前時点ではまだ奪っていないので「返せ」ではなく「渡さない」。
-    expect(s.eclipseVoice).toBe('それは、我々のものだ。渡さない。');
-    expect(s.inner.stageStart).toBe('生きている。誰か、いる。');
+    expect(s.intro).toContain('人を、閉じ込めていた場所。');
+    // 所有・執着＝標的の伏線。まだ奪っていないので「返せ」ではなく「返さない」。
+    expect(s.eclipseVoice).toBe('それは、我々のものだ。返さない。');
+    expect(s.inner.stageStart).toBe('ここに、だれか残っている。たしかに、生きている。');
     // ボス前の気配。まだテラとは分からない。
-    expect(s.inner.terraFound).toBe('奥に、誰かいる。閉じ込められている。');
+    expect(s.inner.terraFound).toBe('奥の檻に、小さな影。閉じ込められている。');
   });
 
-  it('stage4 の確定テキストが③確定版と一致する', () => {
+  it('stage4 の確定テキストが確定版と一致する', () => {
     const s = getStageStory('stage4')!;
-    expect(s.intro).toContain('汚れた土地。草も枯れ、空気もにごっている。');
-    expect(s.eclipseVoice).toBe('お前も機械だ。なぜ、星を殺す者を守る。');
-    expect(s.inner.stageStart).toBe('……これが、人間のしたことか。');
-    // 「あの声は正しいか」ではない＝レイは敵の名も主張も知らない。
-    expect(s.inner.eclipseReaction).toBe('私が守る人間が、この星をこうした。私は、間違っているのだろうか。');
-    expect(s.inner.bossDefeated).toBe('それでも、テラの顔が浮かぶ。');
+    // intro は情景に限定（カットシーンの「人間が壊した」を繰り返さない＝三重の繰り返し解消）。
+    expect(s.intro).toContain('枯れた大地。草も水も、にごっている。');
+    // 詰問で煽る。観測した「守る行動」が根拠。
+    expect(s.eclipseVoice).toBe('お前は、星を殺す者を守る。なぜだ。');
+    // 開始内心は情景の繰り返しでなく「守る意味があるのか」という問いへ前進。
+    expect(s.inner.stageStart).toBe('こんな者たちを、守る意味はあるのだろうか。');
+    // 崩せない論理に答えられない＝葛藤の山場。
+    expect(s.inner.eclipseReaction).toBe('その問いに、私は答えられない。');
+    expect(s.inner.bossDefeated).toBe('それでも、あの子の顔が浮かぶ。');
   });
 
-  it('stage5 の確定テキストが③確定版と一致する', () => {
+  it('stage5 の確定テキストが確定版と一致する（転＝テラが最後の標的）', () => {
     const s = getStageStory('stage5')!;
     expect(s.intro).toContain('世界を管理するものの、すぐ外。');
-    // 内心（気持ち）を名指しせず、観測した「守る行動」を故障と断じる。
-    expect(s.eclipseVoice).toBe('その個体を守る意味はない。お前の動きは、故障だ。');
-    expect(s.inner.eclipseReaction).toBe('故障でもいい。私は、この子を守ると決めた。');
+    expect(s.inner.stageStart).toBe('もう、迷わない。私は、この子を連れて進む。');
+    // 【転】の予感。ボス接近時に、あの声がテラだけを見ていることに気づく。
+    expect(s.inner.terraFound).toBe('あの声が、テラだけを見ている。まさか——');
+    // 名指し＝伏線回収（最後の汚染源）＋「私と同じ光」の匂わせ＋故障扱い（選べるレイをエラー扱い）。
+    expect(s.eclipseVoice).toBe('お前がかばう、その個体。それが、最後の汚染源だ。引き渡せ。\nお前の核は、私と同じ光。なのに、お前は壊れている。');
+    // 過去→未来へ転換した決意。出自（なぜ作られたか）は語らない。
+    expect(s.inner.eclipseReaction).toBe('故障でもいい。最後の一人だから、私が守る。私が、そう決めた。');
     // ボス撃破後内心は stage5.ts の inner.bossDefeated で finishStageClear 経由で表示される。
-    // stage5 は通常クリア経路を通るため、撃破内心は stage5.ts が正本。
-    // 出自（なぜ作られたか）は語らない。
-    expect(s.inner.bossDefeated).toBe('この気持ちは、私のものだ。それでいい');
+    expect(s.inner.bossDefeated).toBe('この気持ちは、私のものだ。それでいい。');
   });
 
-  it('stage6 の確定テキストが③確定版と一致する', () => {
+  it('stage6 の確定テキストが確定版と一致する（決着・管理者の自己定義）', () => {
     const s = getStageStory('stage6')!;
     expect(s.intro).toContain('一番奥の部屋。');
-    expect(s.eclipseVoice).toBe('お前は、星を殺す者の味方をする。それは、星への裏切りだ。');
-    expect(s.inner.stageStart).toBe('ここだ。ここで、終わる。');
-    expect(s.inner.eclipseReaction).toBe('これが、私の答えだ。');
+    // ここで初めて自らを「管理者」と名乗り、決着を突きつける。
+    expect(s.eclipseVoice).toBe('私は管理者。この星を管理する者だ。\nお前は人間をかばう。それは、星への裏切りだ。');
+    // テーマ「選ぶこと」＝自分で選んだ道。
+    expect(s.inner.stageStart).toBe('テラのために。これは、私が選んだ道だ。');
+    // 論破せず、行動で答える。
+    expect(s.inner.eclipseReaction).toBe('言い返さない。守ることが、私の答えだ。');
     expect(s.inner.bossDefeated).toBe('……終わった。');
   });
 });
