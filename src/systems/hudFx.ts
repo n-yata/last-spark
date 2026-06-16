@@ -1,5 +1,5 @@
 // HUD 演出の進行計算(Phaser 非依存の純粋関数)。
-// BossHpBar の出現フィル、LifeBar の被ダメ点滅の位相を扱う。
+// BossHpBar の出現フィル、LifeBar の被ダメ点滅、チャージ完了パルスの位相を扱う。
 
 /**
  * ボス HP バー出現時のフィル進行率(0..1)を返す。easeOutQuad で立ち上がりを速くし、
@@ -39,4 +39,22 @@ export function flashBlinkOn(nowMs: number, damagedAtMs: number, intervalMs: num
   if (intervalMs <= 0) return true;
   const elapsed = Math.max(0, nowMs - damagedAtMs);
   return Math.floor(elapsed / intervalMs) % 2 === 0;
+}
+
+/**
+ * チャージ完了時の発光パルスのアルファ値を返す。
+ * sin 波でゆっくり明滅させ、満タン状態が静止表示に埋もれないようにする。
+ */
+export function chargePulseAlpha(
+  nowMs: number,
+  periodMs: number,
+  minAlpha: number,
+  maxAlpha: number,
+): number {
+  if (periodMs <= 0) return maxAlpha;
+  const lo = Math.max(0, Math.min(1, minAlpha));
+  const hi = Math.max(lo, Math.min(1, maxAlpha));
+  const phase = ((nowMs % periodMs) / periodMs) * Math.PI * 2;
+  const t = (Math.sin(phase) + 1) / 2;
+  return lo + (hi - lo) * t;
 }

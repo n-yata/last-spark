@@ -17,8 +17,10 @@ import {
 
 // depth は地形(0)・梯子(5)・敵(8)・ボス(9)・プレイヤー(10)・UI(95+)より背面に置く。
 const SKY_DEPTH = -30;
+const ATMOSPHERE_DEPTH = -26;
 const LAYER_DEPTH_BASE = -20; // LAYER_DEPTH_BASE + layerIndex。全ステージ 2 層なので実際は -20/-19 のみ。地形(0)等より必ず背面。
 const SKY_SCROLL_FACTOR = 0.1; // 空はほぼ固定(横方向は一様なので体感は奥行きのみ)
+const ATMOSPHERE_SCROLL_FACTOR = 0.18;
 const SKY_TOP_Y = -200; // 画面上に余白を持たせ、縦リサイズでも空が切れないようにする
 const SKY_BANDS = 32; // グラデーションを近似する横帯の数
 
@@ -40,7 +42,13 @@ export function paintStageBackground(
   drawSkyGradient(sky, worldWidth, groundY, theme);
   created.push(sky);
 
-  // 2) レイヤー(奥→手前)を手続きシルエットで描く。
+  // 2) 地平線付近の靄と発光線。暗さを保ったままステージ色を一段立たせる。
+  const atmosphere = scene.add.graphics();
+  atmosphere.setDepth(ATMOSPHERE_DEPTH).setScrollFactor(ATMOSPHERE_SCROLL_FACTOR);
+  drawAtmosphere(atmosphere, worldWidth, groundY, theme);
+  created.push(atmosphere);
+
+  // 3) レイヤー(奥→手前)を手続きシルエットで描く。
   theme.layers.forEach((layer, i) => {
     const g = scene.add.graphics();
     g.setDepth(LAYER_DEPTH_BASE + i).setScrollFactor(layer.scrollFactor);
@@ -71,6 +79,33 @@ function drawSkyGradient(
   // 地平線より下(奈落・地面裏)は skyBottom で塗っておく(カメラ背景色の保険)。
   g.fillStyle(bottom, 1);
   g.fillRect(0, horizonY, worldWidth, 240);
+}
+
+/** 地平線の靄と、ステージのアクセント色に寄せた薄い光の筋。 */
+function drawAtmosphere(
+  g: Phaser.GameObjects.Graphics,
+  worldWidth: number,
+  groundY: number,
+  theme: StageBackgroundTheme,
+): void {
+  const accent = hexToNum(theme.accent);
+  const bottom = hexToNum(theme.skyBottom);
+
+  for (let i = 0; i < 4; i++) {
+    const y = groundY - 112 + i * 24;
+    g.fillStyle(bottom, 0.1 - i * 0.012);
+    g.fillRect(0, y, worldWidth, 18);
+  }
+
+  g.lineStyle(2, accent, 0.18);
+  g.lineBetween(0, groundY - 6, worldWidth, groundY - 6);
+  g.lineStyle(1, accent, 0.08);
+  g.lineBetween(0, groundY - 42, worldWidth, groundY - 42);
+
+  const glowStep = Math.max(220, Math.floor(worldWidth / 8));
+  for (let x = glowStep / 2; x < worldWidth; x += glowStep) {
+    drawGlow(g, x, groundY - 88, 36, accent);
+  }
 }
 
 /** 1レイヤーを種別に応じて描く。 */
@@ -212,6 +247,8 @@ function drawFacility(
     // 上端の冷たい発光ライン(人工照明)。
     g.fillStyle(accent, 0.4);
     g.fillRect(c.x, top, c.width, 2);
+    g.fillStyle(accent, 0.12);
+    g.fillRect(c.x, top + 5, c.width, 1);
     // 監視灯の一列(等間隔のドット)。
     const lampY = top + c.height * 0.35;
     g.fillStyle(accent, 0.6);
@@ -270,6 +307,8 @@ function drawOuterWorks(
     if (i % 2 === 0) {
       g.fillStyle(accent, 0.5);
       g.fillRect(c.x + c.width * 0.5 - 1, top + 12, 2, Math.min(60, c.height - 24));
+      g.fillStyle(accent, 0.16);
+      g.fillRect(c.x + c.width * 0.5 - 4, top + 12, 8, Math.min(60, c.height - 24));
     }
   });
 }
@@ -290,6 +329,10 @@ function drawCore(
     // モノリスの合間に、地平付近で脈打つコアの赤光。
     if (i % 2 === 1) {
       drawGlow(g, c.x + c.width, groundY - c.height * 0.4, 60, accent);
+    }
+    if (i % 3 === 0) {
+      g.lineStyle(2, accent, 0.25);
+      g.lineBetween(c.x + c.width / 2, top + 18, c.x + c.width / 2, groundY - 24);
     }
   });
 }
