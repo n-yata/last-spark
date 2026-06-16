@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
-import { TEX, CUTSCENE_TEX, TITLE_TEX, STAGE_BG_TEX } from '../config/assetKeys';
+import { TEX, CUTSCENE_TEX, TITLE_TEX } from '../config/assetKeys';
 import { PLAYER, ENEMY, BOSS, SHOT } from '../config/balance';
 import { allRigParts, type RigPartSpec } from '../config/characterRig';
 import { scaledFontPx } from '../config/uiScale';
@@ -32,10 +32,6 @@ export class PreloadScene extends Phaser.Scene {
 
     // (RAY のカットアウト・リグ用パーツ読込は現在停止中。プレイヤーは手続き CharacterRig に戻した
     //  ＝世界の画風と統一するため。再有効化は config/raySprite.ts のヘッダ手順を参照。)
-
-    // ステージ背景の painted キービジュアル(far 単層)。生成済みのステージのみ読む。
-    // 未生成ステージは stageBackground テーマに imageKey が無いので手続き背景にフォールバックする。
-    this.load.image(STAGE_BG_TEX.stage1.far, 'assets/stages/stage1-bg-far.webp');
   }
 
   create(): void {
