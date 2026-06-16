@@ -4,7 +4,10 @@
 //
 // 設計意図: ストーリーの世界観(崩れた都市→立坑→収容施設→汚染地帯→外縁部→支配中枢)を
 // 空グラデーション + 多層シルエットのパララックスで表現し、6ステージを視覚的に差別化する。
-// 既存のプレースホルダ哲学(手続き生成)に合わせ、アセットは追加しない。
+// 手続き生成を基本としつつ、任意で背景画像レイヤー(imageKey)を持てる。画像が未生成/未ロードの
+// レイヤーは従来どおり手続きシルエットへフォールバックする(段階導入)。
+
+import { STAGE_BG_TEX } from './assetKeys';
 
 /** シルエットの形状種別(ステージ世界観ごとの描き分け)。 */
 export type SilhouetteShape =
@@ -27,6 +30,16 @@ export interface BackgroundLayerTheme {
   height: number;
   /** モチーフ反復幅の目安(px)。列ピッチ。 */
   step: number;
+  // --- 画像レイヤー(任意)。imageKey がロード済みなら手続きシルエットの代わりにこれを敷く。
+  //     未指定/未ロードなら従来の手続き描画へフォールバックする(段階導入で壊れない)。---
+  /** 背景画像テクスチャキー(assetKeys.STAGE_BG_TEX)。 */
+  imageKey?: string;
+  /** 敷き方: 'tile'=横タイル(遠景・横ループ画像)、'stretch'=ワールド全幅へ伸張(中景)。既定 'stretch'。 */
+  imageMode?: 'tile' | 'stretch';
+  /** 画像の上端 y(world)。未指定なら画像高さと groundY から接地で算出。 */
+  imageTop?: number;
+  /** 画像の表示高さ(px)。未指定なら groundY + 余白(地平線まで)。 */
+  imageHeight?: number;
 }
 
 /** 1ステージ分の背景テーマ。 */
@@ -125,8 +138,14 @@ const STAGE1_BG: StageBackgroundTheme = {
   accent: '#c9a14a', // 廃ビルにわずかに灯る琥珀の窓明かり
   seed: 0x5a1b01,
   layers: [
-    { color: '#181620', scrollFactor: 0.3, shape: 'ruinedCity', height: 220, step: 180 },
-    { color: '#0f0d14', scrollFactor: 0.55, shape: 'ruinedCity', height: 300, step: 140 },
+    // far=夕焼け空+遠景の街まで入った完成シーン(外部生成キービジュアル)。これ単体を背景に敷く。
+    // (mid の手前シルエットは重ねると far の見せ場を覆い暗く濁るため不採用。)
+    // 画像未ロード時は従来の手続きシルエット(ruinedCity)へフォールバックする。
+    {
+      // 縦は画面(540)を上下に少しはみ出してカバーし、どのフレーミングでも中間に隙間が出ないようにする。
+      color: '#181620', scrollFactor: 0.25, shape: 'ruinedCity', height: 260, step: 170,
+      imageKey: STAGE_BG_TEX.stage1.far, imageMode: 'stretch', imageTop: -30, imageHeight: 600,
+    },
   ],
 };
 
