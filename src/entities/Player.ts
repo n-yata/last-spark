@@ -303,6 +303,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       projectile.fire(muzzleX, muzzleY, vx, kind, 'player', { velocityY: 0 });
     }
     this.rig.triggerAttack(now);
+    // マズルフラッシュ演出は GameScene 側(EffectsManager)で出す。発射位置と向きを通知する。
+    this.scene.events.emit('player-fired', muzzleX, this.y, dir, kind === 'charged');
     getSound().playSe(kind === 'charged' ? 'shootCharged' : 'shootNormal');
   }
 

@@ -26,7 +26,46 @@ export const EFFECTS = {
   /** カメラシェイク。intensity は Phaser の shake 強度(画面比)。 */
   shake: {
     playerDamage: { durationMs: 120, intensity: 0.008 },
+    enemyKill: { durationMs: 90, intensity: 0.006 }, // 雑魚撃破の小さな手応え
     bossDefeat: { durationMs: 700, intensity: 0.012 },
+  },
+
+  /** 着弾火花(弾が命中した瞬間の放射状スパーク)。撃破前の通常ヒットでも出して手応えを出す。 */
+  impactSpark: {
+    count: 8,
+    speedMin: 80,
+    speedMax: 260,
+    lifespanMs: 320,
+    scaleStart: 0.9,
+  },
+
+  /** 発射時のマズルフラッシュ(銃口の閃光+前方スパーク)。 */
+  muzzle: {
+    /** 閃光スプライト(TEX.hit)の初期スケールと寿命。 */
+    flashScale: 1.4,
+    flashMs: 110,
+    /** 前方へ飛ぶ火花の数と速度。 */
+    sparkCount: 5,
+    sparkSpeedMin: 120,
+    sparkSpeedMax: 300,
+    sparkLifespanMs: 260,
+    /** チャージ弾はフラッシュを大きく。 */
+    chargedScaleMul: 1.8,
+  },
+
+  /** 環境パーティクル(空気感): カメラ可視域に漂う塵/火の粉。ステージのアクセント色で発光。 */
+  ambient: {
+    /** 発生間隔(ms)。小さいほど密。可視域に常時十数〜数十個漂う密度。 */
+    frequencyMs: 45,
+    lifespanMs: 4200,
+    /** ゆっくり漂う速度。 */
+    speedMin: 5,
+    speedMax: 26,
+    /** 上方向へのドリフト(火の粉が立ち上る)。 */
+    gravityY: -12,
+    scaleMin: 0.3,
+    scaleMax: 0.8,
+    alphaPeak: 0.7,
   },
 
   /**

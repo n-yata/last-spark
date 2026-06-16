@@ -20,12 +20,17 @@ export class EffectsManager {
   /** ヒットストップの復帰予定時刻。多重発火時は後ろへ伸ばす。 */
   private resumeAt = 0;
   private bossDeathTimer?: Phaser.Time.TimerEvent;
+  /** 環境パーティクル(空気感)の emitter と、カメラ可視域に追従させる発生ゾーン。 */
+  private ambientEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private ambientZone?: Phaser.Geom.Rectangle;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     // シーン終了時にタイマーを破棄し、物理が止まったまま遷移するのを防ぐ。
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.bossDeathTimer?.remove();
+      this.scene.events.off(Phaser.Scenes.Events.UPDATE, this.followAmbientToCamera, this);
+      this.ambientEmitter?.destroy();
       // SHUTDOWN 時点では物理プラグインが先に破棄され world が null の場合がある。
       // ガードなしで触れると throw し、scene.start の遷移処理ごと壊れる。
       const world = scene.physics.world as Phaser.Physics.Arcade.World | undefined;
@@ -97,6 +102,79 @@ export class EffectsManager {
       }
     });
   }
+
+  /** 弾命中の放射状スパーク(撃破前の通常ヒットの手応え)。 */
+  impactSpark(x: number, y: number): void {
+    this.explode(x, y, EFFECTS.impactSpark);
+  }
+
+  /** 雑魚撃破: 小爆発 + 小さなカメラシェイクで手応えを足す。 */
+  enemyKilled(x: number, y: number): void {
+    this.explodeSmall(x, y);
+    const k = EFFECTS.shake.enemyKill;
+    this.scene.cameras.main.shake(k.durationMs, k.intensity);
+  }
+
+  /** 発射のマズルフラッシュ: 銃口の閃光 + 前方へ飛ぶ火花。dir は向き(+1右/-1左)。 */
+  muzzleFlash(x: number, y: number, dir: 1 | -1, charged = false): void {
+    const m = EFFECTS.muzzle;
+    const scale = m.flashScale * (charged ? m.chargedScaleMul : 1);
+    const flash = this.scene.add
+      .image(x, y, TEX.hit)
+      .setDepth(21)
+      .setScale(scale)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(charged ? 0xfff27a : 0x9ffff0);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: scale * 1.6,
+      duration: m.flashMs,
+      onComplete: () => flash.destroy(),
+    });
+    const baseAngle = dir > 0 ? 0 : 180;
+    const emitter = this.scene.add.particles(x, y, TEX.spark, {
+      speed: { min: m.sparkSpeedMin, max: m.sparkSpeedMax },
+      angle: { min: baseAngle - 22, max: baseAngle + 22 },
+      lifespan: m.sparkLifespanMs,
+      scale: { start: 0.7, end: 0 },
+      alpha: { start: 1, end: 0 },
+      blendMode: Phaser.BlendModes.ADD,
+      emitting: false,
+    });
+    emitter.setDepth(21);
+    emitter.explode(m.sparkCount);
+    this.scene.time.delayedCall(m.sparkLifespanMs + EFFECTS.explosion.cleanupMarginMs, () =>
+      emitter.destroy(),
+    );
+  }
+
+  /** 環境パーティクル(空気感)を開始する。color はステージのアクセント色(発光)。 */
+  startAmbient(color: number): void {
+    const a = EFFECTS.ambient;
+    const v = this.scene.cameras.main.worldView;
+    this.ambientZone = new Phaser.Geom.Rectangle(v.x, v.y, v.width || 960, v.height || 540);
+    this.ambientEmitter = this.scene.add.particles(0, 0, TEX.spark, {
+      frequency: a.frequencyMs,
+      lifespan: a.lifespanMs,
+      speed: { min: a.speedMin, max: a.speedMax },
+      gravityY: a.gravityY,
+      scale: { min: a.scaleMin, max: a.scaleMax },
+      alpha: { start: a.alphaPeak, end: 0 },
+      tint: color,
+      blendMode: Phaser.BlendModes.ADD,
+      emitZone: { type: 'random', source: this.ambientZone, quantity: 1 },
+    });
+    this.ambientEmitter.setDepth(-2); // 背景の前・キャラの後ろ(漂う空気感)
+    this.scene.events.on(Phaser.Scenes.Events.UPDATE, this.followAmbientToCamera, this);
+  }
+
+  /** 環境パーティクルの発生域をカメラ可視域へ追従させる(横スクロールで常に画面内に漂わせる)。 */
+  private followAmbientToCamera = (): void => {
+    if (!this.ambientZone) return;
+    const v = this.scene.cameras.main.worldView;
+    this.ambientZone.setTo(v.x, v.y, v.width, v.height);
+  };
 
   /** 使い捨て emitter で単発爆発を出し、寿命後に必ず破棄する(リーク防止)。 */
   private explode(x: number, y: number, conf: ExplosionConfig): void {

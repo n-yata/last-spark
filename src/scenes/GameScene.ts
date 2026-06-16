@@ -6,7 +6,7 @@ import { STAGE, BOSS, FLYING_BOSS, HAZARD, getStageTuning } from '../config/bala
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stages';
-import { getStageBackground, type StageBackgroundTheme } from '../config/stageBackground';
+import { getStageBackground, hexToNum, type StageBackgroundTheme } from '../config/stageBackground';
 import { resolveGraphicsQuality } from '../config/graphicsQuality';
 import { STORY } from '../config/storyEvents';
 import { Player } from '../entities/Player';
@@ -135,6 +135,8 @@ export class GameScene extends Phaser.Scene {
     this.buildHazards();
     this.buildCage();
     this.setupCamera();
+    // 空気感: ステージのアクセント色で発光する塵/火の粉をカメラ可視域に漂わせる。
+    this.effects.startAmbient(hexToNum(this.bgTheme.accent));
 
     this.startTime = this.time.now;
     this.scene.launch(SCENE_KEYS.ui);
@@ -431,10 +433,11 @@ export class GameScene extends Phaser.Scene {
     this.combat = new CombatSystem(this, {
       onHit: (x, y, target) => {
         this.spawnHitEffect(x, y);
+        this.effects.impactSpark(x, y);
         getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
       },
       onEnemyDefeated: (enemy) => {
-        this.effects.explodeSmall(enemy.x, enemy.y);
+        this.effects.enemyKilled(enemy.x, enemy.y);
         getSound().playSe('enemyDefeated');
         if (!this.firstEnemyInnerDone) {
           this.firstEnemyInnerDone = true;
@@ -455,6 +458,14 @@ export class GameScene extends Phaser.Scene {
       enemyShots: this.enemyShots,
       playerBeams: this.playerBeams,
     });
+
+    // 発射ごとのマズルフラッシュ。Player が発射位置/向きを 'player-fired' で通知する。
+    // シーン再入(stage継続)でリスナーが重複しないよう SHUTDOWN で必ず外す。
+    const onPlayerFired = (mx: number, my: number, dir: 1 | -1, charged: boolean): void => {
+      this.effects.muzzleFlash(mx, my, dir, charged);
+    };
+    this.events.on('player-fired', onPlayerFired);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off('player-fired', onPlayerFired));
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
     this.spawn.loadStage(this.stageId);
