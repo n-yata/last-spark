@@ -11,7 +11,7 @@ const EXPECTED_BOSS_NAMES: Record<string, string> = {
   stage3: 'ヴェイル', // 収容番人(重装型) = 帳
   stage4: 'ミアズマ', // 環境管理機(浄化型) = 瘴気
   stage5: 'ヘラルド', // 使者(高速型) = 伝令
-  stage6: 'ECLIPSE', // 管理AI本体(ラスボス) = 影の核そのもの
+  stage6: 'エクリプス', // 管理AI本体(ラスボス) = 影の核そのもの。表記はカタカナで統一
 };
 
 describe('ボス固有名(stages.bossName)', () => {
