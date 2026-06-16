@@ -4,10 +4,6 @@
 //
 // 設計意図: ストーリーの世界観(崩れた都市→立坑→収容施設→汚染地帯→外縁部→支配中枢)を
 // 空グラデーション + 多層シルエットのパララックスで表現し、6ステージを視覚的に差別化する。
-// 手続き生成を基本としつつ、任意で背景画像レイヤー(imageKey)を持てる。画像が未生成/未ロードの
-// レイヤーは従来どおり手続きシルエットへフォールバックする(段階導入)。
-
-import { STAGE_BG_TEX } from './assetKeys';
 
 /** シルエットの形状種別(ステージ世界観ごとの描き分け)。 */
 export type SilhouetteShape =
@@ -30,19 +26,6 @@ export interface BackgroundLayerTheme {
   height: number;
   /** モチーフ反復幅の目安(px)。列ピッチ。 */
   step: number;
-  // --- 画像レイヤー(任意)。imageKey がロード済みなら手続きシルエットの代わりにこれを敷く。
-  //     未指定/未ロードなら従来の手続き描画へフォールバックする(段階導入で壊れない)。---
-  /** 背景画像テクスチャキー(assetKeys.STAGE_BG_TEX)。 */
-  imageKey?: string;
-  /** 敷き方(旧式・現在は未使用。cover-fit追従に統一)。 */
-  imageMode?: 'tile' | 'stretch';
-  /** cover-fit の縦アンカー: 'center'=可視域中央(空の絵を中央に残す/既定)、'bottom'=可視域の底
-   *  (地面から立つ手前シルエット向け)。 */
-  imageAnchor?: 'center' | 'bottom';
-  /** 画像の上端 y(world)。未指定なら画像高さと groundY から接地で算出。 */
-  imageTop?: number;
-  /** 画像の表示高さ(px)。未指定なら groundY + 余白(地平線まで)。 */
-  imageHeight?: number;
 }
 
 /** 1ステージ分の背景テーマ。 */
@@ -58,9 +41,6 @@ export interface StageBackgroundTheme {
   layers: BackgroundLayerTheme[];
   /** 決定論的レイアウト用シード。 */
   seed: number;
-  /** 背景の暗幕アルファ(0..1)。painted 背景が明るいと敵弾が埋もれるため、背景とゲーム本体の
-   *  間に黒の半透明を敷いて背景だけ沈める。未指定/0 なら暗幕なし。 */
-  dimAlpha?: number;
 }
 
 /** 生成された1本のシルエット列(矩形)。world 座標。 */
@@ -144,16 +124,9 @@ const STAGE1_BG: StageBackgroundTheme = {
   accent: '#c9a14a', // 廃ビルにわずかに灯る琥珀の窓明かり
   seed: 0x5a1b01,
   layers: [
-    // far=夕焼け空+遠景の街まで入った完成シーン。cover-fit でカメラ可視域を覆う単層背景。
-    // (mid の手前シルエット層は不採用: 重ねると far の夕焼けを覆い、画風も濁るため。far 単体で十分リッチ。)
-    // 画像未ロード時は従来の手続きシルエット(ruinedCity)へフォールバックする。
-    {
-      color: '#181620', scrollFactor: 0.25, shape: 'ruinedCity', height: 260, step: 170,
-      imageKey: STAGE_BG_TEX.stage1.far,
-    },
+    { color: '#181620', scrollFactor: 0.3, shape: 'ruinedCity', height: 220, step: 180 },
+    { color: '#0f0d14', scrollFactor: 0.55, shape: 'ruinedCity', height: 300, step: 140 },
   ],
-  // 夕焼け背景が明るく敵の赤弾が埋もれるため、背景を黒の半透明で沈める(ゲーム本体は前面で無影響)。
-  dimAlpha: 0.45,
 };
 
 const STAGE2_BG: StageBackgroundTheme = {

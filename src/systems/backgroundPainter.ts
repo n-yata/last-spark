@@ -21,7 +21,6 @@ const LAYER_DEPTH_BASE = -20; // LAYER_DEPTH_BASE + layerIndex。全ステージ
 const SKY_SCROLL_FACTOR = 0.1; // 空はほぼ固定(横方向は一様なので体感は奥行きのみ)
 const SKY_TOP_Y = -200; // 画面上に余白を持たせ、縦リサイズでも空が切れないようにする
 const SKY_BANDS = 32; // グラデーションを近似する横帯の数
-const DIM_DEPTH = -10; // 暗幕。背景(-30〜-19)より前・地形(0)/敵/弾より後ろ=背景だけ沈める
 
 /**
  * ステージ背景を描画し、生成した GameObject 群を返す(呼び出し側が必要なら破棄に使える)。
@@ -41,78 +40,15 @@ export function paintStageBackground(
   drawSkyGradient(sky, worldWidth, groundY, theme);
   created.push(sky);
 
-  // 2) レイヤー(奥→手前)。画像キーがロード済みなら画像で敷き、無ければ手続きシルエットへ
-  //    フォールバックする(段階導入: 絵が未生成のステージは従来どおり手続き背景になる)。
+  // 2) レイヤー(奥→手前)を手続きシルエットで描く。
   theme.layers.forEach((layer, i) => {
-    const depth = LAYER_DEPTH_BASE + i;
-    if (layer.imageKey && scene.textures.exists(layer.imageKey)) {
-      created.push(drawImageLayer(scene, layer, depth));
-      return;
-    }
     const g = scene.add.graphics();
-    g.setDepth(depth).setScrollFactor(layer.scrollFactor);
+    g.setDepth(LAYER_DEPTH_BASE + i).setScrollFactor(layer.scrollFactor);
     drawLayer(g, layer, worldWidth, groundY, theme, i);
     created.push(g);
   });
 
-  // 3) 暗幕: 背景が明るいと敵弾(赤)が埋もれるため、背景とゲーム本体の間に黒の半透明を敷く。
-  //    可視域へ追従させ、ゲーム本体(地形/敵/弾/プレイヤー=depth0+)とHUD(別シーン)には掛からない。
-  if (theme.dimAlpha && theme.dimAlpha > 0) {
-    created.push(drawDimOverlay(scene, theme.dimAlpha));
-  }
-
   return created;
-}
-
-/**
- * 画像背景レイヤーを敷く。アスペクト比によらず破綻しないよう、カットシーンと同じ cover-fit
- * (縦横比維持で可視域を覆い、はみ出しはトリミング)で敷き、毎フレーム カメラ可視域(worldView)へ
- * 追従させる。下端を可視域の底に合わせ、奥行き感は遠景=スカイ・中景=透過シルエットの重ねで出す。
- * 端末アスペクト/コントロール帯/ズームが変わっても常に全面を覆う(モバイル対応)。
- */
-function drawImageLayer(
-  scene: Phaser.Scene,
-  layer: BackgroundLayerTheme,
-  depth: number,
-): Phaser.GameObjects.GameObject {
-  const key = layer.imageKey as string;
-  const src = scene.textures.get(key).getSourceImage();
-  const anchorBottom = layer.imageAnchor === 'bottom';
-  const img = scene.add.image(0, 0, key).setOrigin(0.5, anchorBottom ? 1 : 0.5).setDepth(depth);
-
-  const fit = (): void => {
-    if (!img.active) return;
-    const wv = scene.cameras.main.worldView;
-    if (wv.width <= 0 || wv.height <= 0) return;
-    const scale = Math.max(wv.width / src.width, wv.height / src.height); // cover
-    img.setScale(scale).setPosition(wv.centerX, anchorBottom ? wv.bottom : wv.centerY);
-  };
-  fit();
-  scene.events.on(Phaser.Scenes.Events.UPDATE, fit);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-    scene.events.off(Phaser.Scenes.Events.UPDATE, fit),
-  );
-  return img;
-}
-
-/**
- * 背景用の暗幕。黒の半透明 Rectangle をカメラ可視域へ毎フレーム追従させ、背景だけを沈める。
- * depth=DIM_DEPTH(背景より前・ゲーム本体より後ろ)なので敵/弾/プレイヤー/HUD には掛からない。
- */
-function drawDimOverlay(scene: Phaser.Scene, alpha: number): Phaser.GameObjects.GameObject {
-  const rect = scene.add.rectangle(0, 0, 10, 10, 0x000000, alpha).setOrigin(0.5, 0.5).setDepth(DIM_DEPTH);
-  const fit = (): void => {
-    if (!rect.active) return;
-    const wv = scene.cameras.main.worldView;
-    if (wv.width <= 0 || wv.height <= 0) return;
-    rect.setSize(wv.width, wv.height).setPosition(wv.centerX, wv.centerY);
-  };
-  fit();
-  scene.events.on(Phaser.Scenes.Events.UPDATE, fit);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-    scene.events.off(Phaser.Scenes.Events.UPDATE, fit),
-  );
-  return rect;
 }
 
 /** 空グラデーションを横帯の集合で描く(WebGL/Canvas 双方で動く)。 */
