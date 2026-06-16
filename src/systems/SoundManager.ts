@@ -4,10 +4,12 @@ import type { GameSettings } from '../types/save';
 import {
   clamp01,
   centsToRatio,
+  droneVoices,
   effectiveVolume,
   noteToFrequency,
   scheduleNotes,
   trackDurationSec,
+  voicePeak,
   type ScheduledNote,
 } from './soundSynth';
 
@@ -50,8 +52,8 @@ export class SoundManager {
   private bgmNoteIndex = 0;
   private bgmScheduler?: ReturnType<typeof setInterval>;
   private bgmNodes = new Set<OscillatorNode>();
-  /** 持続ドローン(低音パッド)のノード。トラックに drone がある間だけ存在する。 */
-  private bgmDrone?: { osc: OscillatorNode; gain: GainNode };
+  /** 持続ドローン(低音パッド)のノード。トラックに drone がある間だけ存在する。和音化で複数声を持つ。 */
+  private bgmDrone?: { oscs: OscillatorNode[]; gain: GainNode };
   /** 持続ビーム音(RAY強化)のノード群。ビーム射出中だけ存在する。 */
   private beam?: { sources: AudioScheduledSourceNode[]; gains: GainNode[]; mainGain: GainNode };
   private unlockBound = false;
@@ -312,37 +314,51 @@ export class SoundManager {
   /**
    * 持続ドローン(低音パッド)を開始する。トラックに drone がなければ何もしない。
    * 正弦波の柔らかなパッドを bgmGain 経由で鳴らし、チャンネル音量(mute/bgmVolume)に追従させる。
+   * drone.semitones が指定されていれば各声を重ねて和音化(低音パッドを分厚く)する。
    */
   private startDrone(track: BgmTrack): void {
     if (!this.ctx || !this.bgmGain || !track.drone) return;
     const t0 = this.bgmLoopBaseTime;
-    const osc = this.ctx.createOscillator();
-    osc.type = 'sine'; // 角のない低音パッド
-    osc.frequency.setValueAtTime(Math.max(1, noteToFrequency(track.drone.semitone)), t0);
+    const voices = droneVoices(track.drone);
 
     const gain = this.ctx.createGain();
-    const vol = clamp01(track.drone.volume);
+    // 声数に応じてピークを正規化(声数1なら drone.volume そのまま=後方互換)。和音化での合算クリップを防ぐ。
+    const vol = voicePeak(voices.length, clamp01(track.drone.volume));
     // ゆるやかにフェードインして、唐突な低音の立ち上がりを避ける。
     gain.gain.setValueAtTime(0, t0);
     gain.gain.linearRampToValueAtTime(vol, t0 + 0.8);
     gain.connect(this.bgmGain);
 
-    osc.connect(gain);
-    osc.start(t0);
-    this.bgmDrone = { osc, gain };
+    const oscs: OscillatorNode[] = [];
+    for (const semitone of voices) {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine'; // 角のない低音パッド
+      osc.frequency.setValueAtTime(Math.max(1, noteToFrequency(semitone)), t0);
+      osc.connect(gain);
+      osc.start(t0);
+      oscs.push(osc);
+    }
+    this.bgmDrone = { oscs, gain };
   }
 
-  /** 持続ドローンを停止して片付ける。 */
+  /** 持続ドローンを停止して片付ける(全声を停止・切断する)。 */
   private stopDrone(): void {
     if (!this.bgmDrone) return;
-    try {
-      this.bgmDrone.osc.stop();
-      this.bgmDrone.osc.disconnect();
-      this.bgmDrone.gain.disconnect();
-    } catch {
-      /* 既に停止済みなら無視 */
-    }
+    const { oscs, gain } = this.bgmDrone;
     this.bgmDrone = undefined;
+    for (const osc of oscs) {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch {
+        /* 既に停止済みなら無視 */
+      }
+    }
+    try {
+      gain.disconnect();
+    } catch {
+      /* 既に切断済みなら無視 */
+    }
   }
 
   /** 先読み窓に入ったノートを順次予約する(ルックアヘッド・スケジューラ)。 */
@@ -372,29 +388,38 @@ export class SoundManager {
     // 軽いアタック/リリースで音の繋ぎを滑らかにする(ノート長の範囲内)
     const attack = Math.min(0.01, durSec * 0.2);
     const release = Math.min(0.06, durSec * 0.4);
-    // デチューン 2 声は合算で音圧が上がるため、ピークを下げてクリップを防ぐ。
+
+    // ベース声群: 本体(0)＋ harmonies の半音オフセット。各声は freq * 2^(semi/12)。
+    // 例 harmonies=[-12,7] → 本体＋オクターブ下＋完全5度上(パワーコード感)。
+    const harmonySemis = [0, ...(track.harmonies ?? [])];
+    // 各ベース声を ±detune/2 セントの 2 声(温もり・弦の揺らぎ)か単声で鳴らす。
     const detune = track.detuneCents ?? 0;
-    const peak = detune > 0 ? 0.5 : 0.8;
+    const detuneRatios = detune > 0 ? [centsToRatio(detune / 2), centsToRatio(-detune / 2)] : [1];
+
+    // 総声数(ベース声 × デチューン声)で合算音圧を正規化(声数1なら従来の 0.8)。固定値 0.5/0.8 は廃止。
+    const totalVoices = harmonySemis.length * detuneRatios.length;
+    const peak = voicePeak(totalVoices);
     this.applyEnvelope(envelope.gain, when, durSec, attack, release, peak);
 
-    // 単声(0)か、±detune/2 セントの 2 声(温もり・弦の揺らぎ)。
-    const voiceRatios = detune > 0 ? [centsToRatio(detune / 2), centsToRatio(-detune / 2)] : [1];
-    let pending = voiceRatios.length;
-    for (const ratio of voiceRatios) {
-      const osc = this.ctx.createOscillator();
-      osc.type = track.wave;
-      osc.frequency.setValueAtTime(Math.max(1, freq * ratio), when);
-      osc.connect(envelope);
-      osc.start(when);
-      osc.stop(when + durSec);
-      this.bgmNodes.add(osc);
-      osc.onended = () => {
-        this.bgmNodes.delete(osc);
-        osc.disconnect();
-        // 全声が鳴り終わってからエンベロープを切る(共有のため最後の声で片付ける)。
-        pending -= 1;
-        if (pending <= 0) envelope.disconnect();
-      };
+    let pending = totalVoices;
+    for (const semi of harmonySemis) {
+      const baseFreq = freq * Math.pow(2, semi / 12);
+      for (const ratio of detuneRatios) {
+        const osc = this.ctx.createOscillator();
+        osc.type = track.wave;
+        osc.frequency.setValueAtTime(Math.max(1, baseFreq * ratio), when);
+        osc.connect(envelope);
+        osc.start(when);
+        osc.stop(when + durSec);
+        this.bgmNodes.add(osc);
+        osc.onended = () => {
+          this.bgmNodes.delete(osc);
+          osc.disconnect();
+          // 全声が鳴り終わってからエンベロープを切る(共有のため最後の声で片付ける)。
+          pending -= 1;
+          if (pending <= 0) envelope.disconnect();
+        };
+      }
     }
   }
 

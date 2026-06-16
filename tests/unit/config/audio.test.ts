@@ -114,4 +114,45 @@ describe('BGM トラック', () => {
     expect(BGM.stageWarm.drone).toBeDefined();
     expect(BGM.ending.drone).toBeDefined();
   });
+
+  it('harmonies(任意)を持つトラックは有限値の配列である', () => {
+    for (const key of keys) {
+      const harmonies = BGM[key].harmonies;
+      if (harmonies === undefined) continue;
+      expect(Array.isArray(harmonies), `${key}.harmonies は配列`).toBe(true);
+      for (const semitone of harmonies) {
+        expect(Number.isFinite(semitone), `${key}.harmonies の各値は有限値`).toBe(true);
+      }
+    }
+  });
+
+  it('drone.semitones(任意)を持つトラックは有限値の配列である', () => {
+    for (const key of keys) {
+      const semitones = BGM[key].drone?.semitones;
+      if (semitones === undefined) continue;
+      expect(Array.isArray(semitones), `${key}.drone.semitones は配列`).toBe(true);
+      for (const semitone of semitones) {
+        expect(Number.isFinite(semitone), `${key}.drone.semitones の各値は有限値`).toBe(true);
+      }
+    }
+  });
+
+  it('BGM.boss に harmonies が定義されている(重厚化: design.md準拠)', () => {
+    expect(BGM.boss.harmonies).toBeDefined();
+  });
+
+  it('BGM.ending に harmonies が定義されている(重厚化: design.md準拠)', () => {
+    expect(BGM.ending.harmonies).toBeDefined();
+  });
+
+  it('BGM.boss.harmonies は完全5度(+7)とオクターブ下(-12)を含む(パワーコード感)', () => {
+    // design.md 「harmonies: [-12, 7]」: 重みと完全5度でECLIPSEの機械的な圧を最大化する。
+    expect(BGM.boss.harmonies).toContain(7);
+    expect(BGM.boss.harmonies).toContain(-12);
+  });
+
+  it('BGM.ending.harmonies はオクターブ下(-12)を含む(弦の重み・厚み)', () => {
+    // design.md 「harmonies: [-12]」: オクターブ下で弦の重みを加える。
+    expect(BGM.ending.harmonies).toContain(-12);
+  });
 });

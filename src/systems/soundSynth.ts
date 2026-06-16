@@ -1,5 +1,5 @@
 import type { GameSettings } from '../types/save';
-import type { BgmTrack } from '../config/audio';
+import type { BgmTrack, BgmDrone } from '../config/audio';
 
 // サウンド合成の純粋ロジック(Phaser / Web Audio 非依存)。
 // 音量計算・音名→周波数・BGM ノートのスケジューリングを担う。SoundManager から利用する。
@@ -53,6 +53,29 @@ export function effectiveVolume(
   if (settings.muted) return 0;
   const channel = role === 'bgm' ? settings.bgmVolume : settings.seVolume;
   return clamp01(clamp01(base) * clamp01(channel));
+}
+
+/**
+ * 同時に鳴らす声の数から、クリップを避けるピーク音量(0–1)を返す。声が増えるほど合算音圧が
+ * 上がるため、エネルギー基準の平方根則で 1 声=basePeak から単調に下げる。0–1 にクランプする。
+ * 例(basePeak=0.8): 1声→0.8, 2声→約0.566, 3声→約0.462, 4声→0.4。
+ * 声数 1 のとき従来の単声ピーク(0.8)と一致し、後方互換を保つ。
+ *
+ * @param voiceCount 同時発音数(1 以上を想定。0 以下・非有限は 1 声扱い)
+ * @param basePeak   1 声時のピーク(既定 0.8)
+ */
+export function voicePeak(voiceCount: number, basePeak = 0.8): number {
+  const n = Number.isFinite(voiceCount) && voiceCount > 1 ? voiceCount : 1;
+  return clamp01(basePeak / Math.sqrt(n));
+}
+
+/**
+ * ドローンが実際に鳴らす声(半音オフセット)の配列を返す。semitones が指定され非空ならその配列
+ * (ルートを含む全声)、未指定/空なら単声 [semitone] へフォールバックする。
+ * SoundManager.startDrone が各声を sine で重ねて低音パッドを和音化するために使う。
+ */
+export function droneVoices(drone: BgmDrone): number[] {
+  return drone.semitones && drone.semitones.length > 0 ? drone.semitones : [drone.semitone];
 }
 
 /** スケジュール済みの 1 ノート。freq が null の区間は休符(無音)。 */
