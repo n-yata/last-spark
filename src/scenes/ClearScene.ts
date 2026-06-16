@@ -11,7 +11,15 @@ interface ClearData {
   stageId?: string;
   /** 次ステージ ID(任意)。あれば中継表示で次ステージへ継続、なければ最終クリア。 */
   nextStageId?: string;
+  /**
+   * 入力(タップ送り)を受け付けるまでの待機時間(ms)。未指定なら既定値。
+   * stage6 エンディング直後の最終クリアは、余韻を残すため長め(2000ms)を渡す。
+   */
+  inputDelayMs?: number;
 }
+
+/** 入力受付までの既定待機時間(ms)。演出を一拍読ませてから送りを受け付ける。 */
+const DEFAULT_INPUT_DELAY_MS = 600;
 
 // ボス撃破時のクリア演出。
 // 次ステージがあれば「TAP TO CONTINUE」で継続、なければ最終クリアとして保存しタイトルへ。
@@ -79,8 +87,8 @@ export class ClearScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.tweens.add({ targets: back, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
 
-    // 演出を読ませるため、短い猶予の後に入力を受け付ける
-    this.time.delayedCall(600, () => {
+    // 演出を読ませるため、短い猶予の後に入力を受け付ける(最終クリアは余韻のため長め)
+    this.time.delayedCall(data?.inputDelayMs ?? DEFAULT_INPUT_DELAY_MS, () => {
       const proceed = (): void => {
         getSound().playSe('uiTap');
         if (nextStageId) {

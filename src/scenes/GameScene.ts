@@ -39,6 +39,8 @@ import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 
 const DEFAULT_STAGE_ID = 'stage1';
 const PROJECTILE_POOL = 32;
+/** エンディング後の最終クリア画面で、余韻を残すため入力受付までに置く待機時間(ms)。 */
+const ENDING_CLEAR_INPUT_DELAY_MS = 2000;
 
 /** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
 export interface GameSceneData {
@@ -773,12 +775,17 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** エンディング演出の完了後: 全クリアを保存し、タイトルへ帰還する。 */
+  /**
+   * エンディング演出の完了後: 全クリアを保存し、クリア画面(ALL CLEAR)を一拍見せてからタイトルへ。
+   * 直接タイトルへ戻さず ClearScene を経由することで、エンディングの余韻のあとに到達の手応えを残す。
+   * クリア記録はここで確定し、ClearScene は表示専用とする(stageId を渡さず二重保存を避ける)。
+   */
   private finalizeEnding(clearTimeMs: number): void {
     this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
     this.scene.stop(SCENE_KEYS.ui);
     this.saveManager.markStageCleared(this.stageId, clearTimeMs);
-    transitionTo(this, SCENE_KEYS.title);
+    // nextStageId 無し = 最終クリア(ALL CLEAR / TAP TO TITLE)。余韻のため入力受付を一拍遅らせる。
+    transitionTo(this, SCENE_KEYS.clear, { clearTimeMs, inputDelayMs: ENDING_CLEAR_INPUT_DELAY_MS });
   }
 
   private handleGameOver(): void {
