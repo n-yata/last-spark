@@ -40,15 +40,54 @@ export function paintStageBackground(
   drawSkyGradient(sky, worldWidth, groundY, theme);
   created.push(sky);
 
-  // 2) シルエットレイヤー(奥→手前)。
+  // 2) レイヤー(奥→手前)。画像キーがロード済みなら画像で敷き、無ければ手続きシルエットへ
+  //    フォールバックする(段階導入: 絵が未生成のステージは従来どおり手続き背景になる)。
   theme.layers.forEach((layer, i) => {
+    const depth = LAYER_DEPTH_BASE + i;
+    if (layer.imageKey && scene.textures.exists(layer.imageKey)) {
+      created.push(drawImageLayer(scene, layer, worldWidth, groundY, depth));
+      return;
+    }
     const g = scene.add.graphics();
-    g.setDepth(LAYER_DEPTH_BASE + i).setScrollFactor(layer.scrollFactor);
+    g.setDepth(depth).setScrollFactor(layer.scrollFactor);
     drawLayer(g, layer, worldWidth, groundY, theme, i);
     created.push(g);
   });
 
   return created;
+}
+
+/**
+ * 画像背景レイヤーを敷く。'tile'=横タイル(遠景の横ループ画像。テクスチャを縦に合わせて
+ * 横へ繰り返す)、'stretch'=ワールド全幅へ伸張(中景)。手続きと同じ depth/scrollFactor 規約。
+ */
+function drawImageLayer(
+  scene: Phaser.Scene,
+  layer: BackgroundLayerTheme,
+  worldWidth: number,
+  groundY: number,
+  depth: number,
+): Phaser.GameObjects.GameObject {
+  const key = layer.imageKey as string;
+  const top = layer.imageTop ?? 0;
+  const height = layer.imageHeight ?? groundY + 60; // 既定: 画面上端〜地平線の少し下まで覆う
+  let obj: Phaser.GameObjects.GameObject;
+  if (layer.imageMode === 'tile') {
+    // テクスチャを height に合わせて等倍縮小し、横方向へシームレスに繰り返す。
+    const src = scene.textures.get(key).getSourceImage();
+    const ts = scene.add.tileSprite(0, top, worldWidth, height, key).setOrigin(0, 0);
+    const s = height / src.height;
+    ts.tileScaleX = s;
+    ts.tileScaleY = s;
+    ts.setDepth(depth).setScrollFactor(layer.scrollFactor);
+    obj = ts;
+  } else {
+    // 全幅へ伸張(中景)。
+    const img = scene.add.image(0, top, key).setOrigin(0, 0).setDisplaySize(worldWidth, height);
+    img.setDepth(depth).setScrollFactor(layer.scrollFactor);
+    obj = img;
+  }
+  return obj;
 }
 
 /** 空グラデーションを横帯の集合で描く(WebGL/Canvas 双方で動く)。 */
