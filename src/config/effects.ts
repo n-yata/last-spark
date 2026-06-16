@@ -105,6 +105,11 @@ export const EFFECTS = {
     lifeBarBlinkIntervalMs: 90,
     /** ボス HP バー出現時の 0→満タンフィル時間 */
     bossBarFillMs: 900,
+    /** チャージ完了リングの発光パルス周期 */
+    chargeFullPulseMs: 720,
+    /** チャージ完了リングの最小/最大アルファ */
+    chargeFullPulseAlphaMin: 0.35,
+    chargeFullPulseAlphaMax: 0.85,
   },
 
   /** タッチ仮想ボタンの押下フィードバック。 */

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { entranceFillRatio, damageFlashActive, flashBlinkOn } from '../../../src/systems/hudFx';
+import {
+  entranceFillRatio,
+  damageFlashActive,
+  flashBlinkOn,
+  chargePulseAlpha,
+} from '../../../src/systems/hudFx';
 
 describe('entranceFillRatio', () => {
   it('経過 0ms ではフィル率 0 になる', () => {
@@ -81,5 +86,24 @@ describe('flashBlinkOn', () => {
   it('intervalMs が 0 以下なら常に明(ゼロ除算しない)', () => {
     expect(flashBlinkOn(1234, 1000, 0)).toBe(true);
     expect(flashBlinkOn(1234, 1000, -5)).toBe(true);
+  });
+});
+
+describe('chargePulseAlpha', () => {
+  it('周期が 0 以下なら最大アルファを返す', () => {
+    expect(chargePulseAlpha(100, 0, 0.3, 0.8)).toBe(0.8);
+    expect(chargePulseAlpha(100, -1, 0.3, 0.8)).toBe(0.8);
+  });
+
+  it('最小値と最大値の範囲内で明滅する', () => {
+    const samples = [0, 180, 360, 540, 720].map((t) => chargePulseAlpha(t, 720, 0.35, 0.85));
+    for (const alpha of samples) {
+      expect(alpha).toBeGreaterThanOrEqual(0.35);
+      expect(alpha).toBeLessThanOrEqual(0.85);
+    }
+  });
+
+  it('maxAlpha が minAlpha 未満なら minAlpha にそろえる', () => {
+    expect(chargePulseAlpha(180, 720, 0.7, 0.2)).toBe(0.7);
   });
 });
