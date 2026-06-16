@@ -34,8 +34,11 @@ export interface BackgroundLayerTheme {
   //     未指定/未ロードなら従来の手続き描画へフォールバックする(段階導入で壊れない)。---
   /** 背景画像テクスチャキー(assetKeys.STAGE_BG_TEX)。 */
   imageKey?: string;
-  /** 敷き方: 'tile'=横タイル(遠景・横ループ画像)、'stretch'=ワールド全幅へ伸張(中景)。既定 'stretch'。 */
+  /** 敷き方(旧式・現在は未使用。cover-fit追従に統一)。 */
   imageMode?: 'tile' | 'stretch';
+  /** cover-fit の縦アンカー: 'center'=可視域中央(空の絵を中央に残す/既定)、'bottom'=可視域の底
+   *  (地面から立つ手前シルエット向け)。 */
+  imageAnchor?: 'center' | 'bottom';
   /** 画像の上端 y(world)。未指定なら画像高さと groundY から接地で算出。 */
   imageTop?: number;
   /** 画像の表示高さ(px)。未指定なら groundY + 余白(地平線まで)。 */
@@ -138,18 +141,17 @@ const STAGE1_BG: StageBackgroundTheme = {
   accent: '#c9a14a', // 廃ビルにわずかに灯る琥珀の窓明かり
   seed: 0x5a1b01,
   layers: [
-    // far=夕焼け空+遠景の街(不透明・完成シーン)。画面全体を緩やかにスクロールする奥の層。
-    // 縦は画面(540)を上下に少しはみ出してカバーし、どのフレーミングでも中間に隙間が出ないようにする。
+    // far=夕焼け空+遠景の街(不透明・完成シーン)。cover-fit でカメラ可視域を覆う奥の層。
     // 画像未ロード時は従来の手続きシルエット(ruinedCity)へフォールバックする。
     {
       color: '#181620', scrollFactor: 0.25, shape: 'ruinedCity', height: 260, step: 170,
-      imageKey: STAGE_BG_TEX.stage1.far, imageMode: 'stretch', imageTop: -30, imageHeight: 600,
+      imageKey: STAGE_BG_TEX.stage1.far,
     },
-    // mid=手前の廃墟スカイライン(透過シルエット)。地面寄りの低い帯に収め、far の夕焼け空を
-    // 上に残したまま手前の奥行きを足す。速めのスクロールで近さを出す。
+    // mid=手前の廃墟スカイライン(透過シルエット)。同じく cover-fit。透過の隙間から far の夕焼けが
+    // 覗き、奥行きが出る。
     {
       color: '#0f0d14', scrollFactor: 0.5, shape: 'ruinedCity', height: 300, step: 140,
-      imageKey: STAGE_BG_TEX.stage1.mid, imageMode: 'stretch', imageTop: 240, imageHeight: 320,
+      imageKey: STAGE_BG_TEX.stage1.mid, imageAnchor: 'bottom',
     },
   ],
 };

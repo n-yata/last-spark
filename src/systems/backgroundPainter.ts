@@ -45,7 +45,7 @@ export function paintStageBackground(
   theme.layers.forEach((layer, i) => {
     const depth = LAYER_DEPTH_BASE + i;
     if (layer.imageKey && scene.textures.exists(layer.imageKey)) {
-      created.push(drawImageLayer(scene, layer, worldWidth, groundY, depth));
+      created.push(drawImageLayer(scene, layer, depth));
       return;
     }
     const g = scene.add.graphics();
@@ -58,36 +58,34 @@ export function paintStageBackground(
 }
 
 /**
- * 画像背景レイヤーを敷く。'tile'=横タイル(遠景の横ループ画像。テクスチャを縦に合わせて
- * 横へ繰り返す)、'stretch'=ワールド全幅へ伸張(中景)。手続きと同じ depth/scrollFactor 規約。
+ * 画像背景レイヤーを敷く。アスペクト比によらず破綻しないよう、カットシーンと同じ cover-fit
+ * (縦横比維持で可視域を覆い、はみ出しはトリミング)で敷き、毎フレーム カメラ可視域(worldView)へ
+ * 追従させる。下端を可視域の底に合わせ、奥行き感は遠景=スカイ・中景=透過シルエットの重ねで出す。
+ * 端末アスペクト/コントロール帯/ズームが変わっても常に全面を覆う(モバイル対応)。
  */
 function drawImageLayer(
   scene: Phaser.Scene,
   layer: BackgroundLayerTheme,
-  worldWidth: number,
-  groundY: number,
   depth: number,
 ): Phaser.GameObjects.GameObject {
   const key = layer.imageKey as string;
-  const top = layer.imageTop ?? 0;
-  const height = layer.imageHeight ?? groundY + 60; // 既定: 画面上端〜地平線の少し下まで覆う
-  let obj: Phaser.GameObjects.GameObject;
-  if (layer.imageMode === 'tile') {
-    // テクスチャを height に合わせて等倍縮小し、横方向へシームレスに繰り返す。
-    const src = scene.textures.get(key).getSourceImage();
-    const ts = scene.add.tileSprite(0, top, worldWidth, height, key).setOrigin(0, 0);
-    const s = height / src.height;
-    ts.tileScaleX = s;
-    ts.tileScaleY = s;
-    ts.setDepth(depth).setScrollFactor(layer.scrollFactor);
-    obj = ts;
-  } else {
-    // 全幅へ伸張(中景)。
-    const img = scene.add.image(0, top, key).setOrigin(0, 0).setDisplaySize(worldWidth, height);
-    img.setDepth(depth).setScrollFactor(layer.scrollFactor);
-    obj = img;
-  }
-  return obj;
+  const src = scene.textures.get(key).getSourceImage();
+  const anchorBottom = layer.imageAnchor === 'bottom';
+  const img = scene.add.image(0, 0, key).setOrigin(0.5, anchorBottom ? 1 : 0.5).setDepth(depth);
+
+  const fit = (): void => {
+    if (!img.active) return;
+    const wv = scene.cameras.main.worldView;
+    if (wv.width <= 0 || wv.height <= 0) return;
+    const scale = Math.max(wv.width / src.width, wv.height / src.height); // cover
+    img.setScale(scale).setPosition(wv.centerX, anchorBottom ? wv.bottom : wv.centerY);
+  };
+  fit();
+  scene.events.on(Phaser.Scenes.Events.UPDATE, fit);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+    scene.events.off(Phaser.Scenes.Events.UPDATE, fit),
+  );
+  return img;
 }
 
 /** 空グラデーションを横帯の集合で描く(WebGL/Canvas 双方で動く)。 */
