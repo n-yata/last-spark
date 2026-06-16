@@ -24,8 +24,9 @@ export class BossHpBar {
     this.scene = scene;
     this.gfx = scene.add.graphics();
     this.gfx.setScrollFactor(0).setDepth(100).setVisible(false);
+    // ラベル文言はボスの固有名。show(name) で戦うボスごとに差し替える。
     this.label = scene.add
-      .text(0, 0, 'まもりのきかい', {
+      .text(0, 0, '', {
         fontFamily: 'monospace',
         fontSize: scaledFontPx(14),
         color: '#ff90a8',
@@ -36,9 +37,11 @@ export class BossHpBar {
       .setVisible(false);
   }
 
-  show(): void {
+  /** ボス戦開始時に表示する。name はそのボスの固有名(HUD.bossName 由来)。 */
+  show(name: string): void {
     this.visible = true;
     this.shownAtMs = this.scene.time.now;
+    this.label.setText(name);
     this.gfx.setVisible(true);
     this.label.setVisible(true);
   }

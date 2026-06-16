@@ -610,6 +610,8 @@ export class GameScene extends Phaser.Scene {
     cam.setBounds(arenaLeft, 0, arenaRight - arenaLeft, STAGE.height);
 
     this.registry.set(HUD.bossActive, true);
+    // ボスの固有名を HUD へ渡す(HP バーのラベルにステージごとの名前を表示)。
+    this.registry.set(HUD.bossName, this.stage.bossName);
     // 設定値ではなく実際のボスの maxHp を使う(系統で硬さが異なっても HUD が一致する)。
     this.registry.set(HUD.bossMaxHp, this.boss.maxHp);
     getSound().playBgm('boss');
@@ -639,6 +641,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossActive, false);
     this.registry.set(HUD.bossHp, 0);
     this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
+    this.registry.set(HUD.bossName, '');
     this.registry.set(HUD.pauseRequested, false);
   }
 

@@ -95,7 +95,9 @@ export class UIScene extends Phaser.Scene {
     const bossActive = (reg.get(HUD.bossActive) as boolean) ?? false;
     if (bossActive && !this.bossShown) {
       this.bossShown = true;
-      this.bossHpBar.show();
+      // 戦うボスの固有名を渡す(GameScene がボス出現時に registry へ積む)。
+      const bossName = (reg.get(HUD.bossName) as string) ?? '';
+      this.bossHpBar.show(bossName);
     }
     if (bossActive) {
       const bossHp = (reg.get(HUD.bossHp) as number) ?? 0;

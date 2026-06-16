@@ -76,6 +76,12 @@ export interface StageData {
    * bossSpawn が画面外ならこの値より後ろで発火する。
    */
   bossTriggerX: number;
+  /**
+   * ボスの固有名(ECLIPSE が配下に与えた識別名)。ボス HP バーに表示する。
+   * 光(RAY)に対する「影・日食・不吉」モチーフで統一する(docs/story.md ボス設定)。
+   * 必須にすることで、ステージ追加時に命名忘れを型で防ぐ。
+   */
+  bossName: string;
   /** ボスの出現位置(中心) */
   bossSpawn: { x: number; y: number };
   /** ボス系統。未定義なら接地型('ground')。stage2 は飛行型('flying')。 */
@@ -177,6 +183,8 @@ const STAGE1: StageData = {
     { pattern: 'turret', x: 3380, y: GROUND_TOP - 136 },
   ],
   bossTriggerX: 4200,
+  // 守護機械の固有名。本影(最も濃い影)=最初の番兵。
+  bossName: 'ウンブラ',
   // ボスはトリガー地点(プレイヤー x≈3720, カメラ右端4200)のすぐ先に出現させ、
   // 間合いが開きすぎて戦闘が成立しないのを防ぐ。本体下端=地面で接地させ、
   // 地上ショット(プレイヤー中心の高さ)が当たり判定に重なるようにする。
@@ -235,6 +243,8 @@ const STAGE2: StageData = {
     { pattern: 'turret', x: 3350, y: GROUND_TOP - 16 },
   ],
   bossTriggerX: 3700,
+  // 哨戒機の固有名。日食時の光冠=空を巡る制空機。
+  bossName: 'コロナ',
   // 飛行ボスは空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
   bossSpawn: { x: 3950, y: GROUND_TOP - FLYING_BOSS.hoverAltitude },
   bossKind: 'flying',
@@ -285,6 +295,8 @@ const STAGE3: StageData = {
   // 収容番人は重装ミサイル型(接地)。本体下端=地面で接地させる。系統 'warden' に対し
   // WardenBoss が固有設定(CONTAINMENT_WARDEN)・リグ('bossWarden')を内包するため、
   // bossConfig/bossRig は指定不要(stage2 の 'flying' と同じ扱い)。
+  // 収容番人の固有名。覆い隠す帳=収容・拘束のモチーフ。
+  bossName: 'ヴェイル',
   bossSpawn: { x: 4050, y: GROUND_TOP - CONTAINMENT_WARDEN.height / 2 },
   bossKind: 'warden',
   bossArenaMinX: 4100,
@@ -348,6 +360,8 @@ const STAGE4: StageData = {
   ],
   bossTriggerX: 3900,
   // 環境管理機は接地型。本体下端=地面で接地させる。
+  // 環境管理機の固有名。瘴気=毒霧スプレー。
+  bossName: 'ミアズマ',
   bossSpawn: { x: 4050, y: GROUND_TOP - PURIFIER.height / 2 },
   bossKind: 'ground',
   bossVariant: 'purifier',
@@ -410,6 +424,8 @@ const STAGE5: StageData = {
   ],
   bossTriggerX: 4000,
   // 使者は飛行型。空中の基準滞空高度に出現する(center_y = groundY - hoverAltitude)。
+  // 使者の固有名。伝令=ECLIPSE の意志を伝える者。
+  bossName: 'ヘラルド',
   bossSpawn: { x: 4150, y: GROUND_TOP - ENVOY.hoverAltitude },
   bossKind: 'flying',
   bossVariant: 'envoy',
@@ -469,6 +485,8 @@ const STAGE6: StageData = {
   bossTriggerX: 4200,
   // ECLIPSE本体は浮遊する巨大コア。空中(地面より高い位置)に静止して出現する。
   // center_y はコア下端が地面付近に来る高さ(groundY - height/2 より少し上)に置く。
+  // ラスボスの固有名。太陽を遮る影の核=ECLIPSE 本体そのもの。
+  bossName: 'ECLIPSE',
   bossSpawn: { x: 4400, y: GROUND_TOP - ECLIPSE_CORE.height / 2 - 8 },
   bossKind: 'core',
   bossArenaMinX: 4250,

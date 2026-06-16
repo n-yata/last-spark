@@ -8,6 +8,8 @@ export const HUD = {
   bossActive: 'hud.boss.active',
   bossHp: 'hud.boss.hp',
   bossMaxHp: 'hud.boss.maxHp',
+  // ボスの固有名(HP バーのラベルに表示)。ステージごとに出し分ける。
+  bossName: 'hud.boss.name',
   // 仮想ボタンの押下状態(押下フィードバック描画用)
   shootHeld: 'hud.touch.shootHeld',
   jumpHeld: 'hud.touch.jumpHeld',
