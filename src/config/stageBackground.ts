@@ -58,6 +58,9 @@ export interface StageBackgroundTheme {
   layers: BackgroundLayerTheme[];
   /** 決定論的レイアウト用シード。 */
   seed: number;
+  /** 背景の暗幕アルファ(0..1)。painted 背景が明るいと敵弾が埋もれるため、背景とゲーム本体の
+   *  間に黒の半透明を敷いて背景だけ沈める。未指定/0 なら暗幕なし。 */
+  dimAlpha?: number;
 }
 
 /** 生成された1本のシルエット列(矩形)。world 座標。 */
@@ -149,6 +152,8 @@ const STAGE1_BG: StageBackgroundTheme = {
       imageKey: STAGE_BG_TEX.stage1.far,
     },
   ],
+  // 夕焼け背景が明るく敵の赤弾が埋もれるため、背景を黒の半透明で沈める(ゲーム本体は前面で無影響)。
+  dimAlpha: 0.45,
 };
 
 const STAGE2_BG: StageBackgroundTheme = {
