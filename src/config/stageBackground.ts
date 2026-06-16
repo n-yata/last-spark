@@ -138,13 +138,18 @@ const STAGE1_BG: StageBackgroundTheme = {
   accent: '#c9a14a', // 廃ビルにわずかに灯る琥珀の窓明かり
   seed: 0x5a1b01,
   layers: [
-    // far=夕焼け空+遠景の街まで入った完成シーン(外部生成キービジュアル)。これ単体を背景に敷く。
-    // (mid の手前シルエットは重ねると far の見せ場を覆い暗く濁るため不採用。)
+    // far=夕焼け空+遠景の街(不透明・完成シーン)。画面全体を緩やかにスクロールする奥の層。
+    // 縦は画面(540)を上下に少しはみ出してカバーし、どのフレーミングでも中間に隙間が出ないようにする。
     // 画像未ロード時は従来の手続きシルエット(ruinedCity)へフォールバックする。
     {
-      // 縦は画面(540)を上下に少しはみ出してカバーし、どのフレーミングでも中間に隙間が出ないようにする。
       color: '#181620', scrollFactor: 0.25, shape: 'ruinedCity', height: 260, step: 170,
       imageKey: STAGE_BG_TEX.stage1.far, imageMode: 'stretch', imageTop: -30, imageHeight: 600,
+    },
+    // mid=手前の廃墟スカイライン(透過シルエット)。地面寄りの低い帯に収め、far の夕焼け空を
+    // 上に残したまま手前の奥行きを足す。速めのスクロールで近さを出す。
+    {
+      color: '#0f0d14', scrollFactor: 0.5, shape: 'ruinedCity', height: 300, step: 140,
+      imageKey: STAGE_BG_TEX.stage1.mid, imageMode: 'stretch', imageTop: 240, imageHeight: 320,
     },
   ],
 };
