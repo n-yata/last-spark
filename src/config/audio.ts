@@ -52,6 +52,13 @@ export type BgmKey = 'title' | 'stage' | 'stageWarm' | 'boss' | 'ending';
 export interface BgmDrone {
   semitone: number;
   volume: number;
+  /**
+   * ドローンを和音化する声(半音オフセット)の配列。ルートを含む全声を列挙する
+   * (例: ルート＋完全5度なら [-24, -17])。土台を分厚くする「低音パッドの和音化」に使う。
+   * 後方互換: 未指定/空なら従来どおり semitone の単声で鳴る。
+   * 合算音圧は声数に応じて voicePeak で正規化し、クリップを防ぐ。
+   */
+  semitones?: number[];
 }
 
 /** ノート 1 つ。semitone は A4=0 を基準とした半音オフセット。null は休符。 */
@@ -76,6 +83,13 @@ export interface BgmTrack {
    * 「温もり(stageWarm)」「弦・ピアノ系(ending)」の質感づくりに使う。
    */
   detuneCents?: number;
+  /**
+   * 各メロディノートへ重ねる半音オフセットの配列(本体=0 は含めず、追加で重ねる声のみ)。
+   * 例: [7]=完全5度上(パワー)、[-12]=オクターブ下(重み)、[-12, 7]=両方(パワーコード感)。
+   * detuneCents(2声の揺らぎ)と独立・併用可能。未指定なら本体のみで従来どおり鳴る。
+   * 合算音圧は総声数(harmonies × detune 声)に応じて voicePeak で正規化し、クリップを防ぐ。
+   */
+  harmonies?: number[];
   /** 持続する低音パッド(ドローン)。未指定ならドローンなし。 */
   drone?: BgmDrone;
 }
@@ -149,6 +163,9 @@ export const BGM: Record<BgmKey, BgmTrack> = {
     wave: 'triangle',
     bpm: 84,
     baseVolume: 0.32,
+    // 導入の浮遊感を保ちつつ、薄く開いた低音パッド(ルート＋完全5度)を敷いて土台に厚みを足す。
+    // 過剰化を避けるため音量は控えめ。
+    drone: { semitone: -24, volume: 0.22, semitones: [-24, -17] }, // 薄い A2＋E3 のパッド
     loop: [
       { semitone: 0, beats: 1 }, // A4
       { semitone: 7, beats: 1 }, // E5
@@ -168,7 +185,9 @@ export const BGM: Record<BgmKey, BgmTrack> = {
     // 三角波は矩形波より体感が小さく、疎なメロディ+休符で鳴る時間も短いため、
     // 「探索中ほぼ聞こえない」を避けるべく基準音量を底上げする(クリップ余裕あり)。
     baseVolume: 0.4,
-    drone: { semitone: -24, volume: 0.5 }, // A2 の持続パッド(土台)
+    // 探索の静寂・不安は死守。メロディにハーモニーは重ねず、ドローンのみ和音化(ルート＋完全5度)で
+    // 土台に厚みだけを足す。開いた5度が不安感を補強する。
+    drone: { semitone: -24, volume: 0.5, semitones: [-24, -17] }, // A2＋E3 の開いた持続パッド(和音化)
     loop: [
       { semitone: 0, beats: 2 }, // A4
       { semitone: 7, beats: 2 }, // E5(開いた5度)
@@ -186,7 +205,8 @@ export const BGM: Record<BgmKey, BgmTrack> = {
     bpm: 96,
     baseVolume: 0.4, // 探索(stage)と同じ音圧で揃える(底上げ理由は stage 参照)
     detuneCents: 8, // わずかなコーラス感(温もり)
-    drone: { semitone: -24, volume: 0.45 },
+    harmonies: [-12], // オクターブ下を控えめに重ね、温もりに包容感のある厚みを足す
+    drone: { semitone: -24, volume: 0.45, semitones: [-24, -17] }, // ルート＋完全5度の和音パッド
     loop: [
       { semitone: 0, beats: 2 }, // A4
       { semitone: 7, beats: 2 }, // E5
@@ -203,7 +223,10 @@ export const BGM: Record<BgmKey, BgmTrack> = {
     wave: 'sawtooth',
     bpm: 150,
     baseVolume: 0.3,
-    drone: { semitone: -24, volume: 0.35 }, // A2 の機械的な低音ハム
+    // 重厚化: メロディにオクターブ下(重み)＋完全5度上(パワーコード)を重ね、機械の圧を最大化する。
+    // 無機質さは鋸波(wave)で維持する。
+    harmonies: [-12, 7],
+    drone: { semitone: -24, volume: 0.4, semitones: [-24, -17] }, // A2＋E3 の機械的な低音パッド(和音化)
     loop: [
       { semitone: -12, beats: 0.5 }, // A3
       { semitone: -12, beats: 0.5 }, // A3
@@ -226,7 +249,8 @@ export const BGM: Record<BgmKey, BgmTrack> = {
     bpm: 72,
     baseVolume: 0.3,
     detuneCents: 10, // 弦セクションのような厚みと揺らぎ
-    drone: { semitone: -24, volume: 0.4 }, // 持続する余韻のパッド
+    harmonies: [-12], // オクターブ下を重ね、弦の重み・厚みを加える
+    drone: { semitone: -24, volume: 0.4, semitones: [-24, -17, -12] }, // ルート＋5度＋オクターブの厚い余韻パッド
     loop: [
       { semitone: -12, beats: 2 }, // A3(沈んだ始まり)
       { semitone: -5, beats: 1 }, // E4

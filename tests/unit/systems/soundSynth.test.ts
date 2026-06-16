@@ -7,9 +7,11 @@ import {
   effectiveVolume,
   scheduleNotes,
   trackDurationSec,
+  voicePeak,
+  droneVoices,
 } from '../../../src/systems/soundSynth';
 import type { GameSettings } from '../../../src/types/save';
-import type { BgmTrack } from '../../../src/config/audio';
+import type { BgmTrack, BgmDrone } from '../../../src/config/audio';
 
 const settings = (over: Partial<GameSettings> = {}): GameSettings => ({
   muted: false,
@@ -133,6 +135,82 @@ describe('centsToRatio', () => {
   it('非有限値は等倍(1)へフォールバック(無音化・破綻を防ぐ)', () => {
     expect(centsToRatio(Number.NaN)).toBe(1);
     expect(centsToRatio(Number.POSITIVE_INFINITY)).toBe(1);
+  });
+});
+
+describe('voicePeak', () => {
+  it('声数 1 で basePeak(=0.8)を返す(後方互換)', () => {
+    expect(voicePeak(1)).toBeCloseTo(0.8, 5);
+  });
+
+  it('声数が増えるにつれ単調減少する(クリップ回避)', () => {
+    const v1 = voicePeak(1);
+    const v2 = voicePeak(2);
+    const v3 = voicePeak(3);
+    const v4 = voicePeak(4);
+    expect(v1).toBeGreaterThan(v2);
+    expect(v2).toBeGreaterThan(v3);
+    expect(v3).toBeGreaterThan(v4);
+  });
+
+  it('2 声は basePeak / sqrt(2) ≈ 0.566 になる', () => {
+    // 0.8 / Math.sqrt(2) ≈ 0.5656...
+    expect(voicePeak(2)).toBeCloseTo(0.8 / Math.sqrt(2), 5);
+  });
+
+  it('4 声は basePeak / sqrt(4) = 0.4 になる', () => {
+    // 0.8 / sqrt(4) = 0.8 / 2 = 0.4
+    expect(voicePeak(4)).toBeCloseTo(0.4, 5);
+  });
+
+  it('0 以下・NaN・Infinity は 1 声扱いで basePeak(=0.8)を返す', () => {
+    expect(voicePeak(0)).toBeCloseTo(0.8, 5);
+    expect(voicePeak(-1)).toBeCloseTo(0.8, 5);
+    expect(voicePeak(Number.NaN)).toBeCloseTo(0.8, 5);
+    expect(voicePeak(Number.POSITIVE_INFINITY)).toBeCloseTo(0.8, 5);
+    expect(voicePeak(Number.NEGATIVE_INFINITY)).toBeCloseTo(0.8, 5);
+  });
+
+  it('結果は常に 0–1 に収まる', () => {
+    for (const n of [1, 2, 3, 4, 10, 100]) {
+      const result = voicePeak(n);
+      expect(result, `voicePeak(${n})`).toBeGreaterThanOrEqual(0);
+      expect(result, `voicePeak(${n})`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('basePeak を変えた場合も声数 1 でその値になる', () => {
+    expect(voicePeak(1, 1.0)).toBeCloseTo(1.0, 5);
+    expect(voicePeak(1, 0.5)).toBeCloseTo(0.5, 5);
+    expect(voicePeak(2, 1.0)).toBeCloseTo(1.0 / Math.sqrt(2), 5);
+  });
+});
+
+describe('droneVoices', () => {
+  it('semitones が指定(非空)のときはその配列をそのまま返す', () => {
+    const drone: BgmDrone = { semitone: -24, volume: 0.4, semitones: [-24, -17] };
+    expect(droneVoices(drone)).toEqual([-24, -17]);
+  });
+
+  it('semitones が複数要素のときも全声を返す', () => {
+    const drone: BgmDrone = { semitone: -24, volume: 0.4, semitones: [-24, -17, -12] };
+    expect(droneVoices(drone)).toEqual([-24, -17, -12]);
+  });
+
+  it('semitones が未指定のときは [semitone] の単声へフォールバックする', () => {
+    const drone: BgmDrone = { semitone: -24, volume: 0.4 };
+    expect(droneVoices(drone)).toEqual([-24]);
+  });
+
+  it('semitones が空配列のときも [semitone] の単声へフォールバックする', () => {
+    const drone: BgmDrone = { semitone: -12, volume: 0.5, semitones: [] };
+    expect(droneVoices(drone)).toEqual([-12]);
+  });
+
+  it('semitones 指定時は semitone フィールドの値に依存しない(配列が優先)', () => {
+    const drone: BgmDrone = { semitone: -999, volume: 0.3, semitones: [-24, -17] };
+    expect(droneVoices(drone)).toEqual([-24, -17]);
+    expect(droneVoices(drone)).not.toContain(-999);
   });
 });
 
