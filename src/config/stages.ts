@@ -486,7 +486,8 @@ const STAGE6: StageData = {
   // ECLIPSE本体は浮遊する巨大コア。空中(地面より高い位置)に静止して出現する。
   // center_y はコア下端が地面付近に来る高さ(groundY - height/2 より少し上)に置く。
   // ラスボスの固有名。太陽を遮る影の核=ECLIPSE 本体そのもの。
-  bossName: 'ECLIPSE',
+  // 表示名は他ボス(ウンブラ等)とカタカナ表記で統一する。
+  bossName: 'エクリプス',
   bossSpawn: { x: 4400, y: GROUND_TOP - ECLIPSE_CORE.height / 2 - 8 },
   bossKind: 'core',
   bossArenaMinX: 4250,
