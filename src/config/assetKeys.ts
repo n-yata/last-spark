@@ -66,6 +66,18 @@ export const RAY_SPRITE = {
   legBack: 'tex-ray-leg-back',
 } as const;
 
+// ステージ背景の多層パララックス画像キー。far=遠景(横タイル)、mid=中景(全幅)。
+// public/assets/stages/ の WebP を PreloadScene が load.image で読み、backgroundPainter が敷く。
+// 未生成/未ロードのステージは従来の手続きシルエット背景へフォールバックする(段階導入)。
+export const STAGE_BG_TEX: Record<string, { far: string; mid: string }> = {
+  stage1: { far: 'tex-bg-stage1-far', mid: 'tex-bg-stage1-mid' },
+  stage2: { far: 'tex-bg-stage2-far', mid: 'tex-bg-stage2-mid' },
+  stage3: { far: 'tex-bg-stage3-far', mid: 'tex-bg-stage3-mid' },
+  stage4: { far: 'tex-bg-stage4-far', mid: 'tex-bg-stage4-mid' },
+  stage5: { far: 'tex-bg-stage5-far', mid: 'tex-bg-stage5-mid' },
+  stage6: { far: 'tex-bg-stage6-far', mid: 'tex-bg-stage6-mid' },
+};
+
 // キャラのパーツ(関節)テクスチャキー。CharacterRig が組み立て、PreloadScene が
 // characterRig 定義に基づいて手続き生成する。系統(player/walker/turret/boss)ごとに
 // 必要なパーツのみを持つ。将来のアトラス差し替え時もここを単一変更点とする。
