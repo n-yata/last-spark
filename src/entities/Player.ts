@@ -26,7 +26,7 @@ import {
   type Box,
 } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
-import { SpriteRig } from './SpriteRig';
+import { CharacterRig } from './CharacterRig';
 import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
 import { Beam } from './Beam';
@@ -52,7 +52,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private beams?: Phaser.GameObjects.Group;
   /** ビーム発動中の再発火を抑止する終了時刻(ms)。発動中(now < beamActiveUntil)は新規ショットを受けない。 */
   private beamActiveUntil = 0;
-  private readonly rig: SpriteRig;
+  private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.player);
@@ -62,9 +62,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     body.setSize(PLAYER.width, PLAYER.height);
     body.setCollideWorldBounds(false);
     this.setDepth(10);
-    // 物理は据え置き、見た目はカットアウト・リグ(外部生成キービジュアル)へ委譲する(自スプライトは非表示)。
+    // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
     this.setVisible(false);
-    this.rig = new SpriteRig(scene, 10);
+    this.rig = new CharacterRig(scene, 'player', 10);
   }
 
   /** 発射に使う弾プールを設定する。 */
@@ -303,6 +303,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       projectile.fire(muzzleX, muzzleY, vx, kind, 'player', { velocityY: 0 });
     }
     this.rig.triggerAttack(now);
+    // マズルフラッシュ演出は GameScene 側(EffectsManager)で出す。発射位置と向きを通知する。
+    this.scene.events.emit('player-fired', muzzleX, this.y, dir, kind === 'charged');
     getSound().playSe(kind === 'charged' ? 'shootCharged' : 'shootNormal');
   }
 
