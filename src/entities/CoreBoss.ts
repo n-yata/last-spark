@@ -3,6 +3,7 @@ import { ECLIPSE_CORE, STAGE, ENEMY, NEUTRAL_STAGE_TUNING, type CoreBossConfig, 
 import { pickNextCoreBossAction, bossActionDuration } from '../systems/bossAi';
 import { computeSummonXs } from '../systems/coreSummon';
 import type { EnemyPattern } from '../types/enemy';
+import type { ShieldHitKind } from '../systems/combatRules';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
 import { Enemy } from './Enemy';
 
@@ -160,10 +161,12 @@ export class CoreBoss extends Boss {
     const staggering = this.currentAction === 'stagger';
     const eyeColor = staggering ? 0xff6b6b : this.phase === 'phase2' ? 0xff5a5a : 0x37f7d8;
     this.coreEye.setFillStyle(eyeColor);
+    const faceDir: 1 | -1 = _playerX < this.x ? -1 : 1;
+    this.syncShieldNode(faceDir);
   }
 
-  override takeDamage(amount: number): void {
-    super.takeDamage(amount);
+  override takeDamage(amount: number, hitKind?: ShieldHitKind): void {
+    super.takeDamage(amount, hitKind);
     // 撃破で専用ビジュアルも消す(基底はリグを隠すが、コアは独自ビジュアルのため別途消す)。
     if (this.isDead()) {
       this.coreVisual.setVisible(false);

@@ -57,6 +57,12 @@ export function chargingElapsed(state: ShotState, now: number): number {
   return state.mode === 'charging' ? Math.max(0, now - state.chargeStartAt) : 0;
 }
 
+/** チャージ中だけ、蓄積済み時間を amountMs 分増やす。 */
+export function addChargeElapsed(state: ShotState, amountMs: number): ShotState {
+  if (state.mode !== 'charging' || amountMs <= 0) return state;
+  return { ...state, chargeStartAt: state.chargeStartAt - amountMs };
+}
+
 /**
  * 1 フレーム評価して次状態と発火アクションを返す。1 フレーム最大 1 アクション。
  */

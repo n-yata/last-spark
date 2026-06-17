@@ -12,6 +12,7 @@ const BORDER = 0xff4d6d;
 const FILL = 0xff2d55; // 警告色(ボスの脅威)
 const DAMAGE_LAG = 0xffb14a;
 const BG = 0x1a0d12;
+const SHIELD = 0x55f7ff;
 
 export class BossHpBar {
   private readonly scene: Phaser.Scene;
@@ -56,7 +57,7 @@ export class BossHpBar {
     this.label.setVisible(false);
   }
 
-  render(hp: number, maxHp: number, nowMs: number): void {
+  render(hp: number, maxHp: number, nowMs: number, shieldRatio = 0): void {
     if (!this.visible) return;
     const screenW = this.scene.scale.width;
     const screenH = this.scene.scale.height;
@@ -93,6 +94,15 @@ export class BossHpBar {
     this.gfx.fillStyle(DAMAGE_LAG, 0.42).fillRect(x, barY, barWidth * this.lagRatio, barHeight);
     this.gfx.fillStyle(FILL, 1).fillRect(x, barY, barWidth * ratio, barHeight);
     this.gfx.lineStyle(scaled(2), BORDER, 1).strokeRect(x, barY, barWidth, barHeight);
+    if (shieldRatio > 0) {
+      const shieldHeight = Math.max(scaled(3), Math.floor(barHeight * 0.28));
+      this.gfx
+        .fillStyle(SHIELD, 0.9)
+        .fillRect(x, barY - scaled(6), barWidth * Math.min(1, shieldRatio), shieldHeight);
+      this.gfx
+        .lineStyle(scaled(1), SHIELD, 0.55)
+        .strokeRect(x, barY - scaled(6), barWidth, shieldHeight);
+    }
     this.gfx
       .lineStyle(scaled(1), 0xff90a8, 0.35)
       .lineBetween(x, barY - scaled(4), x + barWidth, barY - scaled(4));

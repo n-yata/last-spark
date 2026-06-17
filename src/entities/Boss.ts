@@ -1,10 +1,16 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { BOSS, SHOT, STAGE, type BossConfig } from '../config/balance';
+import { BOSS, BOSS_SHIELD, SHOT, STAGE, type BossConfig } from '../config/balance';
 import type { RigFamily } from '../config/characterRig';
 import type { BossPhase, BossAction } from '../types/boss';
 import type { Damageable } from '../types/combat';
-import { applyDamageToHp, isDead, bossPhaseForHp } from '../systems/combatRules';
+import {
+  applyDamageToHp,
+  isDead,
+  bossPhaseForHp,
+  resolveBossShieldHit,
+  type ShieldHitKind,
+} from '../systems/combatRules';
 import { pickNextBossAction, bossActionDuration } from '../systems/bossAi';
 import { CharacterRig } from './CharacterRig';
 import type { MotionState } from '../systems/rigAnimation';
@@ -31,6 +37,8 @@ export const DEFAULT_ACTION_DURATION_MS = 700;
 export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   hp: number;
   maxHp: number;
+  shieldHp: number = BOSS_SHIELD.maxHp;
+  readonly shieldMaxHp: number = BOSS_SHIELD.maxHp;
   readonly contactDamage: number;
 
   /** 系統別チューニング設定。サブクラスからも参照する。 */
@@ -51,6 +59,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   // 射撃の狙い高さ(プレイヤーの Y)。update 毎に更新し、fireVolley が参照する。
   protected targetY: number;
   protected readonly rig: CharacterRig;
+  protected readonly shieldNode: Phaser.GameObjects.Arc;
 
   constructor(scene: Phaser.Scene, x: number, y: number, options?: BossOptions) {
     super(scene, x, y, TEX.boss);
@@ -74,6 +83,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     // 物理は据え置き、見た目は関節リグへ委譲する(自スプライトは非表示)。
     this.setVisible(false);
     this.rig = new CharacterRig(scene, rigFamily, 9);
+    this.shieldNode = scene.add
+      .circle(x, y, Math.max(10, cfg.width * 0.16), 0x55f7ff, 0.28)
+      .setStrokeStyle(3, 0x9ffff0, 0.9)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(12);
   }
 
   protected get onGround(): boolean {
@@ -98,6 +112,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   getCurrentAction(): BossAction {
     return this.currentAction;
+  }
+
+  getShieldRatio(): number {
+    return this.shieldMaxHp > 0 ? Math.max(0, Math.min(1, this.shieldHp / this.shieldMaxHp)) : 0;
   }
 
   /** フェーズ/アクション遷移を駆動する。 */
@@ -139,6 +157,19 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.rig.clearTint();
     }
     this.rig.update(time, vy);
+    this.syncShieldNode(faceDir);
+  }
+
+  protected syncShieldNode(faceDir: 1 | -1): void {
+    const ratio = this.getShieldRatio();
+    const visible = ratio > 0 && !this.isDead();
+    this.shieldNode.setVisible(visible);
+    if (!visible) return;
+    const radius = Math.max(9, this.cfg.width * 0.16) * (0.72 + ratio * 0.28);
+    this.shieldNode
+      .setPosition(this.x + faceDir * this.cfg.width * 0.34, this.y - this.cfg.height * 0.18)
+      .setRadius(radius)
+      .setAlpha(0.35 + ratio * 0.35);
   }
 
   /** アリーナ範囲外へ出ようとしたら押し戻し、その方向の速度を止める。 */
@@ -230,9 +261,27 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.rig.triggerAttack(this.scene.time.now);
   }
 
-  takeDamage(amount: number): void {
-    this.hp = applyDamageToHp(this.hp, amount);
-    this.staggerAccumulated += amount;
+  takeDamage(amount: number, hitKind?: ShieldHitKind): void {
+    let hpDamage = amount;
+    let shieldDamage = 0;
+    let brokeShield = false;
+    if (hitKind) {
+      const shield = resolveBossShieldHit({
+        shieldHp: this.shieldHp,
+        hpDamage: amount,
+        hitKind,
+      });
+      this.shieldHp = shield.nextShieldHp;
+      shieldDamage = shield.shieldDamage;
+      hpDamage = shield.hpDamage;
+      brokeShield = shield.brokeShield;
+      if (shieldDamage > 0) {
+        this.flashShield(brokeShield);
+      }
+    }
+
+    this.hp = applyDamageToHp(this.hp, hpDamage);
+    this.staggerAccumulated += hpDamage;
 
     // 一定ダメージ蓄積で短時間のけぞる(反撃チャンス)
     if (this.staggerAccumulated >= this.cfg.staggerDamageThreshold && !this.isDead()) {
@@ -249,9 +298,24 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.isAlive = false;
       this.setVelocity(0, 0);
       this.rig.setVisible(false); // 撃破でリグも消す
+      this.shieldNode.setVisible(false);
     } else {
       this.rig.triggerHit(this.scene.time.now);
     }
+  }
+
+  protected flashShield(broken: boolean): void {
+    this.scene.tweens.add({
+      targets: this.shieldNode,
+      scale: broken ? 1.8 : 1.32,
+      alpha: broken ? 0 : 1,
+      duration: broken ? 180 : 90,
+      yoyo: !broken,
+      onComplete: () => {
+        this.shieldNode.setScale(1);
+        if (broken) this.shieldNode.setVisible(false);
+      },
+    });
   }
 
   isDead(): boolean {
@@ -260,6 +324,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
 
   /** エンティティ破棄時にリグも破棄する(リーク防止)。 */
   override destroy(fromScene?: boolean): void {
+    this.shieldNode.destroy();
     this.rig.destroy();
     super.destroy(fromScene);
   }

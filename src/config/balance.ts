@@ -64,6 +64,16 @@ export const SHOT = {
   beamLifespanMs: 800, // ビームの持続時間
   beamThickness: 22, // 帯の太さ(ワールドpx)
   beamLength: 900, // 射程(ワールドpx・画面端非依存でアスペクト比に左右されない)
+  // --- チャージ中の敵通常弾吸収 ---
+  // チャージ中に吸収できる敵通常弾 1 発あたり、チャージ時間をこの量だけ前倒しする。
+  absorbChargeMs: 220,
+} as const;
+
+export const BOSS_SHIELD = {
+  maxHp: 8,
+  normalDamage: 1,
+  beamDamage: 1,
+  chargedDamage: 5,
 } as const;
 
 export const ENEMY = {

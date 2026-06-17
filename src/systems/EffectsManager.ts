@@ -108,6 +108,13 @@ export class EffectsManager {
     this.explode(x, y, EFFECTS.impactSpark);
   }
 
+  /** チャージ吸収成功時の小演出。 */
+  absorbSpark(x: number, y: number): void {
+    this.explode(x, y, EFFECTS.absorbSpark);
+    const shake = EFFECTS.shake.absorb;
+    this.scene.cameras.main.shake(shake.durationMs, shake.intensity);
+  }
+
   /** 雑魚撃破: 小爆発 + 小さなカメラシェイクで手応えを足す。 */
   enemyKilled(x: number, y: number): void {
     this.explodeSmall(x, y);
