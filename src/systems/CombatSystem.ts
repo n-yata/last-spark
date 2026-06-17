@@ -6,6 +6,7 @@ import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { Projectile } from '../entities/Projectile';
 import { Beam } from '../entities/Beam';
+import { isChargeAbsorbableProjectile } from './combatRules';
 
 /** 命中元の種別。弾(ProjectileKind)に加え、持続ビーム('beam')を含む(Beam は Projectile ではない)。 */
 type HitKind = ProjectileKind | 'beam';
@@ -19,6 +20,7 @@ export interface CombatCallbacks {
   onBossDefeated?: (boss: Boss) => void;
   onPlayerDamaged?: (player: Player) => void;
   onPlayerDeath?: (player: Player) => void;
+  onProjectileAbsorbed?: (x: number, y: number) => void;
 }
 
 export interface CombatRefs {
@@ -59,6 +61,15 @@ export class CombatSystem {
     physics.add.overlap(refs.enemyShots, refs.player, (a, b) => {
       const projectile = this.asProjectile(a, b);
       if (!projectile || !projectile.active) return;
+      if (
+        refs.player.canAbsorbCharge() &&
+        isChargeAbsorbableProjectile(projectile.kind, projectile.owner) &&
+        refs.player.absorbCharge(SHOT.absorbChargeMs)
+      ) {
+        this.callbacks.onProjectileAbsorbed?.(projectile.x, projectile.y);
+        projectile.deactivate();
+        return;
+      }
       this.damagePlayer(refs.player, projectile.damage);
       projectile.deactivate();
     });
@@ -137,7 +148,11 @@ export class CombatSystem {
     kind: 'enemy' | 'boss',
     shotKind: HitKind,
   ): void {
-    this.applyDamage(target, amount);
+    if (target instanceof Boss) {
+      target.takeDamage(amount, shotKind);
+    } else {
+      this.applyDamage(target, amount);
+    }
     this.callbacks.onHit?.(x, y, kind, shotKind);
   }
 

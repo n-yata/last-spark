@@ -26,6 +26,7 @@ export const EFFECTS = {
   /** カメラシェイク。intensity は Phaser の shake 強度(画面比)。 */
   shake: {
     playerDamage: { durationMs: 120, intensity: 0.008 },
+    absorb: { durationMs: 70, intensity: 0.004 },
     enemyKill: { durationMs: 90, intensity: 0.006 }, // 雑魚撃破の小さな手応え
     bossDefeat: { durationMs: 700, intensity: 0.012 },
   },
@@ -37,6 +38,15 @@ export const EFFECTS = {
     speedMax: 260,
     lifespanMs: 320,
     scaleStart: 0.9,
+  },
+
+  /** チャージ吸収成功時の小スパーク。 */
+  absorbSpark: {
+    count: 10,
+    speedMin: 40,
+    speedMax: 180,
+    lifespanMs: 280,
+    scaleStart: 0.85,
   },
 
   /** 発射時のマズルフラッシュ(銃口の閃光+前方スパーク)。 */

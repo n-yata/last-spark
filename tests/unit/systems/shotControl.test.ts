@@ -3,6 +3,7 @@ import {
   initialShotState,
   stepShot,
   chargingElapsed,
+  addChargeElapsed,
   type ShotState,
   type ShotAction,
 } from '../../../src/systems/shotControl';
@@ -175,5 +176,34 @@ describe('shotControl: 強制中断(cancel)', () => {
     const r = stepShot(s, { pressed: false, released: false, held: true, cancel: true, now: 999 });
     expect(r.state.mode).toBe('idle');
     expect(r.action).toBe('none');
+  });
+});
+
+describe('shotControl: チャージ吸収による蓄積加算', () => {
+  it('charging 中だけチャージ開始時刻を前倒ししてゲージ経過を増やす', () => {
+    let s = initialShotState();
+    s = press(s, 1000).state;
+    s = release(s, 1100).state;
+
+    const boosted = addChargeElapsed(s, 250);
+
+    expect(chargingElapsed(s, 1500)).toBe(400);
+    expect(chargingElapsed(boosted, 1500)).toBe(650);
+  });
+
+  it('charging 以外の状態では変更しない', () => {
+    const idle = initialShotState();
+    const pending = press(idle, 1000).state;
+
+    expect(addChargeElapsed(idle, 250)).toEqual(idle);
+    expect(addChargeElapsed(pending, 250)).toEqual(pending);
+  });
+
+  it('負の加算量は無視する', () => {
+    let s = initialShotState();
+    s = press(s, 1000).state;
+    s = release(s, 1100).state;
+
+    expect(addChargeElapsed(s, -50)).toEqual(s);
   });
 });

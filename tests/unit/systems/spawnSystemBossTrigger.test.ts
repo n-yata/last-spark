@@ -87,7 +87,7 @@ function makeSpawnSystem(): SpawnSystem {
 
 describe('SpawnSystem ボス戦突入トリガ', () => {
   let spawn: SpawnSystem;
-  let onBoss: ReturnType<typeof vi.fn>;
+  let onBoss: () => void;
 
   beforeEach(() => {
     spawn = makeSpawnSystem();

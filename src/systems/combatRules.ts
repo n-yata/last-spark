@@ -1,5 +1,6 @@
 import type { BossPhase } from '../types/boss';
-import { BOSS } from '../config/balance';
+import type { ProjectileKind, ProjectileOwner } from '../types/combat';
+import { BOSS, BOSS_SHIELD } from '../config/balance';
 
 // 戦闘ルールの純粋ロジック(Phaser 非依存)。
 
@@ -29,6 +30,60 @@ export function isDead(hp: number): boolean {
 export function bossPhaseForHp(hp: number, maxHp: number): BossPhase {
   if (maxHp <= 0) return 'phase2';
   return hp / maxHp <= BOSS.phase2HpRatio ? 'phase2' : 'phase1';
+}
+
+/** チャージ中に吸収できる弾。強攻撃のミサイル/槍弾は回避対象として残す。 */
+export function isChargeAbsorbableProjectile(
+  kind: ProjectileKind,
+  owner: ProjectileOwner,
+): boolean {
+  return owner === 'enemy' && kind === 'normal';
+}
+
+export type ShieldHitKind = ProjectileKind | 'beam';
+
+export interface BossShieldHitInput {
+  shieldHp: number;
+  hpDamage: number;
+  hitKind: ShieldHitKind;
+}
+
+export interface BossShieldHitResult {
+  nextShieldHp: number;
+  shieldDamage: number;
+  hpDamage: number;
+  brokeShield: boolean;
+}
+
+function shieldDamageForHit(kind: ShieldHitKind): number {
+  if (kind === 'charged') return BOSS_SHIELD.chargedDamage;
+  if (kind === 'beam') return BOSS_SHIELD.beamDamage;
+  return BOSS_SHIELD.normalDamage;
+}
+
+/**
+ * ボスシールドへの命中を解決する。シールドが残っている間は本体ダメージを遮断し、
+ * シールドを割った命中だけ余剰分を本体へ通す。
+ */
+export function resolveBossShieldHit(input: BossShieldHitInput): BossShieldHitResult {
+  const shieldHp = Math.max(0, input.shieldHp);
+  const hpDamage = Math.max(0, input.hpDamage);
+  if (shieldHp <= 0) {
+    return { nextShieldHp: 0, shieldDamage: 0, hpDamage, brokeShield: false };
+  }
+
+  const shieldDamage = Math.max(0, shieldDamageForHit(input.hitKind));
+  const appliedShieldDamage = Math.min(shieldHp, shieldDamage);
+  const nextShieldHp = shieldHp - appliedShieldDamage;
+  const brokeShield = shieldHp > 0 && nextShieldHp === 0;
+  const overflowDamage = brokeShield ? Math.max(0, hpDamage - appliedShieldDamage) : 0;
+
+  return {
+    nextShieldHp,
+    shieldDamage: appliedShieldDamage,
+    hpDamage: overflowDamage,
+    brokeShield,
+  };
 }
 
 export interface DamageState {

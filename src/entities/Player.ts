@@ -9,6 +9,7 @@ import {
   initialShotState,
   stepShot,
   chargingElapsed,
+  addChargeElapsed,
   type ShotState,
   type ShotAction,
 } from '../systems/shotControl';
@@ -108,6 +109,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   /** チャージ蓄積の経過時間(ms)。チャージ中以外は 0(UI ゲージ表示用)。 */
   chargeElapsed(now: number): number {
     return chargingElapsed(this.shotState, now);
+  }
+
+  /** チャージ吸収が有効な状態か。 */
+  canAbsorbCharge(): boolean {
+    return this.shotState.mode === 'charging' && !this.isDead();
+  }
+
+  /** チャージ中なら吸収分だけゲージを増やす。 */
+  absorbCharge(amountMs: number): boolean {
+    if (!this.canAbsorbCharge()) return false;
+    const next = addChargeElapsed(this.shotState, amountMs);
+    const changed = next !== this.shotState;
+    this.shotState = next;
+    return changed;
   }
 
   /** 入力に基づいて移動・ジャンプ・発射を行う。 */

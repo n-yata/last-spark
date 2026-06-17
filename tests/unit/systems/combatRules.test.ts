@@ -4,8 +4,10 @@ import {
   applyDamageToHp,
   isDead,
   bossPhaseForHp,
+  isChargeAbsorbableProjectile,
+  resolveBossShieldHit,
 } from '../../../src/systems/combatRules';
-import { BOSS } from '../../../src/config/balance';
+import { BOSS, BOSS_SHIELD } from '../../../src/config/balance';
 
 describe('isInvincible', () => {
   it('現在時刻が無敵終了時刻より前なら無敵', () => {
@@ -59,5 +61,70 @@ describe('bossPhaseForHp', () => {
 
   it('HP が 50% 未満は phase2', () => {
     expect(bossPhaseForHp(BOSS.maxHp * 0.2, BOSS.maxHp)).toBe('phase2');
+  });
+});
+
+describe('isChargeAbsorbableProjectile', () => {
+  it('敵の通常弾だけをチャージ吸収対象にする', () => {
+    expect(isChargeAbsorbableProjectile('normal', 'enemy')).toBe(true);
+    expect(isChargeAbsorbableProjectile('missile', 'enemy')).toBe(false);
+    expect(isChargeAbsorbableProjectile('lance', 'enemy')).toBe(false);
+    expect(isChargeAbsorbableProjectile('normal', 'player')).toBe(false);
+    expect(isChargeAbsorbableProjectile('charged', 'player')).toBe(false);
+  });
+});
+
+describe('resolveBossShieldHit', () => {
+  it('シールドが残っている間は本体 HP へのダメージを止める', () => {
+    const result = resolveBossShieldHit({
+      shieldHp: BOSS_SHIELD.maxHp,
+      hpDamage: 3,
+      hitKind: 'normal',
+    });
+
+    expect(result.hpDamage).toBe(0);
+    expect(result.shieldDamage).toBe(BOSS_SHIELD.normalDamage);
+    expect(result.nextShieldHp).toBe(BOSS_SHIELD.maxHp - BOSS_SHIELD.normalDamage);
+    expect(result.brokeShield).toBe(false);
+  });
+
+  it('最大チャージ弾は通常弾よりシールドを大きく削る', () => {
+    const normal = resolveBossShieldHit({
+      shieldHp: BOSS_SHIELD.maxHp,
+      hpDamage: 1,
+      hitKind: 'normal',
+    });
+    const charged = resolveBossShieldHit({
+      shieldHp: BOSS_SHIELD.maxHp,
+      hpDamage: 3,
+      hitKind: 'charged',
+    });
+
+    expect(charged.shieldDamage).toBeGreaterThan(normal.shieldDamage);
+    expect(charged.shieldDamage).toBe(BOSS_SHIELD.chargedDamage);
+  });
+
+  it('シールドが割れた命中の余剰ダメージは本体へ通す', () => {
+    const result = resolveBossShieldHit({
+      shieldHp: 1,
+      hpDamage: 3,
+      hitKind: 'charged',
+    });
+
+    expect(result.nextShieldHp).toBe(0);
+    expect(result.brokeShield).toBe(true);
+    expect(result.hpDamage).toBe(2);
+  });
+
+  it('シールドが無いときは本体 HP ダメージをそのまま通す', () => {
+    const result = resolveBossShieldHit({
+      shieldHp: 0,
+      hpDamage: 3,
+      hitKind: 'charged',
+    });
+
+    expect(result.nextShieldHp).toBe(0);
+    expect(result.shieldDamage).toBe(0);
+    expect(result.hpDamage).toBe(3);
   });
 });

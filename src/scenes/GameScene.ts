@@ -450,6 +450,10 @@ export class GameScene extends Phaser.Scene {
         this.effects.playerDamaged();
         getSound().playSe('playerDamaged');
       },
+      onProjectileAbsorbed: (x, y) => {
+        this.effects.absorbSpark(x, y);
+        getSound().playSe('chargeReady');
+      },
       onBossDefeated: (boss) => this.handleClear(boss),
       onPlayerDeath: () => this.handleGameOver(),
     });
@@ -614,6 +618,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossName, this.stage.bossName);
     // 設定値ではなく実際のボスの maxHp を使う(系統で硬さが異なっても HUD が一致する)。
     this.registry.set(HUD.bossMaxHp, this.boss.maxHp);
+    this.registry.set(HUD.bossShieldRatio, this.boss.getShieldRatio());
     getSound().playBgm('boss');
   }
 
@@ -642,6 +647,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossHp, 0);
     this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
     this.registry.set(HUD.bossName, '');
+    this.registry.set(HUD.bossShieldRatio, 0);
     this.registry.set(HUD.pauseRequested, false);
   }
 
@@ -668,6 +674,7 @@ export class GameScene extends Phaser.Scene {
     if (this.boss) {
       this.boss.update(time, this.player.x, this.player.y);
       this.registry.set(HUD.bossHp, this.boss.hp);
+      this.registry.set(HUD.bossShieldRatio, this.boss.getShieldRatio());
     }
 
     this.checkFallDeath();
@@ -708,6 +715,7 @@ export class GameScene extends Phaser.Scene {
     getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
     getSound().playSe('bossDefeated');
     this.registry.set(HUD.bossHp, 0);
+    this.registry.set(HUD.bossShieldRatio, 0);
 
     // ボス後演出を持つステージ(現状 stage3 のケージ救出のみ): 即クリアせず、撃破演出後に救出フェーズへ。
     if (this.stage.postBossCutsceneKey) {
