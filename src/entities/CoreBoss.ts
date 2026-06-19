@@ -161,8 +161,6 @@ export class CoreBoss extends Boss {
     const staggering = this.currentAction === 'stagger';
     const eyeColor = staggering ? 0xff6b6b : this.phase === 'phase2' ? 0xff5a5a : 0x37f7d8;
     this.coreEye.setFillStyle(eyeColor);
-    const faceDir: 1 | -1 = _playerX < this.x ? -1 : 1;
-    this.syncShieldNode(faceDir);
   }
 
   override takeDamage(amount: number, hitKind?: ShieldHitKind): void {
