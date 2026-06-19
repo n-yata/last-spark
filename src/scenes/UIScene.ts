@@ -102,8 +102,7 @@ export class UIScene extends Phaser.Scene {
     if (bossActive) {
       const bossHp = (reg.get(HUD.bossHp) as number) ?? 0;
       const bossMaxHp = (reg.get(HUD.bossMaxHp) as number) ?? 1;
-      const bossShieldRatio = (reg.get(HUD.bossShieldRatio) as number) ?? 0;
-      this.bossHpBar.render(bossHp, bossMaxHp, this.time.now, bossShieldRatio);
+      this.bossHpBar.render(bossHp, bossMaxHp, this.time.now);
     }
   }
 }
