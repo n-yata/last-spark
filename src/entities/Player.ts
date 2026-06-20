@@ -339,6 +339,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     // 発射音は Beam.fire/destroy が射出中だけ鳴らす持続音(startBeam/stopBeam)。
     // 通常チャージの単発SE(shootCharged)とは別系統にして「強化された強さ」を表す。
     this.rig.triggerAttack(now);
+    // 発射の手応え演出は GameScene 側(EffectsManager.beamFire)で出す。マズル位置と向きを通知する。
+    // 座標式は通常弾の発射・Beam.reposition と揃える(マズル先端)。
+    const dir = facingSign(this.facing);
+    const muzzleX = this.x + dir * (PLAYER.width / 2 + 6);
+    this.scene.events.emit('player-beam-fired', muzzleX, this.y, dir);
   }
 
   /** 被弾。無敵中は無効。HP0 で撃破。 */

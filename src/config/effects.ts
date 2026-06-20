@@ -63,6 +63,31 @@ export const EFFECTS = {
     chargedScaleMul: 1.8,
   },
 
+  /**
+   * 強化ビーム(RAY 強化 stage6 のチャージ攻撃=持続レーザー)の発射演出。
+   * 最上位アクションとして、通常チャージ弾のマズルフラッシュより強い手応えを出す
+   * (収束リングの予兆 → 大きなマズル閃光 → 前方バースト → 軽いシェイク)。
+   */
+  beamFire: {
+    /** ビーム色基調(シアン〜白)。Beam 本体の BEAM_COLOR と揃える。 */
+    color: 0x9ffff0,
+    /** マズル閃光(TEX.hit)の初期スケールと寿命。charged の実効(1.4*1.8=2.52)より強い。 */
+    flashScale: 3.0,
+    flashMs: 150,
+    /** 収束リング(TEX.hit を内側へ潰す implode)の開始スケールと尺。発射の予兆。 */
+    ringScaleStart: 2.6,
+    ringMs: 130,
+    /** 前方バースト(TEX.spark)。muzzle(5発)より多く・速くして噴出感を出す。 */
+    sparkCount: 14,
+    sparkSpeedMin: 160,
+    sparkSpeedMax: 420,
+    sparkLifespanMs: 300,
+    /** 前方バーストの広がり(基準角からの ±度)。 */
+    sparkSpreadDeg: 30,
+    /** 発射の手応えシェイク(吸収より強く、被弾より控えめ)。 */
+    shake: { durationMs: 110, intensity: 0.007 },
+  },
+
   /** 環境パーティクル(空気感): カメラ可視域に漂う塵/火の粉。ステージのアクセント色で発光。 */
   ambient: {
     /** 発生間隔(ms)。小さいほど密。可視域に常時十数〜数十個漂う密度。 */
