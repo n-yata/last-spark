@@ -46,6 +46,14 @@ describe('ECLIPSE_CORE(ECLIPSE本体)のチューニング', () => {
     expect(ECLIPSE_CORE.phase2HpRatio).toBeGreaterThan(0);
     expect(ECLIPSE_CORE.phase2HpRatio).toBeLessThan(1);
   });
+
+  it('攻撃圧はハードでも回避余地が残る範囲に収める', () => {
+    expect(ECLIPSE_CORE.bulletDamage).toBeLessThanOrEqual(2);
+    expect(ECLIPSE_CORE.bulletSpeed).toBeLessThanOrEqual(310);
+    expect(ECLIPSE_CORE.phase2SpeedFactor).toBeGreaterThanOrEqual(0.6);
+    expect(ECLIPSE_CORE.summonCount).toBeLessThanOrEqual(2);
+    expect(ECLIPSE_CORE.summonMaxActive).toBeLessThanOrEqual(6);
+  });
 });
 
 describe('stage6(ECLIPSE支配中枢)のステージ条件', () => {

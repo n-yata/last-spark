@@ -12,7 +12,7 @@ import {
   type StageTuning,
 } from '../config/balance';
 import type { DifficultyMode } from '../types/save';
-import { applyDifficultyToStageTuning } from './difficulty';
+import { applyDifficultyToEnemySpawns, applyDifficultyToStageTuning } from './difficulty';
 
 // ステージ進行(カメラ位置)に応じた雑魚敵の出現と、ボス戦突入の検知。
 
@@ -63,7 +63,9 @@ export class SpawnSystem {
     this.stage = getStageData(stageId);
     this.tuning = applyDifficultyToStageTuning(getStageTuning(stageId), difficulty);
     // x 昇順にして左から順に出現判定する
-    this.pending = [...this.stage.enemies].sort((a, b) => a.x - b.x);
+    this.pending = applyDifficultyToEnemySpawns(this.stage.enemies, difficulty).sort(
+      (a, b) => a.x - b.x,
+    );
     this.bossTriggered = false;
     // ボスが画面外のまま戦闘(BGM 切替・HP バー・アリーナ固定)が始まらないよう、
     // 「ボスの全身が画面内に見える位置」までトリガーを遅らせる。bossTriggerX は
