@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
-import { ECLIPSE_CORE, STAGE, ENEMY, NEUTRAL_STAGE_TUNING, type CoreBossConfig, type StageTuning } from '../config/balance';
+import {
+  ECLIPSE_CORE,
+  ECLIPSE_SUMMON_MINION_PLAYER_DAMAGE_MULTIPLIER,
+  ECLIPSE_SUMMON_MINION_TUNING,
+  STAGE,
+  ENEMY,
+  type CoreBossConfig,
+} from '../config/balance';
 import { pickNextCoreBossAction, bossActionDuration } from '../systems/bossAi';
 import { computeSummonXs } from '../systems/coreSummon';
 import type { EnemyPattern } from '../types/enemy';
@@ -17,7 +24,6 @@ import { Enemy } from './Enemy';
 export interface SummonContext {
   enemies: Phaser.Physics.Arcade.Group;
   enemyShots: Phaser.Physics.Arcade.Group;
-  tuning: StageTuning;
 }
 
 export class CoreBoss extends Boss {
@@ -142,7 +148,9 @@ export class CoreBoss extends Boss {
       const conf = pattern === 'turret' ? ENEMY.turret : ENEMY.walker;
       const x = xs[i];
       const y = STAGE.groundY - conf.height / 2;
-      const minion = new Enemy(this.scene, x, y, pattern, ctx.tuning ?? NEUTRAL_STAGE_TUNING);
+      const minion = new Enemy(this.scene, x, y, pattern, ECLIPSE_SUMMON_MINION_TUNING, {
+        playerDamageMultiplierOverride: ECLIPSE_SUMMON_MINION_PLAYER_DAMAGE_MULTIPLIER,
+      });
       minion.setProjectiles(ctx.enemyShots);
       ctx.enemies.add(minion);
       // Group.add() がグループ既定値でボディを上書きするため、追加後に再適用して接地を保証する。

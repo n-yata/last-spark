@@ -10,6 +10,8 @@ export interface ProjectileFireOptions {
   velocityY?: number;
   /** 重力の影響を受けるか(放物線にする)。既定は false。 */
   gravity?: boolean;
+  /** プレイヤーへ命中した時だけ使う被ダメージ倍率 override。未指定なら難易度倍率を使う。 */
+  playerDamageMultiplierOverride?: number;
 }
 
 // 弾(通常/チャージ/敵弾の共通)。オブジェクトプールで再利用する。
@@ -18,6 +20,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   kind: ProjectileKind = 'normal';
   owner: ProjectileOwner = 'player';
   damage: number = SHOT.normalDamage;
+  playerDamageMultiplierOverride?: number;
   private expiresAt = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -41,6 +44,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.kind = kind;
     this.owner = owner;
     this.damage = spec.damage;
+    this.playerDamageMultiplierOverride = options?.playerDamageMultiplierOverride;
 
     const texture =
       kind === 'missile'

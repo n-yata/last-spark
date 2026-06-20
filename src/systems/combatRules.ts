@@ -21,6 +21,18 @@ export function applyDamageToHp(hp: number, amount: number): number {
   return Math.max(0, hp - Math.max(0, amount));
 }
 
+/**
+ * プレイヤーが受ける実ダメージを解決する。
+ * sourceMultiplierOverride がある攻撃は、難易度の globalMultiplier ではなく個別倍率を使う。
+ */
+export function resolvePlayerDamage(
+  amount: number,
+  globalMultiplier: number,
+  sourceMultiplierOverride?: number,
+): number {
+  return Math.ceil(amount * (sourceMultiplierOverride ?? globalMultiplier));
+}
+
 /** HP が尽きた(撃破)かを判定する。 */
 export function isDead(hp: number): boolean {
   return hp <= 0;

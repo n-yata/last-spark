@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { ECLIPSE_CORE, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, PURIFIER, ENVOY } from '../../../src/config/balance';
+import {
+  ECLIPSE_CORE,
+  ECLIPSE_SUMMON_MINION_PLAYER_DAMAGE_MULTIPLIER,
+  ECLIPSE_SUMMON_MINION_TUNING,
+  BOSS,
+  FLYING_BOSS,
+  CONTAINMENT_WARDEN,
+  PURIFIER,
+  ENVOY,
+  NEUTRAL_STAGE_TUNING,
+} from '../../../src/config/balance';
 import { getStageData } from '../../../src/config/stages';
 
 // stage6「ECLIPSE本体」のチューニング検証。最終決戦のラスボスとして全ボス中最も硬く、
@@ -53,6 +63,11 @@ describe('ECLIPSE_CORE(ECLIPSE本体)のチューニング', () => {
     expect(ECLIPSE_CORE.phase2SpeedFactor).toBeGreaterThanOrEqual(0.6);
     expect(ECLIPSE_CORE.summonCount).toBeLessThanOrEqual(2);
     expect(ECLIPSE_CORE.summonMaxActive).toBeLessThanOrEqual(6);
+  });
+
+  it('召喚雑魚は hard 中でも HP とプレイヤーへのダメージを normal 相当にする', () => {
+    expect(ECLIPSE_SUMMON_MINION_TUNING).toEqual(NEUTRAL_STAGE_TUNING);
+    expect(ECLIPSE_SUMMON_MINION_PLAYER_DAMAGE_MULTIPLIER).toBe(1);
   });
 });
 

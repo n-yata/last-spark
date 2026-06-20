@@ -6,6 +6,7 @@ import {
   bossPhaseForHp,
   isChargeAbsorbableProjectile,
   resolveBossShieldHit,
+  resolvePlayerDamage,
 } from '../../../src/systems/combatRules';
 import { BOSS, BOSS_SHIELD } from '../../../src/config/balance';
 
@@ -35,6 +36,16 @@ describe('applyDamageToHp', () => {
 
   it('負のダメージは無視する(回復しない)', () => {
     expect(applyDamageToHp(5, -3)).toBe(5);
+  });
+});
+
+describe('resolvePlayerDamage', () => {
+  it('通常は難易度の被ダメージ倍率を適用して切り上げる', () => {
+    expect(resolvePlayerDamage(1, 1.5)).toBe(2);
+  });
+
+  it('source override がある場合は難易度倍率ではなく override を使う', () => {
+    expect(resolvePlayerDamage(1, 1.5, 1)).toBe(1);
   });
 });
 

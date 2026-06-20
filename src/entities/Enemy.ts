@@ -9,11 +9,17 @@ import { Projectile } from './Projectile';
 
 // 雑魚敵。walker=地上を往復、turret=固定砲台で前方へ射撃。
 
+export interface EnemyOptions {
+  /** プレイヤーへ与える接触・弾ダメージの倍率 override。未指定なら難易度倍率を使う。 */
+  playerDamageMultiplierOverride?: number;
+}
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
   hp: number;
   maxHp: number;
   readonly pattern: EnemyPattern;
   readonly contactDamage: number;
+  readonly playerDamageMultiplierOverride?: number;
 
   private nextShotAt = 0;
   private moveDir: -1 | 1 = -1;
@@ -30,6 +36,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
     y: number,
     pattern: EnemyPattern,
     tuning: StageTuning = NEUTRAL_STAGE_TUNING,
+    options: EnemyOptions = {},
   ) {
     super(scene, x, y, pattern === 'turret' ? TEX.enemyTurret : TEX.enemyWalker);
     this.pattern = pattern;
@@ -38,6 +45,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.hp = effectiveHp;
     this.maxHp = effectiveHp;
     this.contactDamage = conf.contactDamage;
+    this.playerDamageMultiplierOverride = options.playerDamageMultiplierOverride;
     this.effectiveMoveSpeed = ENEMY.walker.moveSpeed * tuning.walkerSpeedFactor;
     this.effectiveShootIntervalMs = ENEMY.turret.shootIntervalMs * tuning.turretIntervalFactor;
 
@@ -123,7 +131,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
     const muzzleX = this.x + dir * (ENEMY.turret.width / 2 + 4);
     const projectile = this.projectiles.get(muzzleX, this.y) as Projectile | null;
     if (!projectile) return;
-    projectile.fire(muzzleX, this.y, dir * ENEMY.turret.bulletSpeed, 'normal', 'enemy');
+    projectile.fire(muzzleX, this.y, dir * ENEMY.turret.bulletSpeed, 'normal', 'enemy', {
+      playerDamageMultiplierOverride: this.playerDamageMultiplierOverride,
+    });
     this.rig.triggerAttack(now);
   }
 
