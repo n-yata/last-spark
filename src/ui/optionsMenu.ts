@@ -7,6 +7,7 @@ import { makeMenuButton } from './menuButton';
 import { PLAYABLE_STAGES } from '../stageSelect/stages';
 import { getControlEntries } from './controlsData';
 import { adjustStep, stepToVolume, volumeToStep, volumeBar, volumePercent } from './volumeSteps';
+import { difficultyLabel, toggleDifficulty } from '../systems/difficulty';
 
 // タイトル/ポーズ双方から開ける共通オプションオーバーレイ(ファクトリ関数)。
 // stageSelect.ts の「Container オーバーレイ + 暗幕 + 縦並びボタン」流儀を一般化し、
@@ -130,7 +131,7 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
   const buildVolume = (): Phaser.GameObjects.Container => {
     const c = scene.add.container(0, 0);
     let y = height * 0.3;
-    const rowGap = scaled(74);
+    const rowGap = Math.min(scaled(74), (height * 0.88 - y) / 4);
 
     const addChannel = (label: string, role: 'bgm' | 'se'): void => {
       const rowY = y;
@@ -180,6 +181,16 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
         settings = { ...settings, muted: !settings.muted };
         save.updateSettings({ muted: settings.muted });
         sound.applySettings(settings);
+        playTap();
+        setPanel(buildVolume);
+      }),
+    );
+    y += rowGap * 0.85;
+
+    c.add(
+      makeMenuButton(scene, width / 2, y, `MODE: ${difficultyLabel(settings.difficulty)}`, () => {
+        settings = { ...settings, difficulty: toggleDifficulty(settings.difficulty) };
+        save.updateSettings({ difficulty: settings.difficulty });
         playTap();
         setPanel(buildVolume);
       }),

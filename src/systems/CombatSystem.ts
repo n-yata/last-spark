@@ -32,14 +32,23 @@ export interface CombatRefs {
   playerBeams?: Phaser.GameObjects.Group;
 }
 
+export interface CombatOptions {
+  /** プレイヤーが受けるダメージ倍率。normal=1、hard では 1 より大きい値を使う。 */
+  playerDamageMultiplier?: number;
+}
+
 export class CombatSystem {
   private readonly scene: Phaser.Scene;
   private readonly callbacks: CombatCallbacks;
+  private readonly options: Required<CombatOptions>;
   private refs?: CombatRefs;
 
-  constructor(scene: Phaser.Scene, callbacks: CombatCallbacks = {}) {
+  constructor(scene: Phaser.Scene, callbacks: CombatCallbacks = {}, options: CombatOptions = {}) {
     this.scene = scene;
     this.callbacks = callbacks;
+    this.options = {
+      playerDamageMultiplier: options.playerDamageMultiplier ?? 1,
+    };
   }
 
   /** プレイヤー・敵・弾の衝突を登録する。 */
@@ -158,7 +167,7 @@ export class CombatSystem {
 
   private damagePlayer(player: Player, amount: number): void {
     const hpBefore = player.hp;
-    player.takeDamage(amount);
+    player.takeDamage(Math.ceil(amount * this.options.playerDamageMultiplier));
     if (player.hp !== hpBefore) {
       this.callbacks.onPlayerDamaged?.(player);
     }

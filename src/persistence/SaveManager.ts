@@ -1,4 +1,4 @@
-import type { SaveData, GameSettings } from '../types/save';
+import type { SaveData, GameSettings, DifficultyMode } from '../types/save';
 import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
 // Persistence レイヤー: SaveData の読み書き・既定値生成・バージョン検証・旧形式マイグレーション。
@@ -6,7 +6,7 @@ import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
 /** 既定のユーザー設定。 */
 export function defaultSettings(): GameSettings {
-  return { muted: false, bgmVolume: 0.6, seVolume: 0.8 };
+  return { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' };
 }
 
 /** 既定のセーブデータ(未プレイ状態)。 */
@@ -23,14 +23,29 @@ function isFiniteInRange(value: unknown, min: number, max: number): value is num
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
 }
 
+function isDifficultyMode(value: unknown): value is DifficultyMode {
+  return value === 'normal' || value === 'hard';
+}
+
+function normalizeSettings(value: unknown): GameSettings | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const s = value as Record<string, unknown>;
+  if (typeof s.muted !== 'boolean') return undefined;
+  if (!isFiniteInRange(s.bgmVolume, 0, 1)) return undefined;
+  if (!isFiniteInRange(s.seVolume, 0, 1)) return undefined;
+  if (s.difficulty !== undefined && !isDifficultyMode(s.difficulty)) return undefined;
+  return {
+    muted: s.muted,
+    bgmVolume: s.bgmVolume,
+    seVolume: s.seVolume,
+    difficulty: s.difficulty ?? 'normal',
+  };
+}
+
 function isValidSettings(value: unknown): value is GameSettings {
   if (typeof value !== 'object' || value === null) return false;
   const s = value as Record<string, unknown>;
-  return (
-    typeof s.muted === 'boolean' &&
-    isFiniteInRange(s.bgmVolume, 0, 1) &&
-    isFiniteInRange(s.seVolume, 0, 1)
-  );
+  return normalizeSettings(value) !== undefined && isDifficultyMode(s.difficulty);
 }
 
 /** clearedStages が「文字列の配列」かを検証する。 */
@@ -62,7 +77,7 @@ export function isValidSaveData(value: unknown): value is SaveData {
 
 /**
  * 旧形式を現行形式へ移行する。
- * - v2 (clearedStages:string[] / bestTimeMs:Record): 構造は現行と同一のため version のみ引き上げる。
+ * - v2/v3 (clearedStages:string[] / bestTimeMs:Record): difficulty を normal 補完して移行する。
  * - v1 (cleared:boolean / bestTimeMs:number): clearedStages を配列化して移行する。
  * 移行できない/不正な場合は undefined を返し、呼び出し側で既定値へフォールバックさせる。
  * 注記: かつての v3 は collectedLogs を持っていたが撤去済み。当時の v3 セーブに残る余分な
@@ -72,21 +87,23 @@ function migrate(value: unknown): SaveData | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const d = value as Record<string, unknown>;
 
-  // v2 → 現行: 構造が同一(collectedLogs 撤去後)なので進捗を保持したまま version だけ引き上げる。
-  // これを欠くと既存プレイヤーの v2 セーブが既定値へ初期化され、クリア進捗が失われる。
-  if (d.version === 2 && isStringArray(d.clearedStages) && isValidSettings(d.settings)) {
+  // v2/v3 → 現行: 進捗を保持し、settings.difficulty を normal 補完して version を引き上げる。
+  // これを欠くと既存プレイヤーの v2/v3 セーブが既定値へ初期化され、クリア進捗が失われる。
+  const migratedSettings = normalizeSettings(d.settings);
+  if ((d.version === 2 || d.version === 3) && isStringArray(d.clearedStages) && migratedSettings) {
     if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return undefined;
     return {
       version: SAVE_VERSION,
       clearedStages: [...(d.clearedStages as string[])],
       bestTimeMs: isValidBestTimes(d.bestTimeMs) ? { ...(d.bestTimeMs as Record<string, number>) } : undefined,
-      settings: { ...(d.settings as GameSettings) },
+      settings: migratedSettings,
     };
   }
 
-  // v1 → v3(version 未指定・不一致で cleared:boolean を持つもの)。
+  // v1 → 現行(version 未指定・不一致で cleared:boolean を持つもの)。
   if (typeof d.cleared !== 'boolean') return undefined;
-  if (!isValidSettings(d.settings)) return undefined;
+  const legacySettings = normalizeSettings(d.settings);
+  if (!legacySettings) return undefined;
 
   const clearedStages = d.cleared ? ['stage1'] : [];
   let bestTimeMs: Record<string, number> | undefined;
@@ -98,7 +115,7 @@ function migrate(value: unknown): SaveData | undefined {
     version: SAVE_VERSION,
     clearedStages,
     bestTimeMs,
-    settings: { ...(d.settings as GameSettings) },
+    settings: legacySettings,
   };
 }
 

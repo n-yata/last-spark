@@ -34,8 +34,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements Damageable {
     super(scene, x, y, pattern === 'turret' ? TEX.enemyTurret : TEX.enemyWalker);
     this.pattern = pattern;
     const conf = pattern === 'turret' ? ENEMY.turret : ENEMY.walker;
-    this.hp = conf.hp;
-    this.maxHp = conf.hp;
+    const effectiveHp = Math.ceil(conf.hp * tuning.enemyHpFactor);
+    this.hp = effectiveHp;
+    this.maxHp = effectiveHp;
     this.contactDamage = conf.contactDamage;
     this.effectiveMoveSpeed = ENEMY.walker.moveSpeed * tuning.walkerSpeedFactor;
     this.effectiveShootIntervalMs = ENEMY.turret.shootIntervalMs * tuning.turretIntervalFactor;
