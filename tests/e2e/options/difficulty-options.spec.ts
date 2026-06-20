@@ -34,10 +34,8 @@ test('タイトルの OPTIONS から hard mode を切り替えて保存できる
 
   const size = await gameSize(page);
   await clickGamePoint(page, 55 * size.uiScale, size.height - 24 * size.uiScale); // OPTIONS
-  await clickGamePoint(page, size.width / 2, size.height * 0.32); // 音量設定
 
-  const rowGap = Math.min(74 * size.uiScale, (size.height * 0.88 - size.height * 0.3) / 4);
-  const modeY = size.height * 0.3 + rowGap * 2.85;
+  const modeY = size.height * 0.32;
   await clickGamePoint(page, size.width / 2, modeY); // MODE: NORMAL -> HARD
 
   await expect.poll(() => savedDifficulty(page)).toBe('hard');
