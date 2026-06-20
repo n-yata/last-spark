@@ -1,4 +1,5 @@
 import type { BossPhase, BossAction } from '../types/boss';
+import type { DifficultyMode } from '../types/save';
 
 // ボス行動抽選(Phaser 非依存の純粋ロジック)。
 // 直前と同じアクションは重みを半減し、連続を抑制する。
@@ -51,6 +52,15 @@ const WARDEN_WEIGHTS: PhaseWeights = {
 const PURIFIER_WEIGHTS: PhaseWeights = {
   phase1: { move: 34, shoot: 20, spray: 25, bloom: 13, idle: 8 },
   phase2: { move: 32, shoot: 15, spray: 28, bloom: 16, idle: 12 },
+};
+
+/**
+ * hard mode 専用の浄化型重み。ボス本体の攻撃性は維持しつつ、汚染床(bloom)だけを減らす。
+ * 減らした重みは move/idle に回し、即ダメージにつながらない時間を増やす。
+ */
+const PURIFIER_HARD_WEIGHTS: PhaseWeights = {
+  phase1: { move: 38, shoot: 20, spray: 25, bloom: 7, idle: 10 },
+  phase2: { move: 36, shoot: 15, spray: 28, bloom: 9, idle: 15 },
 };
 
 /**
@@ -189,8 +199,10 @@ export function pickNextPurifierBossAction(
   phase: BossPhase,
   last: BossAction,
   rng: Rng = Math.random,
+  difficulty: DifficultyMode = 'normal',
 ): BossAction {
-  return pickWeightedAction(PURIFIER_WEIGHTS[phase], last, rng);
+  const weights = difficulty === 'hard' ? PURIFIER_HARD_WEIGHTS : PURIFIER_WEIGHTS;
+  return pickWeightedAction(weights[phase], last, rng);
 }
 
 /**

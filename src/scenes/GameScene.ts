@@ -33,6 +33,7 @@ import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
 import {
   playerDamageMultiplier,
+  pollutionDamageMultiplier,
   shouldShowStoryForDifficulty,
   shouldSpawnHardModeSecretBoss,
 } from '../systems/difficulty';
@@ -263,7 +264,10 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.hazards, (_player, obj) => {
       const hazard = obj as Hazard;
       if (hazard.tryHit(this.time.now)) {
-        this.combat.applyPlayerDamage(HAZARD.pollutionDamage);
+        this.combat.applyPlayerDamage(
+          HAZARD.pollutionDamage,
+          pollutionDamageMultiplier(this.difficulty),
+        );
       }
     });
   }
@@ -617,7 +621,12 @@ export class GameScene extends Phaser.Scene {
     } else if (this.stage.bossVariant === 'purifier') {
       // stage4: 環境管理機(浄化型・扇状の範囲攻撃 spray + 動的汚染床 bloom)。接地型。
       // 動的 Hazard の生成・登録・時限破棄は GameScene が担い、ボスへ生成関数を注入する(疎結合)。
-      const purifier = new PurifierBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      const purifier = new PurifierBoss(
+        this,
+        this.stage.bossSpawn.x,
+        this.stage.bossSpawn.y,
+        this.difficulty,
+      );
       purifier.setBloomContext({
         spawnPatch: (rect, lifespanMs) => this.spawnBloomPatch(rect, lifespanMs),
       });
