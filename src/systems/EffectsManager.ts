@@ -208,8 +208,8 @@ export class EffectsManager {
     this.scene.time.delayedCall(b.sparkLifespanMs + EFFECTS.explosion.cleanupMarginMs, () =>
       emitter.destroy(),
     );
-    // 4) 軽いカメラシェイク(発射の手応え)。
-    this.scene.cameras.main.shake(b.shake.durationMs, b.shake.intensity);
+    // カメラシェイクは出さない: 持続ビームは押している間ずっと発射状態のため、揺らすと画面が
+    // 暴れ続けて見づらい。手応えは閃光・収束リング・前方バーストの光演出で表現する。
   }
 
   /** 環境パーティクル(空気感)を開始する。color はステージのアクセント色(発光)。 */
