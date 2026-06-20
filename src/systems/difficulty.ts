@@ -64,6 +64,10 @@ export function playerDamageMultiplier(difficulty: DifficultyMode): number {
   return DIFFICULTY_TUNING[difficulty].playerDamageMultiplier;
 }
 
+export function shouldShowStoryForDifficulty(difficulty: DifficultyMode): boolean {
+  return difficulty === 'normal';
+}
+
 export function difficultyLabel(difficulty: DifficultyMode): string {
   return difficulty === 'hard' ? 'HARD' : 'NORMAL';
 }

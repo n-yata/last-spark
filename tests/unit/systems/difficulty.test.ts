@@ -4,6 +4,7 @@ import {
   applyDifficultyToStageTuning,
   difficultyLabel,
   playerDamageMultiplier,
+  shouldShowStoryForDifficulty,
   toggleDifficulty,
 } from '../../../src/systems/difficulty';
 import { NEUTRAL_STAGE_TUNING } from '../../../src/config/balance';
@@ -28,6 +29,11 @@ describe('difficulty tuning', () => {
     expect(difficultyLabel('hard')).toBe('HARD');
     expect(toggleDifficulty('normal')).toBe('hard');
     expect(toggleDifficulty('hard')).toBe('normal');
+  });
+
+  it('normal はストーリーを表示し、hard はストーリーを表示しない', () => {
+    expect(shouldShowStoryForDifficulty('normal')).toBe(true);
+    expect(shouldShowStoryForDifficulty('hard')).toBe(false);
   });
 
   it('normal は道中敵配置数を変えない', () => {
