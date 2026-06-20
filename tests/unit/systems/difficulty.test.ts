@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { applyDifficultyToStageTuning, difficultyLabel, playerDamageMultiplier, toggleDifficulty } from '../../../src/systems/difficulty';
+import {
+  applyDifficultyToEnemySpawns,
+  applyDifficultyToStageTuning,
+  difficultyLabel,
+  playerDamageMultiplier,
+  toggleDifficulty,
+} from '../../../src/systems/difficulty';
 import { NEUTRAL_STAGE_TUNING } from '../../../src/config/balance';
+import type { EnemySpawn } from '../../../src/config/stages';
 
 describe('difficulty tuning', () => {
   it('normal はステージ係数を変えない', () => {
@@ -21,5 +28,38 @@ describe('difficulty tuning', () => {
     expect(difficultyLabel('hard')).toBe('HARD');
     expect(toggleDifficulty('normal')).toBe('hard');
     expect(toggleDifficulty('hard')).toBe('normal');
+  });
+
+  it('normal は道中敵配置数を変えない', () => {
+    const spawns: EnemySpawn[] = [
+      { pattern: 'walker', x: 100, y: 420 },
+      { pattern: 'turret', x: 300, y: 464 },
+      { pattern: 'walker', x: 500, y: 420 },
+    ];
+
+    const normal = applyDifficultyToEnemySpawns(spawns, 'normal');
+
+    expect(normal).toEqual(spawns);
+  });
+
+  it('hard は道中敵配置を増やし、追加敵を元配置からずらす', () => {
+    const spawns: EnemySpawn[] = [
+      { pattern: 'walker', x: 100, y: 420 },
+      { pattern: 'turret', x: 300, y: 464 },
+      { pattern: 'walker', x: 500, y: 420 },
+      { pattern: 'turret', x: 700, y: 464 },
+    ];
+
+    const hard = applyDifficultyToEnemySpawns(spawns, 'hard');
+
+    expect(hard.length).toBeGreaterThan(spawns.length);
+    expect(hard.length).toBe(6);
+    expect(hard.slice(0, spawns.length)).toEqual(spawns);
+    const added = hard.slice(spawns.length);
+    expect(added).toHaveLength(2);
+    expect(added[0]).toMatchObject({ pattern: spawns[1].pattern, y: spawns[1].y });
+    expect(added[0].x).toBeGreaterThan(spawns[1].x);
+    expect(added[1]).toMatchObject({ pattern: spawns[3].pattern, y: spawns[3].y });
+    expect(added[1].x).toBeGreaterThan(spawns[3].x);
   });
 });

@@ -223,7 +223,7 @@ class CombatSystem {
 
 ```typescript
 class SpawnSystem {
-  loadStage(stageId: string, difficulty?: DifficultyMode): void; // 敵配置データと難易度係数の読み込み
+  loadStage(stageId: string, difficulty?: DifficultyMode): void; // 敵配置データ・敵数・難易度係数の読み込み
   update(cameraX: number): void;       // 進行に応じた出現制御
   onBossTrigger(cb: () => void): void; // ボス戦突入トリガ
 }
@@ -374,7 +374,7 @@ Boss(接地型・stage1 / 既定 BOSS)
 - **飛行型 `FlyingBoss`(stage2, stage5)**: 重力を切って空中の基準高度に滞空し(上下バブ)、`hover`(滞空)・`move`(高度を保った左右展開)・`shoot`(プレイヤーの高さへ水平発射)・`dive`(プレイヤーへ急降下し、その後高度復帰)で戦う。`dive` の最下点は地上プレイヤーのショット高さに重なるよう調整し、地上からの攻撃で撃破可能にする。飛行固有値(滞空高度・バブ・急降下)をコンストラクタで差し替え、stage2(既定 `FLYING_BOSS`)と stage5 の使者(高速型 `ENVOY`・`bossVariant='envoy'`)で同一ロジックを共有する。
 - **重装型 `WardenBoss`(stage3)**: 接地型(重力あり)のまま `CONTAINMENT_WARDEN` で生成し、接地移動・ジャンプ・通常射撃を再利用しつつ固有アクション `missile`(プレイヤー周辺へ放物線で降り注ぐアーティラリー)を足す。`beginNextAction` を上書きし、専用の重みテーブル(`bossAi` の `WARDEN_WEIGHTS`)で抽選する。水平に飛ぶ stage1 の通常弾とは軌道・脅威が異なり、移動による回避を強制する。
 - **浄化型 `PurifierBoss`(stage4)**: 接地型(重力あり)のまま `beginNextAction` のみ上書きし、浄化型専用の重みテーブル(`bossAi` の `PURIFIER_WEIGHTS`)で抽選する。`jump` を持たず、`spray`(プレイヤー方向の水平を中心に扇状へ複数弾を散布する範囲攻撃=毒霧スプレー)を主軸に `move`/`shoot` を織り交ぜる。`spray` の弾数・開き角・速度は `PurifierBossConfig.spray` でパラメータ化し、既存の弾プール/`Projectile` を流用する(発射後に鉛直速度を与えて扇形にする)。
-- **コア型 `CoreBoss`(stage6 ラスボス)**: `ECLIPSE_CORE` / `CoreBossConfig`。非人型の巨大コアで、重力を切って空中に静止し(移動なし)、人型リグの代わりに専用ビジュアル(八角形の装甲+発光する眼)を描く。`beginNextAction` を上書きして `CORE_WEIGHTS` で抽選し、phase1 は固有アクション `summon`(既存 Enemy/敵グループを流用して配下を動的生成。場の上限 `summonMaxActive` を超えない)で支援型、phase2 は `summon` を止めて `shoot` に集中する直接攻撃型へ切り替わる。
+- **コア型 `CoreBoss`(stage6 ラスボス)**: `ECLIPSE_CORE` / `CoreBossConfig`。非人型の巨大コアで、重力を切って空中に静止し(移動なし)、人型リグの代わりに専用ビジュアル(八角形の装甲+発光する眼)を描く。`beginNextAction` を上書きして `CORE_WEIGHTS` で抽選し、phase1 は固有アクション `summon`(既存 Enemy/敵グループを流用して配下を動的生成。場の上限 `summonMaxActive` を超えない)で支援型、phase2 は `shoot` を主軸にしつつ `summon` も継続して盤面圧を残す直接攻撃型へ切り替わる。ハードで過剰な圧にならないよう、弾ダメージ・弾速・phase2 の行動間隔・召喚密度は回避余地が残る範囲に調整する。
 
 系統別チューニングは `balance.ts` の `BOSS` / `FLYING_BOSS`(`FlyingBossConfig`)/ `CONTAINMENT_WARDEN`(`WardenBossConfig`)/ `PURIFIER`(`PurifierBossConfig`)/ `ECLIPSE_CORE`(`CoreBossConfig`)に分離する。
 
@@ -561,7 +561,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 タイトル画面とプレイ中(ポーズ)の双方から開く共通オーバーレイ(`PauseScene` + `src/ui/optionsMenu.ts`)。設定の実体は `GameSettings` で、`SaveManager` により永続化し `SoundManager.applySettings` で音量を即時反映する。
 
 - **音量**: BGM/SE を連続スライダーではなく 5 段階ボタン(`src/ui/volumeSteps.ts`)で調整し、ミュートを切替。量子化・上下限・往復一致を純関数化してテスト可能にし、タッチ/マウス/キーボードのいずれでも操作できる(Phaser に標準スライダーが無い問題の現実解)。
-- **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛ける。設定は保存され、新規開始・リトライ・次ステージから反映される。
+- **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛け、エリア探索中の道中雑魚配置数も増やす。設定は保存され、新規開始・リトライ・次ステージから反映される。
 - **ポーズ/再開**: プレイ中は `PauseButton` から開き、ゲームを一時停止する。停止は物理ステップ境界に逃がし、再開・破壊的遷移(リトライ/タイトル等)は必ずポーズ解除後に行う。
 - **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
 - **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。
