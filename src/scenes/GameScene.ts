@@ -37,6 +37,7 @@ import {
   shouldShowStoryForDifficulty,
   shouldSpawnHardModeSecretBoss,
 } from '../systems/difficulty';
+import { shouldEmpowerPlayer } from '../systems/empowerment';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -98,6 +99,8 @@ export class GameScene extends Phaser.Scene {
   private storyEnabled = true;
   /** create 時点の難易度。ステージ中のボス分岐・被ダメージ倍率を同じ値で揃える。 */
   private difficulty: DifficultyMode = 'normal';
+  /** create 時点のバスターモード。ON なら全ステージで RAY を強化する。 */
+  private busterMode = false;
   /** hard mode 裏ボス Shadow RAY が現在進行中か。 */
   private shadowRayActive = false;
   /** ECLIPSE 撃破後の裏ボスを同一ステージ内で二重起動しないためのフラグ。 */
@@ -146,6 +149,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(STORY.pending, []);
     this.stage = getStageData(this.stageId);
     this.difficulty = this.saveManager.getData().settings.difficulty;
+    this.busterMode = this.saveManager.getData().settings.busterMode;
     this.storyEnabled = shouldShowStoryForDifficulty(this.difficulty);
     this.story = this.storyEnabled ? getStageStory(this.stageId) : undefined;
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
@@ -446,7 +450,8 @@ export class GameScene extends Phaser.Scene {
     // RAY の攻撃強化は stage6(支配中枢)の静的属性。stage6 開始の覚醒演出(stage6-awakening)で
     // 物語上獲得する力を、ステージそのものの性質として付与する。createPlayer は毎回 stageId から
     // 再導出するため、リトライ(演出スキップ)や stage6 の単体選択でも確実に強化が乗る(演出の有無と独立)。
-    if (this.stageId === 'stage6') {
+    // さらにバスターモード ON 時は全ステージで強化する(難易度とは独立したトグル)。
+    if (shouldEmpowerPlayer(this.stageId, this.busterMode)) {
       this.player.setEmpowered(true);
     }
     // 地面は全面衝突、足場はワンウェイ(上から着地・下から通過、梯子中は貫通)。

@@ -6,7 +6,7 @@ import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
 /** 既定のユーザー設定。 */
 export function defaultSettings(): GameSettings {
-  return { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' };
+  return { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal', busterMode: false };
 }
 
 /** 既定のセーブデータ(未プレイ状態)。 */
@@ -34,18 +34,24 @@ function normalizeSettings(value: unknown): GameSettings | undefined {
   if (!isFiniteInRange(s.bgmVolume, 0, 1)) return undefined;
   if (!isFiniteInRange(s.seVolume, 0, 1)) return undefined;
   if (s.difficulty !== undefined && !isDifficultyMode(s.difficulty)) return undefined;
+  if (s.busterMode !== undefined && typeof s.busterMode !== 'boolean') return undefined;
   return {
     muted: s.muted,
     bgmVolume: s.bgmVolume,
     seVolume: s.seVolume,
     difficulty: s.difficulty ?? 'normal',
+    busterMode: s.busterMode ?? false,
   };
 }
 
 function isValidSettings(value: unknown): value is GameSettings {
   if (typeof value !== 'object' || value === null) return false;
   const s = value as Record<string, unknown>;
-  return normalizeSettings(value) !== undefined && isDifficultyMode(s.difficulty);
+  return (
+    normalizeSettings(value) !== undefined &&
+    isDifficultyMode(s.difficulty) &&
+    typeof s.busterMode === 'boolean'
+  );
 }
 
 /** clearedStages が「文字列の配列」かを検証する。 */
@@ -77,7 +83,8 @@ export function isValidSaveData(value: unknown): value is SaveData {
 
 /**
  * 旧形式を現行形式へ移行する。
- * - v2/v3 (clearedStages:string[] / bestTimeMs:Record): difficulty を normal 補完して移行する。
+ * - v2/v3/v4 (clearedStages:string[] / bestTimeMs:Record): difficulty・busterMode を補完して移行する。
+ *   (v2/v3 は difficulty なし→normal、v4 は busterMode なし→false を normalizeSettings が補完する)
  * - v1 (cleared:boolean / bestTimeMs:number): clearedStages を配列化して移行する。
  * 移行できない/不正な場合は undefined を返し、呼び出し側で既定値へフォールバックさせる。
  * 注記: かつての v3 は collectedLogs を持っていたが撤去済み。当時の v3 セーブに残る余分な
@@ -87,10 +94,15 @@ function migrate(value: unknown): SaveData | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const d = value as Record<string, unknown>;
 
-  // v2/v3 → 現行: 進捗を保持し、settings.difficulty を normal 補完して version を引き上げる。
-  // これを欠くと既存プレイヤーの v2/v3 セーブが既定値へ初期化され、クリア進捗が失われる。
+  // v2/v3/v4 → 現行: 進捗を保持し、settings の不足フィールド(difficulty/busterMode)を
+  // normalizeSettings で補完して version を引き上げる。
+  // これを欠くと既存プレイヤーの v2/v3/v4 セーブが既定値へ初期化され、クリア進捗が失われる。
   const migratedSettings = normalizeSettings(d.settings);
-  if ((d.version === 2 || d.version === 3) && isStringArray(d.clearedStages) && migratedSettings) {
+  if (
+    (d.version === 2 || d.version === 3 || d.version === 4) &&
+    isStringArray(d.clearedStages) &&
+    migratedSettings
+  ) {
     if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return undefined;
     return {
       version: SAVE_VERSION,

@@ -18,6 +18,7 @@ const settings = (over: Partial<GameSettings> = {}): GameSettings => ({
   bgmVolume: 0.6,
   seVolume: 0.8,
   difficulty: 'normal',
+  busterMode: false,
   ...over,
 });
 

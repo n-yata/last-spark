@@ -6,7 +6,13 @@ import {
 } from '../../../src/persistence/SaveManager';
 import { STORAGE_KEYS, SAVE_VERSION } from '../../../src/config/storageKeys';
 
-const DEFAULT_SETTINGS = { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' } as const;
+const DEFAULT_SETTINGS = {
+  muted: false,
+  bgmVolume: 0.6,
+  seVolume: 0.8,
+  difficulty: 'normal',
+  busterMode: false,
+} as const;
 
 describe('defaultSaveData', () => {
   it('未プレイ状態の既定値を返す(clearedStages=[], bestTimeMs 未設定)', () => {
@@ -298,5 +304,65 @@ describe('SaveManager', () => {
     mgr.updateSettings({ difficulty: 'hard' });
     const reloaded = new SaveManager();
     expect(reloaded.getData().settings.difficulty).toBe('hard');
+  });
+
+  // ---- v4 → v5 マイグレーション(busterMode 補完) ----
+
+  it('v4(difficulty あり/busterMode なし)を現行版へ移行し busterMode=false を補完する', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.save,
+      JSON.stringify({
+        version: 4,
+        clearedStages: ['stage1', 'stage2', 'stage3'],
+        bestTimeMs: { stage1: 11_111, stage3: 33_333 },
+        settings: { muted: true, bgmVolume: 0.4, seVolume: 0.7, difficulty: 'hard' },
+      }),
+    );
+    const mgr = new SaveManager();
+    const data = mgr.getData();
+    // バージョンが現行版へ上がっている
+    expect(data.version).toBe(SAVE_VERSION);
+    // クリア進捗・ベストタイムが失われていない
+    expect(data.clearedStages).toEqual(['stage1', 'stage2', 'stage3']);
+    expect(data.bestTimeMs).toEqual({ stage1: 11_111, stage3: 33_333 });
+    // 既存の設定(難易度・音量)は引き継がれる
+    expect(data.settings.difficulty).toBe('hard');
+    expect(data.settings.muted).toBe(true);
+    expect(data.settings.bgmVolume).toBe(0.4);
+    // busterMode は false で補完される
+    expect(data.settings.busterMode).toBe(false);
+  });
+
+  // ---- busterMode の保存・復元・検証 ----
+
+  it('busterMode: true を保存・復元できる', () => {
+    const mgr = new SaveManager();
+    mgr.updateSettings({ busterMode: true });
+    const reloaded = new SaveManager();
+    expect(reloaded.getData().settings.busterMode).toBe(true);
+    // 他の設定は維持される
+    expect(reloaded.getData().settings.difficulty).toBe('normal');
+  });
+
+  it('busterMode が boolean 以外のセーブは既定値へフォールバックする', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.save,
+      JSON.stringify({
+        version: SAVE_VERSION,
+        clearedStages: ['stage1'],
+        settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal', busterMode: 'yes' },
+      }),
+    );
+    const mgr = new SaveManager();
+    expect(mgr.getData()).toEqual(defaultSaveData());
+  });
+
+  it('現行版で busterMode フィールドを欠くセーブは妥当でない(isValidSaveData)', () => {
+    const withoutBuster = {
+      version: SAVE_VERSION,
+      clearedStages: [],
+      settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' },
+    };
+    expect(isValidSaveData(withoutBuster)).toBe(false);
   });
 });
