@@ -82,6 +82,7 @@ last-spark/
   - `WardenBoss.ts`: 収容番人・重装ミサイル型(stage3)
   - `PurifierBoss.ts`: 浄化型・扇状の範囲攻撃(stage4)
   - `CoreBoss.ts`: ECLIPSE 本体・非人型コア(stage6 ラスボス)
+  - `ShadowRayBoss.ts`: hard mode 専用の裏ボス(stage6・ECLIPSE 撃破直後・RAY 同サイズ)
 
 **命名規則**: PascalCase(エンティティ名)。
 
@@ -104,7 +105,7 @@ State を持つ System クラス:
 
 純粋ロジック関数群(camelCase。Phaser/Web Audio 非依存・テスト可能):
 - `bossAi.ts`: ボス行動抽選(`pickNext*BossAction` 等。系統別の重みテーブル)
-- `difficulty.ts`: 難易度設定(`normal`/`hard`)からステージ係数・被ダメージ倍率・ストーリー表示可否・表示ラベルを解決する純粋関数
+- `difficulty.ts`: 難易度設定(`normal`/`hard`)からステージ係数・被ダメージ倍率・ストーリー表示可否・裏ボス出現可否・表示ラベルを解決する純粋関数
 - `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュール・探索 BGM 選択
 - `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(ui からも参照可)
 - `shot.ts` / `shotControl.ts`: ショット仕様の生成と、タップ/チャージ/連射の状態機械(`stepShot`)
@@ -143,7 +144,7 @@ State を持つ System クラス:
 **役割**: チューニング値・ゲーム定数・Phaser 設定を集約(マジックナンバーの一元管理)。
 
 **配置ファイル**(主要。バランス・演出・ステージ・ストーリー等のデータを集約する):
-- `balance.ts`: プレイヤー/ショット/各系統ボスのパラメータ(`PLAYER`, `SHOT`, `BOSS`, `FLYING_BOSS`, `CONTAINMENT_WARDEN`, `PURIFIER`, `ENVOY`, `ECLIPSE_CORE` 等)
+- `balance.ts`: プレイヤー/ショット/各系統ボスのパラメータ(`PLAYER`, `SHOT`, `BOSS`, `FLYING_BOSS`, `CONTAINMENT_WARDEN`, `PURIFIER`, `ENVOY`, `ECLIPSE_CORE`, `SHADOW_RAY` 等)
 - `effects.ts`: 演出のチューニング値(爆発・シェイク・ヒットストップ・フェード・HUD・タッチ押下フィードバック)
 - `audio.ts`: サウンド定義(`SE` 13種の合成仕様 + `BGM` 5トラック `title`/`stage`/`stageWarm`/`boss`/`ending` のノート列。Phaser/Web Audio 非依存のデータ)
 - `gameConfig.ts`: `Phaser.Types.Core.GameConfig`(解像度/スケール/物理設定)

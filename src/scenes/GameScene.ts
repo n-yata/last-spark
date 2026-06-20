@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS, FLYING_BOSS, HAZARD } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, HAZARD, SHADOW_RAY } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stages';
@@ -16,6 +16,7 @@ import { EnvoyBoss } from '../entities/EnvoyBoss';
 import { WardenBoss } from '../entities/WardenBoss';
 import { PurifierBoss } from '../entities/PurifierBoss';
 import { CoreBoss } from '../entities/CoreBoss';
+import { ShadowRayBoss } from '../entities/ShadowRayBoss';
 import { Projectile } from '../entities/Projectile';
 import { Hazard } from '../entities/Hazard';
 import { InputController } from '../systems/InputController';
@@ -30,11 +31,16 @@ import { shouldResumeGame } from '../systems/orientationGuard';
 import { getSound } from '../systems/SoundManager';
 import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
-import { playerDamageMultiplier, shouldShowStoryForDifficulty } from '../systems/difficulty';
+import {
+  playerDamageMultiplier,
+  shouldShowStoryForDifficulty,
+  shouldSpawnHardModeSecretBoss,
+} from '../systems/difficulty';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
 import type { StageStory, StoryEvent, TextRequest } from '../types/story';
+import type { DifficultyMode } from '../types/save';
 
 // ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括する。
 
@@ -42,6 +48,7 @@ const DEFAULT_STAGE_ID = 'stage1';
 const PROJECTILE_POOL = 32;
 /** エンディング後の最終クリア画面で、余韻を残すため入力受付までに置く待機時間(ms)。 */
 const ENDING_CLEAR_INPUT_DELAY_MS = 2000;
+const HARD_SECRET_BOSS_NAME = 'シャドウレイ';
 
 /** GameScene 起動データ。stageId 未指定なら stage1 から開始する。 */
 export interface GameSceneData {
@@ -88,6 +95,12 @@ export class GameScene extends Phaser.Scene {
   private story?: StageStory;
   /** 現在の難易度で物語演出を表示するか。hard はゲームプレイ集中モードとして非表示。 */
   private storyEnabled = true;
+  /** create 時点の難易度。ステージ中のボス分岐・被ダメージ倍率を同じ値で揃える。 */
+  private difficulty: DifficultyMode = 'normal';
+  /** hard mode 裏ボス Shadow RAY が現在進行中か。 */
+  private shadowRayActive = false;
+  /** ECLIPSE 撃破後の裏ボスを同一ステージ内で二重起動しないためのフラグ。 */
+  private shadowRaySpawned = false;
   /** ダメージ床(汚染溜まり等。stage4 のみ)。 */
   private hazards!: Phaser.Physics.Arcade.Group;
   /** 内心トリガの一度きり発火フラグ。 */
@@ -125,11 +138,14 @@ export class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.firstEnemyInnerDone = false;
     this.inPostBoss = false;
+    this.shadowRayActive = false;
+    this.shadowRaySpawned = false;
     this.cageBars = undefined;
     // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
     this.registry.set(STORY.pending, []);
     this.stage = getStageData(this.stageId);
-    this.storyEnabled = shouldShowStoryForDifficulty(this.saveManager.getData().settings.difficulty);
+    this.difficulty = this.saveManager.getData().settings.difficulty;
+    this.storyEnabled = shouldShowStoryForDifficulty(this.difficulty);
     this.story = this.storyEnabled ? getStageStory(this.stageId) : undefined;
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 
@@ -442,7 +458,6 @@ export class GameScene extends Phaser.Scene {
     this.inputController.attachTouchZones();
 
     this.effects = new EffectsManager(this);
-    const difficulty = this.saveManager.getData().settings.difficulty;
     this.combat = new CombatSystem(
       this,
       {
@@ -470,7 +485,7 @@ export class GameScene extends Phaser.Scene {
         onBossDefeated: (boss) => this.handleClear(boss),
         onPlayerDeath: () => this.handleGameOver(),
       },
-      { playerDamageMultiplier: playerDamageMultiplier(difficulty) },
+      { playerDamageMultiplier: playerDamageMultiplier(this.difficulty) },
     );
     this.combat.registerColliders({
       player: this.player,
@@ -489,7 +504,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off('player-fired', onPlayerFired));
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
-    this.spawn.loadStage(this.stageId, difficulty);
+    this.spawn.loadStage(this.stageId, this.difficulty);
     this.spawn.onBossTrigger(() => {
       // ボスを出現させ、(stage3 のみ)ケージの人影を見た内心 → ECLIPSE の語りかけ、の順に重ねる。
       // terraFound 内心はその本文を持つステージ(stage3)でのみ表示され、他ステージでは空になる。
@@ -635,6 +650,35 @@ export class GameScene extends Phaser.Scene {
     getSound().playBgm('boss');
   }
 
+  private spawnHardSecretBoss(): void {
+    if (this.boss || this.shadowRayActive) return;
+    this.shadowRayActive = true;
+    this.clearActiveEnemyPressure();
+
+    const spawnX = this.stage.bossSpawn.x;
+    const spawnY = STAGE.groundY - SHADOW_RAY.height / 2;
+    const shadow = new ShadowRayBoss(this, spawnX, spawnY);
+    this.boss = shadow;
+    shadow.setProjectiles(this.enemyShots);
+    shadow.setArenaBounds(this.cameras.main.scrollX, this.stage.width);
+    this.physics.add.collider(shadow, this.groundGroup);
+    this.combat.registerBoss(shadow);
+
+    this.registry.set(HUD.bossActive, true);
+    this.registry.set(HUD.bossName, HARD_SECRET_BOSS_NAME);
+    this.registry.set(HUD.bossMaxHp, shadow.maxHp);
+    this.registry.set(HUD.bossHp, shadow.hp);
+    getSound().playBgm('boss');
+  }
+
+  private clearActiveEnemyPressure(): void {
+    this.enemies.clear(true, true);
+    this.enemyShots.children.each((child) => {
+      if (child instanceof Projectile) child.deactivate();
+      return true;
+    });
+  }
+
   private addArenaWall(x: number): void {
     const wall = this.add.rectangle(x, STAGE.height / 2, 10, STAGE.height, 0x37f7d8, 0.12);
     this.physics.add.existing(wall, true);
@@ -727,6 +771,21 @@ export class GameScene extends Phaser.Scene {
     getSound().playSe('bossDefeated');
     this.registry.set(HUD.bossHp, 0);
 
+    if (this.shouldStartHardSecretBoss(boss)) {
+      this.shadowRaySpawned = true;
+      this.boss = undefined;
+      this.registry.set(HUD.bossActive, false);
+      this.effects.bossDeathSequence(boss.x, boss.y, () => {
+        boss.destroy();
+        this.spawnHardSecretBoss();
+      });
+      return;
+    }
+
+    if (boss instanceof ShadowRayBoss) {
+      this.shadowRayActive = false;
+    }
+
     // ボス後演出を持つステージ(現状 stage3 のケージ救出のみ): 即クリアせず、撃破演出後に救出フェーズへ。
     if (this.storyEnabled && this.stage.postBossCutsceneKey) {
       this.inPostBoss = true;
@@ -741,6 +800,14 @@ export class GameScene extends Phaser.Scene {
     // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に静止させる。
     this.ended = true;
     this.effects.bossDeathSequence(boss.x, boss.y, () => this.finishStageClear(clearTimeMs));
+  }
+
+  private shouldStartHardSecretBoss(boss: Boss): boolean {
+    return (
+      boss instanceof CoreBoss &&
+      !this.shadowRaySpawned &&
+      shouldSpawnHardModeSecretBoss(this.difficulty, this.stageId)
+    );
   }
 
   /**
