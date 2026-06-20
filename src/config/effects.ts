@@ -84,8 +84,37 @@ export const EFFECTS = {
     sparkLifespanMs: 300,
     /** 前方バーストの広がり(基準角からの ±度)。 */
     sparkSpreadDeg: 30,
-    /** 発射の手応えシェイク(吸収より強く、被弾より控えめ)。 */
-    shake: { durationMs: 110, intensity: 0.007 },
+    // カメラシェイクは持たない: 持続ビームは押下中ずっと発射状態のため、揺らすと画面が暴れ続ける。
+  },
+
+  /**
+   * 強化ビーム「帯本体」の多層描画(Beam.ts)。単色矩形1枚の「ただの線」を、
+   * 外周グロー + 本体 + 明るいコア + 脈動の発光体にして最上位アクションの迫力を出す。
+   * 当たり判定(本体矩形の Arcade body)サイズ・座標は不変で、見た目だけを足す。
+   */
+  beam: {
+    /** 本体・グローの色(Beam 本体 BEAM_COLOR と揃える)。 */
+    color: 0x9ffff0,
+    /** 内側コアの色(白熱した中心)。 */
+    coreColor: 0xffffff,
+    /** 外周グローの太さ倍率(本体太さ basis)。本体より太く、淡く滲ませる。 */
+    glowThicknessMul: 2.4,
+    /** 内側コアの太さ倍率。本体より細く、強い中心線にする。 */
+    coreThicknessMul: 0.4,
+    /** 各レイヤーのピークアルファ(フェードの to 値)。 */
+    bodyAlpha: 0.85,
+    glowAlpha: 0.35,
+    coreAlpha: 1.0,
+    /** フェードイン/アウトの片道尺(ms)。本体の発光立ち上がり/収束と揃える。 */
+    fadeMs: 90,
+    /** コアの太さ脈動(scaleY を min↔max で yoyo ループ)。素早い明滅でエネルギー感を出す。 */
+    corePulseMs: 130,
+    corePulseMin: 0.7,
+    corePulseMax: 1.35,
+    /** グローのゆっくりした呼吸(scaleY を min↔max で yoyo)。淡い外周がうねる。 */
+    glowPulseMs: 420,
+    glowPulseScaleMin: 1.0,
+    glowPulseScaleMax: 1.18,
   },
 
   /** 環境パーティクル(空気感): カメラ可視域に漂う塵/火の粉。ステージのアクセント色で発光。 */

@@ -8,7 +8,7 @@ import {
   resolveBossShieldHit,
   resolvePlayerDamage,
 } from '../../../src/systems/combatRules';
-import { BOSS, BOSS_SHIELD } from '../../../src/config/balance';
+import { BOSS, BOSS_SHIELD, SHOT } from '../../../src/config/balance';
 
 describe('isInvincible', () => {
   it('現在時刻が無敵終了時刻より前なら無敵', () => {
@@ -137,5 +137,37 @@ describe('resolveBossShieldHit', () => {
     expect(result.nextShieldHp).toBe(0);
     expect(result.shieldDamage).toBe(0);
     expect(result.hpDamage).toBe(3);
+  });
+
+  it('強化ビームのシールドダメージはチャージ弾と同等(バリア貫通力で劣らない)', () => {
+    const beam = resolveBossShieldHit({
+      shieldHp: BOSS_SHIELD.maxHp,
+      hpDamage: SHOT.beamDamage,
+      hitKind: 'beam',
+    });
+    expect(beam.shieldDamage).toBe(BOSS_SHIELD.beamDamage);
+    expect(beam.shieldDamage).toBeGreaterThanOrEqual(BOSS_SHIELD.chargedDamage);
+  });
+
+  it('強化ビーム1発射(最大3tick)でバリアを割り切れる(チャージ以下の手間)', () => {
+    // ビームは beamLifespanMs(800) / beamTickMs(300) → t=0/300/600 の最大3ヒット。
+    const maxTicksPerCast = Math.floor(SHOT.beamLifespanMs / SHOT.beamTickMs) + 1;
+    let shieldHp: number = BOSS_SHIELD.maxHp;
+    let ticks = 0;
+    let broke = false;
+    for (let i = 0; i < maxTicksPerCast; i += 1) {
+      const r = resolveBossShieldHit({ shieldHp, hpDamage: SHOT.beamDamage, hitKind: 'beam' });
+      shieldHp = r.nextShieldHp;
+      ticks += 1;
+      if (r.brokeShield) {
+        broke = true;
+        break;
+      }
+    }
+    expect(broke).toBe(true);
+    expect(ticks).toBeLessThanOrEqual(maxTicksPerCast);
+    // チャージ弾でバリアを割るのに要する発射数(ceil(maxHp/chargedDamage))。ビームは1発射で割れる。
+    const chargedShotsToBreak = Math.ceil(BOSS_SHIELD.maxHp / BOSS_SHIELD.chargedDamage);
+    expect(chargedShotsToBreak).toBeGreaterThanOrEqual(1);
   });
 });

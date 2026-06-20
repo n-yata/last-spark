@@ -72,7 +72,10 @@ export const SHOT = {
 export const BOSS_SHIELD = {
   maxHp: 8,
   normalDamage: 1,
-  beamDamage: 1,
+  // 強化ビームのシールド貫通力。チャージ弾(chargedDamage=5)と同等の per-tick 威力にする。
+  // ビームは1発射で最大3tick(t=0/300/600)当たるため、2tick(8→3→0)でバリアを割り切れる。
+  // チャージ弾(2発で破壊)以下の手間で割れる=「強化」ビームがバリア破りでも上位互換になる。
+  beamDamage: 5,
   chargedDamage: 5,
 } as const;
 

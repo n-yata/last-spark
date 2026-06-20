@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER, SHOT } from '../config/balance';
+import { EFFECTS } from '../config/effects';
 import type { Damageable } from '../types/combat';
 import { shouldHazardTick } from '../systems/hazardRules';
 import { getSound } from '../systems/SoundManager';
@@ -34,8 +35,11 @@ export class Beam extends Phaser.GameObjects.Rectangle {
   private expiresAt = 0;
   /** 追従元(マズル位置・向きの参照)。 */
   private owner?: BeamOwner;
-  /** フェード tween(破棄時に確実に止める)。 */
-  private fadeTween?: Phaser.Tweens.Tween;
+  /** フェード/脈動 tween(破棄時に確実に止める)。 */
+  private readonly tweens: Phaser.Tweens.Tween[] = [];
+  /** 装飾レイヤー(物理を持たない見た目専用)。外周グローと白熱コア。 */
+  private glow?: Phaser.GameObjects.Rectangle;
+  private core?: Phaser.GameObjects.Rectangle;
   /** UPDATE 購読のバインド済みハンドラ(解除に同一参照が要る)。 */
   private readonly boundUpdate: () => void;
 
@@ -46,7 +50,27 @@ export class Beam extends Phaser.GameObjects.Rectangle {
     this.configureBody();
     this.setBlendMode(Phaser.BlendModes.ADD); // 発光アクセント(暗い廃墟基調に光を切る)。
     this.setDepth(15); // プレイヤー(10)より手前、ヒットエフェクト(20)より奥。
+    this.createLayers();
     this.boundUpdate = () => this.onUpdate();
+  }
+
+  /**
+   * 見た目を厚くする装飾レイヤーを生成する(当たり判定は本体矩形のまま不変)。
+   * グロー=本体より太く淡い外周(奥)、コア=本体より細く白熱した中心(手前)。
+   * いずれも物理を持たない add.rectangle で、reposition で本体へ追従させる。
+   */
+  private createLayers(): void {
+    const v = EFFECTS.beam;
+    this.glow = this.scene.add
+      .rectangle(0, 0, SHOT.beamLength, SHOT.beamThickness * v.glowThicknessMul, v.color, 1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(14)
+      .setAlpha(0);
+    this.core = this.scene.add
+      .rectangle(0, 0, SHOT.beamLength, SHOT.beamThickness * v.coreThicknessMul, v.coreColor, 1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(16)
+      .setAlpha(0);
   }
 
   /**
@@ -63,20 +87,55 @@ export class Beam extends Phaser.GameObjects.Rectangle {
 
   /** プレイヤーのマズルから発射する。owner を保持し、以後マズルへ追従する。 */
   fire(owner: BeamOwner): void {
+    const v = EFFECTS.beam;
     this.owner = owner;
     this.expiresAt = this.scene.time.now + SHOT.beamLifespanMs;
     this.lastHitAt.clear();
     this.reposition();
-    // フェードイン(90ms) → 保持 → フェードアウト(90ms)。寿命と尺を一致させる。
+    // フェードイン(fadeMs) → 保持 → フェードアウト(fadeMs)。寿命と尺を一致させる。
+    // 各レイヤーは alpha をフェードに専念させ、脈動は scaleY で出す(同一プロパティの tween 競合回避)。
+    const hold = Math.max(0, SHOT.beamLifespanMs - v.fadeMs * 2);
+    const fade = (
+      target: Phaser.GameObjects.GameObject,
+      peak: number,
+    ): Phaser.Tweens.Tween =>
+      this.scene.tweens.add({
+        targets: target,
+        alpha: { from: 0, to: peak },
+        duration: v.fadeMs,
+        yoyo: true,
+        hold,
+        ease: 'Sine.Out',
+      });
     this.setAlpha(0);
-    this.fadeTween = this.scene.tweens.add({
-      targets: this,
-      alpha: { from: 0, to: 0.9 },
-      duration: 90,
-      yoyo: true,
-      hold: Math.max(0, SHOT.beamLifespanMs - 180),
-      ease: 'Sine.Out',
-    });
+    this.tweens.push(fade(this, v.bodyAlpha));
+    if (this.glow) this.tweens.push(fade(this.glow, v.glowAlpha));
+    if (this.core) this.tweens.push(fade(this.core, v.coreAlpha));
+    // コア=素早い太さ脈動(エネルギーのちらつき)、グロー=ゆっくりした呼吸。
+    if (this.core) {
+      this.tweens.push(
+        this.scene.tweens.add({
+          targets: this.core,
+          scaleY: { from: v.corePulseMin, to: v.corePulseMax },
+          duration: v.corePulseMs,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.InOut',
+        }),
+      );
+    }
+    if (this.glow) {
+      this.tweens.push(
+        this.scene.tweens.add({
+          targets: this.glow,
+          scaleY: { from: v.glowPulseScaleMin, to: v.glowPulseScaleMax },
+          duration: v.glowPulseMs,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.InOut',
+        }),
+      );
+    }
     this.scene.events.on(Phaser.Scenes.Events.UPDATE, this.boundUpdate);
     // 射出中ずっと鳴る持続音を開始(destroy で停止)。通常チャージの単発SEとは別系統で「強さ」を表す。
     getSound().startBeam();
@@ -110,15 +169,23 @@ export class Beam extends Phaser.GameObjects.Rectangle {
     const muzzleX = this.owner.x + dir * (PLAYER.width / 2 + 6);
     // 帯の中心 = マズルから前方へ beamLength/2。Arcade dynamic body は GameObject の transform に
     // 追従するため、setPosition で当たり判定もマズルへ移動する。
-    this.setPosition(muzzleX + dir * (SHOT.beamLength / 2), this.owner.y);
+    const cx = muzzleX + dir * (SHOT.beamLength / 2);
+    this.setPosition(cx, this.owner.y);
+    // 装飾レイヤー(物理なし)を本体と同じ中心へ追従させる。
+    this.glow?.setPosition(cx, this.owner.y);
+    this.core?.setPosition(cx, this.owner.y);
   }
 
-  /** 破棄時に UPDATE 購読・tween・参照・持続ビーム音を確実に解放する(リーク防止)。 */
+  /** 破棄時に UPDATE 購読・tween・装飾レイヤー・参照・持続ビーム音を確実に解放する(リーク防止)。 */
   override destroy(fromScene?: boolean): void {
     getSound().stopBeam(); // 射出終了で持続音を停止(早期破棄=シーン終了/被弾リスタートにも追従)。
     this.scene?.events.off(Phaser.Scenes.Events.UPDATE, this.boundUpdate);
-    this.fadeTween?.remove();
-    this.fadeTween = undefined;
+    for (const t of this.tweens) t.remove();
+    this.tweens.length = 0;
+    this.glow?.destroy();
+    this.glow = undefined;
+    this.core?.destroy();
+    this.core = undefined;
     this.owner = undefined;
     this.lastHitAt.clear();
     super.destroy(fromScene);
