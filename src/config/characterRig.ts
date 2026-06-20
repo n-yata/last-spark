@@ -6,7 +6,16 @@
 // 寸法は balance.ts の width/height から比率で導出している(はみ出しすぎない範囲)。
 
 import { PART } from './assetKeys';
-import { PLAYER, ENEMY, BOSS, FLYING_BOSS, CONTAINMENT_WARDEN, ENVOY, PURIFIER } from './balance';
+import {
+  PLAYER,
+  ENEMY,
+  BOSS,
+  FLYING_BOSS,
+  CONTAINMENT_WARDEN,
+  ENVOY,
+  PURIFIER,
+  SHADOW_RAY,
+} from './balance';
 
 /** パーツの描画形状。PreloadScene がこの種別に応じて Graphics で描き分ける。 */
 export type PartShape =
@@ -70,7 +79,8 @@ export interface RigSpec {
     | 'bossFlying'
     | 'bossWarden'
     | 'bossEnvoy'
-    | 'bossPurifier';
+    | 'bossPurifier'
+    | 'bossShadowRay';
   /** 歩行スイングの基準振幅(rad)。系統ごとの脚の振り幅。 */
   swingRad: number;
   /** 歩行周期(ms)。小さいほど速く脚を動かす。 */
@@ -99,6 +109,8 @@ const PALETTE = {
   bossEnvoy: { metal: 0x0a1420, base: 0x16304a, light: 0x3a6a9a, accent: 0x8ad8ff, accent2: 0xff5a8a },
   // 環境管理機(PURIFIER): 浄化を装う白緑 × 漏出する毒の黄緑(汚染弾/Hazard 0xaef03a と地続き)。
   bossPurifier: { metal: 0x1a2410, base: 0x2e4a1c, light: 0x6e8a3a, accent: 0xaef03a, accent2: 0xd8f0a0 },
+  // Shadow RAY: RAY と同じ形だが、赤紫の反転パレットで「影のレイ」と分かるようにする。
+  bossShadowRay: { metal: 0x160917, base: 0x32152f, light: 0x5a234d, accent: 0xff4f9a, accent2: 0x7d5cff },
 } as const;
 
 // プレイヤー(28x40): ヘルメット頭 + 胴 + 片腕アームキャノン + 二脚。
@@ -234,6 +246,23 @@ const bossPurifierRig: RigSpec = {
   ],
 };
 
+// Shadow RAY(28x40): RAY と同じサイズ・同じ人型構成。パーツキーとパレットだけを分け、
+// プレイヤー本人とは別存在として描画・テストできるようにする。
+const SR = PALETTE.bossShadowRay;
+const bossShadowRayRig: RigSpec = {
+  family: 'bossShadowRay',
+  swingRad: playerRig.swingRad,
+  walkCycleMs: playerRig.walkCycleMs,
+  parts: [
+    { key: PART.bossShadowRay.legBack, shape: 'leg', w: 8, h: 16, fill: SR.metal, accent: SR.accent, x: -3, y: 7, originX: 0.5, originY: 0, role: 'legBack' },
+    { key: PART.bossShadowRay.armBack, shape: 'roundedBox', w: 7, h: 15, fill: SR.metal, accent: SR.accent, x: -8, y: -5, originX: 0.5, originY: 0.12, role: 'armBack' },
+    { key: PART.bossShadowRay.torso, shape: 'roundedBox', w: 18, h: 18, fill: SR.base, accent: SR.accent, accent2: SR.accent2, x: 0, y: 0, originX: 0.5, originY: 0.5, role: 'torso' },
+    { key: PART.bossShadowRay.legFront, shape: 'leg', w: 8, h: 16, fill: SR.metal, accent: SR.accent, x: 4, y: 7, originX: 0.5, originY: 0, role: 'legFront' },
+    { key: PART.bossShadowRay.head, shape: 'helmet', w: 18, h: 15, fill: SR.light, accent: SR.accent, accent2: SR.accent2, x: 1, y: -15, originX: 0.5, originY: 0.5, role: 'head' },
+    { key: PART.bossShadowRay.armFront, shape: 'cannon', w: 16, h: 10, fill: SR.base, accent: SR.accent2, x: 7, y: -3, originX: 0.2, originY: 0.5, role: 'armFront' },
+  ],
+};
+
 /** 系統名 → リグ仕様。CharacterRig / PreloadScene が参照する。 */
 export const RIGS = {
   player: playerRig,
@@ -244,6 +273,7 @@ export const RIGS = {
   bossWarden: bossWardenRig,
   bossEnvoy: bossEnvoyRig,
   bossPurifier: bossPurifierRig,
+  bossShadowRay: bossShadowRayRig,
 } as const;
 
 export type RigFamily = keyof typeof RIGS;
@@ -263,4 +293,5 @@ export const RIG_BODY_SIZE = {
   bossWarden: { width: CONTAINMENT_WARDEN.width, height: CONTAINMENT_WARDEN.height },
   bossEnvoy: { width: ENVOY.width, height: ENVOY.height },
   bossPurifier: { width: PURIFIER.width, height: PURIFIER.height },
+  bossShadowRay: { width: SHADOW_RAY.width, height: SHADOW_RAY.height },
 } as const;

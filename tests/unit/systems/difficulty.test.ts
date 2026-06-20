@@ -4,6 +4,7 @@ import {
   applyDifficultyToStageTuning,
   difficultyLabel,
   playerDamageMultiplier,
+  shouldSpawnHardModeSecretBoss,
   shouldShowStoryForDifficulty,
   toggleDifficulty,
 } from '../../../src/systems/difficulty';
@@ -34,6 +35,12 @@ describe('difficulty tuning', () => {
   it('normal はストーリーを表示し、hard はストーリーを表示しない', () => {
     expect(shouldShowStoryForDifficulty('normal')).toBe(true);
     expect(shouldShowStoryForDifficulty('hard')).toBe(false);
+  });
+
+  it('裏ボスは hard の stage6 だけで出現する', () => {
+    expect(shouldSpawnHardModeSecretBoss('hard', 'stage6')).toBe(true);
+    expect(shouldSpawnHardModeSecretBoss('normal', 'stage6')).toBe(false);
+    expect(shouldSpawnHardModeSecretBoss('hard', 'stage5')).toBe(false);
   });
 
   it('normal は道中敵配置数を変えない', () => {

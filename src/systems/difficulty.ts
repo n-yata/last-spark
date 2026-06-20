@@ -68,6 +68,10 @@ export function shouldShowStoryForDifficulty(difficulty: DifficultyMode): boolea
   return difficulty === 'normal';
 }
 
+export function shouldSpawnHardModeSecretBoss(difficulty: DifficultyMode, stageId: string): boolean {
+  return difficulty === 'hard' && stageId === 'stage6';
+}
+
 export function difficultyLabel(difficulty: DifficultyMode): string {
   return difficulty === 'hard' ? 'HARD' : 'NORMAL';
 }

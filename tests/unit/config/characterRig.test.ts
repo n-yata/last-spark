@@ -73,4 +73,14 @@ describe('characterRig(リグ構成)', () => {
     const bossKeys = new Set(RIGS.boss.parts.map((p) => p.key));
     expect(pu.parts.every((p) => !bossKeys.has(p.key))).toBe(true);
   });
+
+  it('Shadow RAY はプレイヤーと同じ人型構成だが、パーツキーは共有しない', () => {
+    const shadow = RIGS.bossShadowRay;
+    expect(shadow.swingRad).toBe(RIGS.player.swingRad);
+    expect(shadow.walkCycleMs).toBe(RIGS.player.walkCycleMs);
+    expect(shadow.parts.map((p) => p.shape)).toEqual(RIGS.player.parts.map((p) => p.shape));
+    expect(shadow.parts.map((p) => p.role)).toEqual(RIGS.player.parts.map((p) => p.role));
+    const playerKeys = new Set(RIGS.player.parts.map((p) => p.key));
+    expect(shadow.parts.every((p) => !playerKeys.has(p.key))).toBe(true);
+  });
 });

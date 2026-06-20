@@ -473,6 +473,31 @@ export const ECLIPSE_CORE = {
 } as const satisfies CoreBossConfig;
 
 /**
+ * hard mode 専用・ECLIPSE 撃破後に現れる裏ボス。RAY と同じ寸法の影のような人型。
+ * 小さい当たり判定のぶん HP は抑え、速度と短い行動間隔で「もう一戦」の手応えを作る。
+ */
+export const SHADOW_RAY = {
+  maxHp: 20,
+  phase2HpRatio: 0.5,
+  contactDamage: 2,
+  bulletDamage: 1,
+  bulletSpeed: 360,
+  moveSpeed: 135,
+  jumpVelocity: PLAYER.jumpVelocity,
+  staggerDamageThreshold: 6,
+  width: PLAYER.width,
+  height: PLAYER.height,
+  actionDurationMs: {
+    idle: 350,
+    move: 520,
+    shoot: 420,
+    jump: 650,
+    stagger: 520,
+  },
+  phase2SpeedFactor: 0.62,
+} as const satisfies BossConfig;
+
+/**
  * ステージ別の雑魚敵難易度係数。後半ステージほど敵を強め、難易度カーブを作る。
  * 値は ENEMY の基準値に乗算され、ロジック側へのマジックナンバー埋め込みを避ける。
  */

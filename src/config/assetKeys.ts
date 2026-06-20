@@ -132,4 +132,13 @@ export const PART = {
     legBack: 'part-bosspurifier-legback',
     legFront: 'part-bosspurifier-legfront',
   },
+  // hard mode 裏ボス Shadow RAY: RAY と同じ人型構造だが、別キーで生成してプレイヤーリグと分離する。
+  bossShadowRay: {
+    head: 'part-bossshadowray-head',
+    torso: 'part-bossshadowray-torso',
+    armBack: 'part-bossshadowray-armback',
+    armFront: 'part-bossshadowray-cannon',
+    legBack: 'part-bossshadowray-legback',
+    legFront: 'part-bossshadowray-legfront',
+  },
 } as const;
