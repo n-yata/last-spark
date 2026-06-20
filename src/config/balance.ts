@@ -492,6 +492,16 @@ export const NEUTRAL_STAGE_TUNING: StageTuning = {
   turretIntervalFactor: 1,
 } as const;
 
+/**
+ * ECLIPSE 本体が召喚する配下専用の難易度係数。
+ * ハードでもボス同伴の雑魚は normal 相当にし、ボス本体の回避と雑魚処理が破綻しないようにする。
+ * 道中の hard 雑魚強化は SpawnSystem 側の通常チューニングで維持する。
+ */
+export const ECLIPSE_SUMMON_MINION_TUNING: StageTuning = NEUTRAL_STAGE_TUNING;
+
+/** ECLIPSE 召喚雑魚から受けるダメージは hard 被ダメージ倍率を掛けず normal 相当にする。 */
+export const ECLIPSE_SUMMON_MINION_PLAYER_DAMAGE_MULTIPLIER = 1;
+
 export const STAGE_TUNING: Record<string, StageTuning> = {
   stage1: NEUTRAL_STAGE_TUNING,
   // stage2 は walker をやや速く、turret の発射を頻繁にして stage1 からの上昇を体感させる。

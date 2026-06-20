@@ -6,7 +6,7 @@ import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { Projectile } from '../entities/Projectile';
 import { Beam } from '../entities/Beam';
-import { isChargeAbsorbableProjectile } from './combatRules';
+import { isChargeAbsorbableProjectile, resolvePlayerDamage } from './combatRules';
 
 /** 命中元の種別。弾(ProjectileKind)に加え、持続ビーム('beam')を含む(Beam は Projectile ではない)。 */
 type HitKind = ProjectileKind | 'beam';
@@ -79,7 +79,11 @@ export class CombatSystem {
         projectile.deactivate();
         return;
       }
-      this.damagePlayer(refs.player, projectile.damage);
+      this.damagePlayer(
+        refs.player,
+        projectile.damage,
+        projectile.playerDamageMultiplierOverride,
+      );
       projectile.deactivate();
     });
 
@@ -87,7 +91,7 @@ export class CombatSystem {
     physics.add.overlap(refs.player, refs.enemies, (a, b) => {
       const enemy = this.asInstance(a, b, Enemy);
       if (!enemy || !enemy.active) return;
-      this.damagePlayer(refs.player, enemy.contactDamage);
+      this.damagePlayer(refs.player, enemy.contactDamage, enemy.playerDamageMultiplierOverride);
     });
 
     // プレイヤービーム ⇔ 雑魚敵(強化時の持続レーザー。per-target 間引きで多段ヒット、命中しても消えない)
@@ -165,9 +169,15 @@ export class CombatSystem {
     this.callbacks.onHit?.(x, y, kind, shotKind);
   }
 
-  private damagePlayer(player: Player, amount: number): void {
+  private damagePlayer(
+    player: Player,
+    amount: number,
+    sourceMultiplierOverride?: number,
+  ): void {
     const hpBefore = player.hp;
-    player.takeDamage(Math.ceil(amount * this.options.playerDamageMultiplier));
+    player.takeDamage(
+      resolvePlayerDamage(amount, this.options.playerDamageMultiplier, sourceMultiplierOverride),
+    );
     if (player.hp !== hpBefore) {
       this.callbacks.onPlayerDamaged?.(player);
     }

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS, FLYING_BOSS, HAZARD, getStageTuning } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, HAZARD } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stages';
@@ -30,7 +30,7 @@ import { shouldResumeGame } from '../systems/orientationGuard';
 import { getSound } from '../systems/SoundManager';
 import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
-import { applyDifficultyToStageTuning, playerDamageMultiplier } from '../systems/difficulty';
+import { playerDamageMultiplier } from '../systems/difficulty';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -583,11 +583,9 @@ export class GameScene extends Phaser.Scene {
     } else if (this.stage.bossKind === 'core') {
       // stage6: ECLIPSE本体(巨大コア・浮遊)。配下召喚のため敵グループ等のコンテキストを注入する。
       const core = new CoreBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
-      const difficulty = this.saveManager.getData().settings.difficulty;
       core.setSummonContext({
         enemies: this.enemies,
         enemyShots: this.enemyShots,
-        tuning: applyDifficultyToStageTuning(getStageTuning(this.stageId), difficulty),
       });
       this.boss = core;
     } else if (this.stage.bossKind === 'warden') {
