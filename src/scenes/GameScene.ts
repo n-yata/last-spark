@@ -30,6 +30,7 @@ import { shouldResumeGame } from '../systems/orientationGuard';
 import { getSound } from '../systems/SoundManager';
 import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
+import { applyDifficultyToStageTuning, playerDamageMultiplier } from '../systems/difficulty';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -114,6 +115,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.saveManager = new SaveManager();
     this.ended = false;
     this.paused = false;
     // シーンはステージ継続(stage1→stage2)で再利用される。前ステージのボス参照が残ると
@@ -432,31 +434,36 @@ export class GameScene extends Phaser.Scene {
     this.inputController.attachTouchZones();
 
     this.effects = new EffectsManager(this);
-    this.combat = new CombatSystem(this, {
-      onHit: (x, y, target) => {
-        this.spawnHitEffect(x, y);
-        this.effects.impactSpark(x, y);
-        getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
+    const difficulty = this.saveManager.getData().settings.difficulty;
+    this.combat = new CombatSystem(
+      this,
+      {
+        onHit: (x, y, target) => {
+          this.spawnHitEffect(x, y);
+          this.effects.impactSpark(x, y);
+          getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
+        },
+        onEnemyDefeated: (enemy) => {
+          this.effects.enemyKilled(enemy.x, enemy.y);
+          getSound().playSe('enemyDefeated');
+          if (!this.firstEnemyInnerDone) {
+            this.firstEnemyInnerDone = true;
+            this.emitStory({ type: 'inner', sceneKey: 'firstEnemyDefeated' });
+          }
+        },
+        onPlayerDamaged: () => {
+          this.effects.playerDamaged();
+          getSound().playSe('playerDamaged');
+        },
+        onProjectileAbsorbed: (x, y) => {
+          this.effects.absorbSpark(x, y);
+          getSound().playSe('chargeReady');
+        },
+        onBossDefeated: (boss) => this.handleClear(boss),
+        onPlayerDeath: () => this.handleGameOver(),
       },
-      onEnemyDefeated: (enemy) => {
-        this.effects.enemyKilled(enemy.x, enemy.y);
-        getSound().playSe('enemyDefeated');
-        if (!this.firstEnemyInnerDone) {
-          this.firstEnemyInnerDone = true;
-          this.emitStory({ type: 'inner', sceneKey: 'firstEnemyDefeated' });
-        }
-      },
-      onPlayerDamaged: () => {
-        this.effects.playerDamaged();
-        getSound().playSe('playerDamaged');
-      },
-      onProjectileAbsorbed: (x, y) => {
-        this.effects.absorbSpark(x, y);
-        getSound().playSe('chargeReady');
-      },
-      onBossDefeated: (boss) => this.handleClear(boss),
-      onPlayerDeath: () => this.handleGameOver(),
-    });
+      { playerDamageMultiplier: playerDamageMultiplier(difficulty) },
+    );
     this.combat.registerColliders({
       player: this.player,
       enemies: this.enemies,
@@ -474,7 +481,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off('player-fired', onPlayerFired));
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
-    this.spawn.loadStage(this.stageId);
+    this.spawn.loadStage(this.stageId, difficulty);
     this.spawn.onBossTrigger(() => {
       // ボスを出現させ、(stage3 のみ)ケージの人影を見た内心 → ECLIPSE の語りかけ、の順に重ねる。
       // terraFound 内心はその本文を持つステージ(stage3)でのみ表示され、他ステージでは空になる。
@@ -576,10 +583,11 @@ export class GameScene extends Phaser.Scene {
     } else if (this.stage.bossKind === 'core') {
       // stage6: ECLIPSE本体(巨大コア・浮遊)。配下召喚のため敵グループ等のコンテキストを注入する。
       const core = new CoreBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      const difficulty = this.saveManager.getData().settings.difficulty;
       core.setSummonContext({
         enemies: this.enemies,
         enemyShots: this.enemyShots,
-        tuning: getStageTuning(this.stageId),
+        tuning: applyDifficultyToStageTuning(getStageTuning(this.stageId), difficulty),
       });
       this.boss = core;
     } else if (this.stage.bossKind === 'warden') {

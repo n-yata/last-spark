@@ -1,11 +1,19 @@
 name: CI
 
-# PR と feature 系ブランチへの push で検証する。
-# master への push は deploy.yml が本番ビルド/デプロイ時に同等の検証を行うため、ここでは対象外。
+# PR で短い verify だけを回す。feature ブランチ push では PR と重複して待ち時間が増えるため起動しない。
+# Playwright E2E は workflow_dispatch から明示実行する。
 on:
   pull_request:
-  push:
-    branches-ignore: [master]
+  workflow_dispatch:
+    inputs:
+      e2e_suite:
+        description: 'E2E suite to run'
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - full
 
 # 検証のみ。書き込み権限は与えない。
 permissions:
@@ -44,12 +52,9 @@ jobs:
       - name: Build (Vite + PWA)
         run: npm run build
 
-  e2e:
+  e2e-smoke:
     runs-on: ubuntu-latest
-    # CI 環境での Phaser + Playwright の安定性が未確認のため、当面は非ブロッキングで導入する。
-    # (headless での縦持ち判定による pause 凍結など、実機特有の不安定要因がある。)
-    # 数回グリーンを確認できたら continue-on-error を外し、必須ゲートへ昇格する(別PR)。
-    continue-on-error: true
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.e2e_suite == 'smoke' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -63,10 +68,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # E2E は Pixel 5 landscape(chromium)のみ使用。webServer は playwright.config.ts が
+      # Smoke E2E は Pixel 5 landscape(chromium)のみ使用。webServer は playwright.config.ts が
       # `npm run build && npm run preview` で自動起動するため、ここでの明示ビルドは不要。
       - name: Install Playwright browser (chromium)
         run: npx playwright install --with-deps chromium
 
-      - name: E2E tests (Playwright)
+      - name: Smoke E2E tests (Playwright)
+        run: npm run test:e2e:smoke
+
+  e2e-full:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.e2e_suite == 'full' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Full E2E tests (Playwright)
         run: npm run test:e2e

@@ -4,6 +4,7 @@ import { getStageTuning, NEUTRAL_STAGE_TUNING, STAGE_TUNING } from '../../../src
 describe('getStageTuning', () => {
   it('stage1 は中立係数(基準難易度)を返す', () => {
     const tuning = getStageTuning('stage1');
+    expect(tuning.enemyHpFactor).toBe(1);
     expect(tuning.walkerSpeedFactor).toBe(1);
     expect(tuning.turretIntervalFactor).toBe(1);
   });
@@ -28,6 +29,7 @@ describe('getStageTuning', () => {
 
   it('定義済みの全ステージの係数は正の値である(停止・逆走しない)', () => {
     for (const tuning of Object.values(STAGE_TUNING)) {
+      expect(tuning.enemyHpFactor).toBeGreaterThan(0);
       expect(tuning.walkerSpeedFactor).toBeGreaterThan(0);
       expect(tuning.turretIntervalFactor).toBeGreaterThan(0);
     }

@@ -11,6 +11,8 @@ import {
   NEUTRAL_STAGE_TUNING,
   type StageTuning,
 } from '../config/balance';
+import type { DifficultyMode } from '../types/save';
+import { applyDifficultyToStageTuning } from './difficulty';
 
 // ステージ進行(カメラ位置)に応じた雑魚敵の出現と、ボス戦突入の検知。
 
@@ -57,9 +59,9 @@ export class SpawnSystem {
   }
 
   /** ステージデータを読み込み、出現待ち敵を準備する。 */
-  loadStage(stageId: string): StageData {
+  loadStage(stageId: string, difficulty: DifficultyMode = 'normal'): StageData {
     this.stage = getStageData(stageId);
-    this.tuning = getStageTuning(stageId);
+    this.tuning = applyDifficultyToStageTuning(getStageTuning(stageId), difficulty);
     // x 昇順にして左から順に出現判定する
     this.pending = [...this.stage.enemies].sort((a, b) => a.x - b.x);
     this.bossTriggered = false;

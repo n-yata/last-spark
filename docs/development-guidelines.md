@@ -295,7 +295,12 @@ CI(GitHub Actions 想定)で以下を自動実行する:
 - `npm run lint`
 - `npm test`(Vitest)
 - `npm run build`(Vite ビルドの成功確認)
-- (任意)Playwright E2E
+
+開発体験を優先し、feature ブランチへの push では PR と重複する CI を起動しない。PR で自動実行するのは `typecheck` / `lint` / Vitest / build までとし、remote CI は長くても 1 分以内、できれば 30 秒台を目標に保つ。
+
+Playwright E2E は自動 CI から外し、GitHub Actions の `workflow_dispatch` で明示実行する。短い確認は `npm run test:e2e:smoke`、全件確認は `npm run test:e2e` を使う。通しプレイや物理タイミング検証は有用だが、PR/push ごとに毎回 5〜6 分待たせるゲートにはしない。
+
+master への push では GitHub Pages deploy を実行する。master に入る変更は PR CI で検証済みとみなし、deploy job は公開アーティファクト生成に必要な `npm run build` を中心に短く保つ。
 
 ## 開発環境セットアップ
 

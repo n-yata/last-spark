@@ -42,7 +42,7 @@ export class SoundManager {
   private bgmGain?: GainNode;
   private seGain?: GainNode;
   private noiseBuffer?: AudioBuffer;
-  private settings: GameSettings = { muted: false, bgmVolume: 0.6, seVolume: 0.8 };
+  private settings: GameSettings = { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' };
 
   private currentBgmKey?: BgmKey;
   private currentBgmBase = 0;

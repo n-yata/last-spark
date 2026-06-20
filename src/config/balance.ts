@@ -477,6 +477,8 @@ export const ECLIPSE_CORE = {
  * 値は ENEMY の基準値に乗算され、ロジック側へのマジックナンバー埋め込みを避ける。
  */
 export interface StageTuning {
+  /** 雑魚敵 HP 係数(>1 で硬い) */
+  enemyHpFactor: number;
   /** walker の移動速度係数(>1 で速い) */
   walkerSpeedFactor: number;
   /** turret の発射間隔係数(<1 で発射が頻繁) */
@@ -485,6 +487,7 @@ export interface StageTuning {
 
 /** 中立(stage1 基準)の難易度係数。未知ステージのフォールバックにも使う。 */
 export const NEUTRAL_STAGE_TUNING: StageTuning = {
+  enemyHpFactor: 1,
   walkerSpeedFactor: 1,
   turretIntervalFactor: 1,
 } as const;
@@ -493,26 +496,31 @@ export const STAGE_TUNING: Record<string, StageTuning> = {
   stage1: NEUTRAL_STAGE_TUNING,
   // stage2 は walker をやや速く、turret の発射を頻繁にして stage1 からの上昇を体感させる。
   stage2: {
+    enemyHpFactor: 1,
     walkerSpeedFactor: 1.3,
     turretIntervalFactor: 0.75,
   },
   // stage3 はさらに敵を強め、難易度カーブを継続させる。
   stage3: {
+    enemyHpFactor: 1,
     walkerSpeedFactor: 1.45,
     turretIntervalFactor: 0.65,
   },
   // stage4 は汚染地帯。難易度カーブを継続し、終盤に向けてさらに敵を強める。
   stage4: {
+    enemyHpFactor: 1,
     walkerSpeedFactor: 1.5,
     turretIntervalFactor: 0.6,
   },
   // stage5 は ECLIPSE 外縁部。終盤の決意ステージとして難易度カーブをさらに引き上げる。
   stage5: {
+    enemyHpFactor: 1,
     walkerSpeedFactor: 1.55,
     turretIntervalFactor: 0.55,
   },
   // stage6 は ECLIPSE 支配中枢。最終決戦として難易度カーブを最大にする。
   stage6: {
+    enemyHpFactor: 1,
     walkerSpeedFactor: 1.6,
     turretIntervalFactor: 0.5,
   },

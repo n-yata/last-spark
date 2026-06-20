@@ -461,12 +461,12 @@ stateDiagram-v2
 **定義**: localStorage に保存される永続データ構造。
 
 **主要フィールド**:
-- `version`: セーブ構造のバージョン(マイグレーション用、現行 3)
+- `version`: セーブ構造のバージョン(マイグレーション用、現行 4)
 - `clearedStages`: クリア済みステージ ID の配列(全6ステージ対応。旧 `cleared:boolean` から移行)
 - `bestTimeMs`: ステージ別クリア最速タイム(`Record<string, number>`、ミリ秒)。未クリアのステージはキーを持たない(全体未クリアなら undefined)
 - `settings`: ユーザー設定([GameSettings](#gamesettings))
 
-**制約**: 保存キーは `lastspark:save`。読込時に型/バージョンを検証し、不正/破損は既定値にフォールバック。`version` 不一致時は旧形式(v1: `cleared:boolean` / `bestTimeMs:number`)からマイグレーションする。現行構造は v2 と同一だが、過去に一時導入され撤去された `collectedLogs`(科学者ログ収集)を持つ v3 セーブとの互換のため version 番号は 3 に据え置く。
+**制約**: 保存キーは `lastspark:save`。読込時に型/バージョンを検証し、不正/破損は既定値にフォールバック。`version` 不一致時は旧形式(v1: `cleared:boolean` / `bestTimeMs:number`、v2/v3: `clearedStages` / `bestTimeMs`)からマイグレーションする。v2/v3 セーブは `settings.difficulty` 未設定なら `normal` を補完して現行 v4 へ移行する。過去に一時導入され撤去された `collectedLogs`(科学者ログ収集)は読み込み時に無視する。
 
 **実装(型)**: `src/types/save.ts`(`SAVE_VERSION` は `src/config/storageKeys.ts`)
 
@@ -478,6 +478,7 @@ stateDiagram-v2
 - `muted`: サウンドミュート(既定 false)
 - `bgmVolume`: BGM 音量(0.0–1.0)
 - `seVolume`: SE 音量(0.0–1.0)
+- `difficulty`: 難易度(`normal` / `hard`)。`hard` は被ダメージ・敵係数を強化する。
 
 **関連用語**: [SaveData](#savedata)
 

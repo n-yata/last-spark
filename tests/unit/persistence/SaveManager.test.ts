@@ -6,13 +6,15 @@ import {
 } from '../../../src/persistence/SaveManager';
 import { STORAGE_KEYS, SAVE_VERSION } from '../../../src/config/storageKeys';
 
+const DEFAULT_SETTINGS = { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' } as const;
+
 describe('defaultSaveData', () => {
   it('未プレイ状態の既定値を返す(clearedStages=[], bestTimeMs 未設定)', () => {
     const d = defaultSaveData();
     expect(d.version).toBe(SAVE_VERSION);
     expect(d.clearedStages).toEqual([]);
     expect(d.bestTimeMs).toBeUndefined();
-    expect(d.settings).toEqual({ muted: false, bgmVolume: 0.6, seVolume: 0.8 });
+    expect(d.settings).toEqual(DEFAULT_SETTINGS);
   });
 });
 
@@ -168,15 +170,16 @@ describe('SaveManager', () => {
 
   it('updateSettings は設定を部分更新して永続化する', () => {
     const mgr = new SaveManager();
-    mgr.updateSettings({ muted: true });
+    mgr.updateSettings({ muted: true, difficulty: 'hard' });
     const reloaded = new SaveManager();
     expect(reloaded.getData().settings.muted).toBe(true);
+    expect(reloaded.getData().settings.difficulty).toBe('hard');
     expect(reloaded.getData().settings.bgmVolume).toBe(0.6); // 他は維持
   });
 
-  // ---- v2 → v3 マイグレーション ----
+  // ---- v2/v3 → v4 マイグレーション ----
 
-  it('v2(clearedStages+bestTimeMs+settings 正常)を v3 へマイグレートし既存進捗を維持する', () => {
+  it('v2(clearedStages+bestTimeMs+settings 正常)を現行版へマイグレートし既存進捗を維持する', () => {
     localStorage.setItem(
       STORAGE_KEYS.save,
       JSON.stringify({
@@ -188,17 +191,17 @@ describe('SaveManager', () => {
     );
     const mgr = new SaveManager();
     const data = mgr.getData();
-    // バージョンが 3 に上がっている
+    // バージョンが現行版に上がっている
     expect(data.version).toBe(SAVE_VERSION);
     // 既存のクリア進捗が失われていない
     expect(data.clearedStages).toEqual(['stage1', 'stage2']);
     // ベストタイムが失われていない
     expect(data.bestTimeMs).toEqual({ stage1: 12_345 });
     // settings が引き継がれている
-    expect(data.settings).toEqual({ muted: false, bgmVolume: 0.6, seVolume: 0.8 });
+    expect(data.settings).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('v2 で bestTimeMs を持たないデータも正しく v3 へマイグレートされる', () => {
+  it('v2 で bestTimeMs を持たないデータも正しく現行版へマイグレートされる', () => {
     localStorage.setItem(
       STORAGE_KEYS.save,
       JSON.stringify({
@@ -214,6 +217,7 @@ describe('SaveManager', () => {
     // bestTimeMs がない場合は undefined のまま
     expect(data.bestTimeMs).toBeUndefined();
     expect(data.settings.muted).toBe(true);
+    expect(data.settings.difficulty).toBe('normal');
   });
 
   it('v2 で bestTimeMs が不正値の場合は既定値へフォールバックする', () => {
@@ -268,11 +272,11 @@ describe('SaveManager', () => {
 
   // ---- 旧 v3 セーブとの互換(余分な collectedLogs フィールドは無視) ----
 
-  it('当時の v3 セーブ(余分な collectedLogs 付き)もそのまま読み込める', () => {
+  it('当時の v3 セーブ(余分な collectedLogs 付き)も進捗を保って現行版へ移行できる', () => {
     localStorage.setItem(
       STORAGE_KEYS.save,
       JSON.stringify({
-        version: SAVE_VERSION,
+        version: 3,
         clearedStages: ['stage1'],
         bestTimeMs: { stage1: 10_000 },
         collectedLogs: ['stage1:early', 'stage3:mid'], // 撤去済みフィールド
@@ -286,5 +290,13 @@ describe('SaveManager', () => {
     expect(data.clearedStages).toEqual(['stage1']);
     expect(data.bestTimeMs).toEqual({ stage1: 10_000 });
     expect(data.settings.bgmVolume).toBe(0.6);
+    expect(data.settings.difficulty).toBe('normal');
+  });
+
+  it('現行版の difficulty: hard を保存・復元できる', () => {
+    const mgr = new SaveManager();
+    mgr.updateSettings({ difficulty: 'hard' });
+    const reloaded = new SaveManager();
+    expect(reloaded.getData().settings.difficulty).toBe('hard');
   });
 });

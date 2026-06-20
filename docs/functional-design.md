@@ -60,7 +60,7 @@ Phaser の Scene を画面/状態の単位とする。
 | `ClearScene` | ボス撃破時のクリア演出。クリア状況(ステージ単位)を保存しタイトル/次ステージへ。最終ステージ全クリアで「ALL CLEAR」を表示 |
 | `CutsceneScene`(オーバーレイ) | 演出シーン。静止画的演出+交互テキスト(TERRA/RAY)+ト書き+ナレーションをタップ送りで再生し、完了後に指定遷移を呼ぶ。Stage 1 開始演出・Stage 3 救出後演出・Stage 4-5 開始演出・Stage 6 エンディングで使用(BGM は起動データで差し替え可能) |
 | `OrientationScene`(オーバーレイ) | 縦持ち検知時に「横向きにしてください」案内を最前面表示 |
-| `PauseScene`(オーバーレイ) | タイトル/プレイ中(ポーズ)双方から開く統合オプションメニュー。音量(BGM/SE 5段階・ミュート)、ポーズ/再開、操作説明、ステージ移動(リトライ/タイトルへ戻る/ステージ選択)を1つのオーバーレイに集約。`GameScene` 上では物理を止めて `launch` し、破壊的遷移は resume 後に実行する |
+| `PauseScene`(オーバーレイ) | タイトル/プレイ中(ポーズ)双方から開く統合オプションメニュー。音量(BGM/SE 5段階・ミュート)、難易度(normal/hard)、ポーズ/再開、操作説明、ステージ移動(リトライ/タイトルへ戻る/ステージ選択)を1つのオーバーレイに集約。`GameScene` 上では物理を止めて `launch` し、破壊的遷移は resume 後に実行する |
 
 ## データモデル定義
 
@@ -70,7 +70,7 @@ Phaser の Scene を画面/状態の単位とする。
 
 ```typescript
 interface SaveData {
-  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 3)
+  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 4)
   clearedStages: string[];          // クリア済みステージID(全6ステージ対応)
   bestTimeMs?: Record<string, number>; // ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーなし
   settings: GameSettings;           // ユーザー設定
@@ -80,15 +80,16 @@ interface GameSettings {
   muted: boolean;           // サウンドミュート(モバイル自動再生制約に配慮、既定 false)
   bgmVolume: number;        // 0.0–1.0
   seVolume: number;         // 0.0–1.0
+  difficulty: 'normal' | 'hard'; // 難易度。hard は被ダメージ・敵係数を強化
 }
 ```
 
 **制約**:
 - 保存キーは `lastspark:save`(名前空間付き)。
 - `localStorage` 利用不可・破損時は既定値で起動し、ゲーム自体は継続可能(進捗が無いだけ)。
-- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 3`(`clearedStages` / `bestTimeMs:Record`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、現行構造は v2 と同一だが、過去の v3 セーブとの互換のため version 番号は 3 に据え置く(余分な `collectedLogs` は読み込み時に無視)。
+- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 4`(`clearedStages` / `bestTimeMs:Record` / `settings.difficulty`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、余分な `collectedLogs` は読み込み時に無視する。
   - v1(`cleared:boolean` / `bestTimeMs:number`)→現行 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。
-  - v2 / v3(構造同一)→現行 移行: 進捗を保持したまま version のみ引き上げる。
+  - v2 / v3→現行 移行: 進捗を保持し、`settings.difficulty` 未設定なら `normal` を補完して version を引き上げる。
 - API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。
 
 ### 実行時モデル: 主要 Entity
@@ -204,6 +205,7 @@ class InputController {
 **責務**:
 - 弾⇔敵、弾⇔ボス、プレイヤー⇔敵/ボス/敵弾 の衝突処理とダメージ適用。
 - 被弾時の無敵・点滅、撃破時のヒット表現発火。
+- `GameSettings.difficulty` に応じて、プレイヤー被ダメージ倍率を適用する。
 
 **インターフェース**:
 ```typescript
@@ -221,7 +223,7 @@ class CombatSystem {
 
 ```typescript
 class SpawnSystem {
-  loadStage(stageId: string): void;   // 敵配置データの読み込み
+  loadStage(stageId: string, difficulty?: DifficultyMode): void; // 敵配置データと難易度係数の読み込み
   update(cameraX: number): void;       // 進行に応じた出現制御
   onBossTrigger(cb: () => void): void; // ボス戦突入トリガ
 }
@@ -556,9 +558,10 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 
 ### オプションメニュー(統合設定UI)
 
-タイトル画面とプレイ中(ポーズ)の双方から開く共通オーバーレイ(`PauseScene` + `src/ui/optionsMenu.ts`)。設定の実体は `GameSettings` で、`SaveManager` により永続化し `SoundManager.applySettings` で即時反映する。
+タイトル画面とプレイ中(ポーズ)の双方から開く共通オーバーレイ(`PauseScene` + `src/ui/optionsMenu.ts`)。設定の実体は `GameSettings` で、`SaveManager` により永続化し `SoundManager.applySettings` で音量を即時反映する。
 
 - **音量**: BGM/SE を連続スライダーではなく 5 段階ボタン(`src/ui/volumeSteps.ts`)で調整し、ミュートを切替。量子化・上下限・往復一致を純関数化してテスト可能にし、タッチ/マウス/キーボードのいずれでも操作できる(Phaser に標準スライダーが無い問題の現実解)。
+- **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛ける。設定は保存され、新規開始・リトライ・次ステージから反映される。
 - **ポーズ/再開**: プレイ中は `PauseButton` から開き、ゲームを一時停止する。停止は物理ステップ境界に逃がし、再開・破壊的遷移(リトライ/タイトル等)は必ずポーズ解除後に行う。
 - **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
 - **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。

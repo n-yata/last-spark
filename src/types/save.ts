@@ -7,7 +7,11 @@ export interface GameSettings {
   bgmVolume: number;
   /** SE 音量 0.0–1.0 */
   seVolume: number;
+  /** 難易度。normal は従来バランス、hard は被ダメージ・敵係数を強化する。 */
+  difficulty: DifficultyMode;
 }
+
+export type DifficultyMode = 'normal' | 'hard';
 
 export interface SaveData {
   /** セーブ構造のバージョン(マイグレーション用) */
