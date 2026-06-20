@@ -4,6 +4,7 @@ import {
   applyDifficultyToStageTuning,
   difficultyLabel,
   playerDamageMultiplier,
+  pollutionDamageMultiplier,
   shouldSpawnHardModeSecretBoss,
   shouldShowStoryForDifficulty,
   toggleDifficulty,
@@ -23,6 +24,12 @@ describe('difficulty tuning', () => {
     expect(hard.walkerSpeedFactor).toBeGreaterThan(NEUTRAL_STAGE_TUNING.walkerSpeedFactor);
     expect(hard.turretIntervalFactor).toBeLessThan(NEUTRAL_STAGE_TUNING.turretIntervalFactor);
     expect(playerDamageMultiplier('hard')).toBeGreaterThan(1);
+  });
+
+  it('汚染水ダメージは hard でも normal 相当の倍率に固定する', () => {
+    expect(pollutionDamageMultiplier('normal')).toBe(1);
+    expect(pollutionDamageMultiplier('hard')).toBe(pollutionDamageMultiplier('normal'));
+    expect(pollutionDamageMultiplier('hard')).toBeLessThan(playerDamageMultiplier('hard'));
   });
 
   it('表示ラベルとトグルが難易度に対応する', () => {

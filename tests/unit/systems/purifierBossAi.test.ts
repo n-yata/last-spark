@@ -93,16 +93,31 @@ describe('pickNextPurifierBossAction', () => {
   });
 
   it('bloom は phase2 でより出やすい(安全地帯を奪う圧を強める)', () => {
-    const countBloom = (phase: 'phase1' | 'phase2'): number => {
+    const countBloom = (phase: 'phase1' | 'phase2', difficulty: 'normal' | 'hard' = 'normal'): number => {
       const n = 3000;
       let c = 0;
       for (let i = 0; i < n; i++) {
         // last は bloom 以外にして連続抑制の影響を排除する。
-        if (pickNextPurifierBossAction(phase, 'shoot', () => (i + 0.5) / n) === 'bloom') c++;
+        if (pickNextPurifierBossAction(phase, 'shoot', () => (i + 0.5) / n, difficulty) === 'bloom') c++;
       }
       return c;
     };
     expect(countBloom('phase2')).toBeGreaterThan(countBloom('phase1'));
+  });
+
+  it('hard は normal より bloom の出現頻度を下げる', () => {
+    const countBloom = (phase: 'phase1' | 'phase2', difficulty: 'normal' | 'hard'): number => {
+      const n = 3000;
+      let c = 0;
+      for (let i = 0; i < n; i++) {
+        if (pickNextPurifierBossAction(phase, 'shoot', () => (i + 0.5) / n, difficulty) === 'bloom') c++;
+      }
+      return c;
+    };
+
+    expect(countBloom('phase1', 'hard')).toBeLessThan(countBloom('phase1', 'normal'));
+    expect(countBloom('phase2', 'hard')).toBeLessThan(countBloom('phase2', 'normal'));
+    expect(countBloom('phase2', 'hard')).toBeGreaterThan(countBloom('phase1', 'hard'));
   });
 
   it('bloom は他系統(接地/飛行/番人/コア/使者)の抽選に混入しない', () => {

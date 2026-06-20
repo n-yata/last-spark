@@ -148,9 +148,9 @@ export class CombatSystem {
    * 環境ダメージ(毒床など)をプレイヤーへ適用する。被弾エフェクト(onPlayerDamaged)・死亡処理
    * (onPlayerDeath)を弾/接触ダメージと同じ共通経路で扱う(Player の無敵時間にも従う)。
    */
-  applyPlayerDamage(amount: number): void {
+  applyPlayerDamage(amount: number, sourceMultiplierOverride?: number): void {
     if (!this.refs) return;
-    this.damagePlayer(this.refs.player, amount);
+    this.damagePlayer(this.refs.player, amount, sourceMultiplierOverride);
   }
 
   private hitDamageable(

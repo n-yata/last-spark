@@ -4,6 +4,7 @@ import { TEX } from '../config/assetKeys';
 import { pickNextPurifierBossAction, bossActionDuration } from '../systems/bossAi';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
 import type { Projectile } from './Projectile';
+import type { DifficultyMode } from '../types/save';
 
 // stage4 専用・環境管理機(浄化型)ボス。Boss を継承し、被ダメ/けぞり/フェーズ/撃破/アリーナ拘束・
 // 接地移動はそのまま再利用しつつ、jump の代わりに spray(扇状の範囲攻撃=汚染霧スプレー)と
@@ -38,10 +39,12 @@ const SPRAY_SECOND_BURST_MS = 220;
 export class PurifierBoss extends Boss {
   /** bloom の外部参照(未注入なら bloom は no-op=安全側)。 */
   private bloomCtx?: BloomContext;
+  private readonly difficulty: DifficultyMode;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, difficulty: DifficultyMode = 'normal') {
     // 接地型(重力あり)。専用リグ bossPurifier(汚染タンクを背負った接地機)を使う('boss' 流用を解消)。
     super(scene, x, y, { config: PURIFIER, rigFamily: 'bossPurifier', gravity: true });
+    this.difficulty = difficulty;
   }
 
   /** bloom の外部参照を注入する。未注入なら bloom は no-op(安全側)。 */
@@ -50,7 +53,12 @@ export class PurifierBoss extends Boss {
   }
 
   protected override beginNextAction(now: number, playerX: number): void {
-    const next = pickNextPurifierBossAction(this.phase, this.lastAction);
+    const next = pickNextPurifierBossAction(
+      this.phase,
+      this.lastAction,
+      Math.random,
+      this.difficulty,
+    );
     this.lastAction = next;
     this.currentAction = next;
 

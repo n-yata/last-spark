@@ -105,7 +105,7 @@ State を持つ System クラス:
 
 純粋ロジック関数群(camelCase。Phaser/Web Audio 非依存・テスト可能):
 - `bossAi.ts`: ボス行動抽選(`pickNext*BossAction` 等。系統別の重みテーブル)
-- `difficulty.ts`: 難易度設定(`normal`/`hard`)からステージ係数・被ダメージ倍率・ストーリー表示可否・裏ボス出現可否・表示ラベルを解決する純粋関数
+- `difficulty.ts`: 難易度設定(`normal`/`hard`)からステージ係数・被ダメージ倍率・汚染床ダメージ倍率・ストーリー表示可否・裏ボス出現可否・表示ラベルを解決する純粋関数
 - `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュール・探索 BGM 選択
 - `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(ui からも参照可)
 - `shot.ts` / `shotControl.ts`: ショット仕様の生成と、タップ/チャージ/連射の状態機械(`stepShot`)
