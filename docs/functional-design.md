@@ -80,7 +80,7 @@ interface GameSettings {
   muted: boolean;           // サウンドミュート(モバイル自動再生制約に配慮、既定 false)
   bgmVolume: number;        // 0.0–1.0
   seVolume: number;         // 0.0–1.0
-  difficulty: 'normal' | 'hard'; // 難易度。hard は被ダメージ・敵係数を強化
+  difficulty: 'normal' | 'hard'; // 難易度。hard は被ダメージ・敵係数を強化し、ストーリー演出を非表示
 }
 ```
 
@@ -240,6 +240,8 @@ class SpawnSystem {
 **StoryDirector(純粋ロジック)**: `resolveStoryEvent(story, event)` が `StoryEvent`(`stageStart` / `bossIntro` / `inner`)を表示要求 `TextRequest[]` に変換する。Phaser 非依存でユニットテスト可能(`bossAi.ts` 等と同方針)。確定テキストは `config/story/stageN.ts`(`StageStory`)に持ち、`getStageStory(stageId)` で引く。
 
 **StoryOverlay(描画)**: `UIScene` に常駐し、`TextRequest` のキューを順に再生する。表示挙動は2段構成: **(1) ステージ開始テキスト(`stageIntro`)のみ**画面中央に出して `GameScene` を `scene.pause` し、**タップで進む**(ステージ開始の合図。止まっている間は移動/ショットの誤タップが起きないので安全)。**(2) それ以外のステージ中テキスト(ECLIPSE の語りかけ/RAY内心/TERRA)**は動きを止めず画面上部に出し、本文の長さに応じた読了時間(`readingDurationMs`)で自動的に次へ進む(タップでは閉じない=プレイ中の移動/ジャンプ/ショットやボス出現時の連射で「読む前に消える」のを防ぐ)。kind→位置/一時停止要否は `TEXT_STYLES` が持つ。`GameScene` → `UIScene` の表示要求は HUD と同じく registry(`STORY.pending` 配列)へ積み、`UIScene.update` が毎フレーム drain して overlay へ渡す。cross-scene イベントだと UIScene の起動(create)が GameScene の発火より遅れて開始テキストを取りこぼすため、起動順に依存しない registry 方式にしている(`GameScene.create` は開始時に pending を空にしてから積む)。
+
+**難易度による表示ポリシー**: `normal` は従来どおりストーリー本文・開始演出・救出演出・エンディング演出を表示する。`hard` は純粋に手ごたえのあるゲームプレイを楽しむモードとして、`shouldShowStoryForDifficulty('hard') === false` により `GameScene` 側で StoryOverlay への表示要求、開始/ボス後/エンディングの `CutsceneScene` 起動、ボス撃破後内心をすべて抑止する。Stage 6 hard ではエンディング演出を経由せず `ClearScene` に遷移し、`stageId` を渡して既存のクリア保存を行う。
 
 > **補足(科学者ログ機構は撤去済み)**: 旧版には `StageData.logTriggers?` に基づく `LogTrigger`(任意接触で科学者ログ断片を発火するオーバーラップ判定)があったが、`docs/story.md`(2026-06-14 再設計)の「ログ全廃」に伴い、型・セーブ(`collectedLogs`)・トリガー機構ともに実装から撤去済み。現行の物語伝達は前述4種のテキスト + カットシーンのみ。
 
@@ -561,7 +563,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 タイトル画面とプレイ中(ポーズ)の双方から開く共通オーバーレイ(`PauseScene` + `src/ui/optionsMenu.ts`)。設定の実体は `GameSettings` で、`SaveManager` により永続化し `SoundManager.applySettings` で音量を即時反映する。
 
 - **音量**: BGM/SE を連続スライダーではなく 5 段階ボタン(`src/ui/volumeSteps.ts`)で調整し、ミュートを切替。量子化・上下限・往復一致を純関数化してテスト可能にし、タッチ/マウス/キーボードのいずれでも操作できる(Phaser に標準スライダーが無い問題の現実解)。
-- **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛け、エリア探索中の道中雑魚配置数も増やす。設定は保存され、新規開始・リトライ・次ステージから反映される。
+- **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛け、エリア探索中の道中雑魚配置数も増やす。さらに、ゲームプレイ集中モードとしてストーリー本文・開始/救出/エンディング演出を表示しない。設定は保存され、新規開始・リトライ・次ステージから反映される。
 - **ポーズ/再開**: プレイ中は `PauseButton` から開き、ゲームを一時停止する。停止は物理ステップ境界に逃がし、再開・破壊的遷移(リトライ/タイトル等)は必ずポーズ解除後に行う。
 - **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
 - **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。

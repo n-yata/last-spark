@@ -30,7 +30,7 @@ import { shouldResumeGame } from '../systems/orientationGuard';
 import { getSound } from '../systems/SoundManager';
 import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
-import { playerDamageMultiplier } from '../systems/difficulty';
+import { playerDamageMultiplier, shouldShowStoryForDifficulty } from '../systems/difficulty';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -86,6 +86,8 @@ export class GameScene extends Phaser.Scene {
   private ended = false;
   /** 現在ステージの確定テキスト(未登録ステージなら undefined)。 */
   private story?: StageStory;
+  /** 現在の難易度で物語演出を表示するか。hard はゲームプレイ集中モードとして非表示。 */
+  private storyEnabled = true;
   /** ダメージ床(汚染溜まり等。stage4 のみ)。 */
   private hazards!: Phaser.Physics.Arcade.Group;
   /** 内心トリガの一度きり発火フラグ。 */
@@ -127,7 +129,8 @@ export class GameScene extends Phaser.Scene {
     // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
     this.registry.set(STORY.pending, []);
     this.stage = getStageData(this.stageId);
-    this.story = getStageStory(this.stageId);
+    this.storyEnabled = shouldShowStoryForDifficulty(this.saveManager.getData().settings.difficulty);
+    this.story = this.storyEnabled ? getStageStory(this.stageId) : undefined;
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 
     this.buildBackground();
@@ -159,6 +162,11 @@ export class GameScene extends Phaser.Scene {
    * UIScene が drain する(起動順非依存)。
    */
   private startIntro(): void {
+    if (!this.storyEnabled) {
+      fadeIn(this);
+      return;
+    }
+
     const key = this.stage.introCutsceneKey;
     // skipCutscene(ゲームオーバーからのやり直し)では演出を飛ばし、演出なしステージと同じ
     // 入場経路(フェードイン+開始テキスト)に合流させる。開始テキストは残し、最低限の文脈は保つ。
@@ -210,7 +218,7 @@ export class GameScene extends Phaser.Scene {
 
   /** ストーリーイベントを解決し、registry の表示キューへ積む(UIScene が drain)。 */
   private emitStory(event: StoryEvent): void {
-    if (!this.story) return;
+    if (!this.storyEnabled || !this.story) return;
     this.pushStory(resolveStoryEvent(this.story, event));
   }
 
@@ -720,7 +728,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossHp, 0);
 
     // ボス後演出を持つステージ(現状 stage3 のケージ救出のみ): 即クリアせず、撃破演出後に救出フェーズへ。
-    if (this.stage.postBossCutsceneKey) {
+    if (this.storyEnabled && this.stage.postBossCutsceneKey) {
       this.inPostBoss = true;
       this.pendingClearTimeMs = clearTimeMs;
       // 死亡ボスを update ループから切り離し(参照を断ち)、演出後に破棄する。
@@ -740,7 +748,7 @@ export class GameScene extends Phaser.Scene {
    * それを見せてから遷移する。持たないステージは即座に遷移する。
    */
   private finishStageClear(clearTimeMs: number): void {
-    const endingKey = this.stage.endingCutsceneKey;
+    const endingKey = this.storyEnabled ? this.stage.endingCutsceneKey : undefined;
     const go = (): void => {
       // 最終ステージ(endingCutsceneKey あり): ClearScene を経ずエンディング演出へ。
       if (endingKey) {
@@ -757,7 +765,7 @@ export class GameScene extends Phaser.Scene {
       });
     };
 
-    const reflection = this.story
+    const reflection = this.storyEnabled && this.story
       ? resolveStoryEvent(this.story, { type: 'inner', sceneKey: 'bossDefeated' })
       : [];
     if (reflection.length === 0) {
