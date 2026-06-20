@@ -94,6 +94,12 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
   const buildRoot = (): Phaser.GameObjects.Container => {
     const c = scene.add.container(0, 0);
     const items: Array<[string, () => void]> = [
+      [`MODE: ${difficultyLabel(settings.difficulty)}`, () => {
+        settings = { ...settings, difficulty: toggleDifficulty(settings.difficulty) };
+        save.updateSettings({ difficulty: settings.difficulty });
+        playTap();
+        setPanel(buildRoot);
+      }],
       ['音量設定', () => { playTap(); showVolume(); }],
       ['操作説明', () => { playTap(); showControls(); }],
     ];
@@ -181,16 +187,6 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
         settings = { ...settings, muted: !settings.muted };
         save.updateSettings({ muted: settings.muted });
         sound.applySettings(settings);
-        playTap();
-        setPanel(buildVolume);
-      }),
-    );
-    y += rowGap * 0.85;
-
-    c.add(
-      makeMenuButton(scene, width / 2, y, `MODE: ${difficultyLabel(settings.difficulty)}`, () => {
-        settings = { ...settings, difficulty: toggleDifficulty(settings.difficulty) };
-        save.updateSettings({ difficulty: settings.difficulty });
         playTap();
         setPanel(buildVolume);
       }),
