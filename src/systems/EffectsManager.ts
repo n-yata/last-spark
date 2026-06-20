@@ -156,6 +156,62 @@ export class EffectsManager {
     );
   }
 
+  /**
+   * 強化ビーム(RAY 強化 stage6 のチャージ攻撃)発射の手応え。dir は向き(+1右/-1左)。
+   * 収束リングの予兆 → 大きなマズル閃光 → 前方バースト → 軽いシェイクで、最上位アクションの
+   * 「チャージを解き放った」迫力を出す。ビーム本体(帯)の生成・当たり判定とは独立した演出のみ。
+   */
+  beamFire(x: number, y: number, dir: 1 | -1): void {
+    const b = EFFECTS.beamFire;
+    // 1) 収束リング: 大きく置いて内側へ潰す(発射の予兆=エネルギーがマズルへ集まる)。
+    const ring = this.scene.add
+      .image(x, y, TEX.hit)
+      .setDepth(21)
+      .setScale(b.ringScaleStart)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(b.color);
+    this.scene.tweens.add({
+      targets: ring,
+      alpha: 0,
+      scale: 0.1,
+      duration: b.ringMs,
+      ease: 'Quad.In',
+      onComplete: () => ring.destroy(),
+    });
+    // 2) マズル閃光: 通常チャージ弾より強い閃光を拡大しながら抜く。
+    const flash = this.scene.add
+      .image(x, y, TEX.hit)
+      .setDepth(21)
+      .setScale(b.flashScale)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(b.color);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: b.flashScale * 1.6,
+      duration: b.flashMs,
+      onComplete: () => flash.destroy(),
+    });
+    // 3) 前方バースト: ビーム方向へスパークを噴出する。
+    const baseAngle = dir > 0 ? 0 : 180;
+    const emitter = this.scene.add.particles(x, y, TEX.spark, {
+      speed: { min: b.sparkSpeedMin, max: b.sparkSpeedMax },
+      angle: { min: baseAngle - b.sparkSpreadDeg, max: baseAngle + b.sparkSpreadDeg },
+      lifespan: b.sparkLifespanMs,
+      scale: { start: 0.9, end: 0 },
+      alpha: { start: 1, end: 0 },
+      blendMode: Phaser.BlendModes.ADD,
+      emitting: false,
+    });
+    emitter.setDepth(21);
+    emitter.explode(b.sparkCount);
+    this.scene.time.delayedCall(b.sparkLifespanMs + EFFECTS.explosion.cleanupMarginMs, () =>
+      emitter.destroy(),
+    );
+    // 4) 軽いカメラシェイク(発射の手応え)。
+    this.scene.cameras.main.shake(b.shake.durationMs, b.shake.intensity);
+  }
+
   /** 環境パーティクル(空気感)を開始する。color はステージのアクセント色(発光)。 */
   startAmbient(color: number): void {
     const a = EFFECTS.ambient;

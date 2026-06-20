@@ -507,6 +507,16 @@ export class GameScene extends Phaser.Scene {
     this.events.on('player-fired', onPlayerFired);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off('player-fired', onPlayerFired));
 
+    // 強化ビーム(stage6 のチャージ攻撃)発射の手応え演出。Player が 'player-beam-fired' で通知する。
+    // 同じく SHUTDOWN でリスナーを必ず外す(シーン再入での重複登録を防ぐ)。
+    const onPlayerBeamFired = (mx: number, my: number, dir: 1 | -1): void => {
+      this.effects.beamFire(mx, my, dir);
+    };
+    this.events.on('player-beam-fired', onPlayerBeamFired);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      this.events.off('player-beam-fired', onPlayerBeamFired),
+    );
+
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
     this.spawn.loadStage(this.stageId, this.difficulty);
     this.spawn.onBossTrigger(() => {
