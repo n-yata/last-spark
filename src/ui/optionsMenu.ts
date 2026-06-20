@@ -100,6 +100,12 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
         playTap();
         setPanel(buildRoot);
       }],
+      [`BUSTER: ${settings.busterMode ? 'ON' : 'OFF'}`, () => {
+        settings = { ...settings, busterMode: !settings.busterMode };
+        save.updateSettings({ busterMode: settings.busterMode });
+        playTap();
+        setPanel(buildRoot);
+      }],
       ['音量設定', () => { playTap(); showVolume(); }],
       ['操作説明', () => { playTap(); showControls(); }],
     ];

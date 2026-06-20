@@ -9,6 +9,11 @@ export interface GameSettings {
   seVolume: number;
   /** 難易度。normal は従来バランス、hard は被ダメージ・敵係数を強化する。 */
   difficulty: DifficultyMode;
+  /**
+   * バスターモード。ON のとき stage6 の強化バスター(通常弾2発化 + チャージビーム)を
+   * 全ステージで使えるようにする。難易度とは独立したトグル(既定 false)。
+   */
+  busterMode: boolean;
 }
 
 export type DifficultyMode = 'normal' | 'hard';
