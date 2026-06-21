@@ -101,10 +101,13 @@ export const EFFECTS = {
     glowThicknessMul: 2.4,
     /** 内側コアの太さ倍率。本体より細く、強い中心線にする。 */
     coreThicknessMul: 0.4,
-    /** 各レイヤーのピークアルファ(フェードの to 値)。 */
-    bodyAlpha: 0.85,
-    glowAlpha: 0.35,
-    coreAlpha: 1.0,
+    /**
+     * 各レイヤーのピークアルファ(フェードの to 値)。ADD 合成で重なると明るくなるため、
+     * 眩しすぎないよう抑えめにする(coreAlpha >= bodyAlpha > glowAlpha の序列は維持)。
+     */
+    bodyAlpha: 0.5,
+    glowAlpha: 0.2,
+    coreAlpha: 0.7,
     /** フェードイン/アウトの片道尺(ms)。本体の発光立ち上がり/収束と揃える。 */
     fadeMs: 90,
     /** コアの太さ脈動(scaleY を min↔max で yoyo ループ)。素早い明滅でエネルギー感を出す。 */
@@ -115,6 +118,18 @@ export const EFFECTS = {
     glowPulseMs: 420,
     glowPulseScaleMin: 1.0,
     glowPulseScaleMax: 1.18,
+    /**
+     * 光の粉(TEX.spark): ビーム軸に沿って継続発生し、ふわっと舞って消える粒子。
+     * 「ただの直線」感を払拭する。当たり判定とは無関係の見た目専用。
+     */
+    dustFrequencyMs: 26, // 発生間隔(小さいほど密)。継続ストリーム。
+    dustQuantity: 1, // 1 発生あたりの粒子数
+    dustLifespanMs: 540, // 1 粒の寿命
+    dustSpeedMin: 8, // ふわっと漂う最小速度
+    dustSpeedMax: 40, // 同 最大速度
+    dustScaleStart: 0.5, // 開始スケール(end は 0 へ縮小)
+    dustAlphaStart: 0.5, // 開始アルファ(end は 0 へフェード)
+    dustSpreadYMul: 1.7, // emitZone の縦幅 = beamThickness × これ(帯の少し外まで湧かせる)
   },
 
   /** 環境パーティクル(空気感): カメラ可視域に漂う塵/火の粉。ステージのアクセント色で発光。 */

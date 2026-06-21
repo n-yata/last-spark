@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PLAYER, SHOT } from '../config/balance';
 import { EFFECTS } from '../config/effects';
+import { TEX } from '../config/assetKeys';
 import type { Damageable } from '../types/combat';
 import { shouldHazardTick } from '../systems/hazardRules';
 import { getSound } from '../systems/SoundManager';
@@ -40,6 +41,10 @@ export class Beam extends Phaser.GameObjects.Rectangle {
   /** 装飾レイヤー(物理を持たない見た目専用)。外周グローと白熱コア。 */
   private glow?: Phaser.GameObjects.Rectangle;
   private core?: Phaser.GameObjects.Rectangle;
+  /** ビーム軸に沿って舞う光の粉エミッター(見た目専用)。 */
+  private dust?: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** 光の粉の発生ゾーン(ビーム中心相対の矩形。emitZone の source 型を満たすため field で保持)。 */
+  private dustZone?: Phaser.Geom.Rectangle;
   /** UPDATE 購読のバインド済みハンドラ(解除に同一参照が要る)。 */
   private readonly boundUpdate: () => void;
 
@@ -71,6 +76,30 @@ export class Beam extends Phaser.GameObjects.Rectangle {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(16)
       .setAlpha(0);
+    // 光の粉: ビーム軸沿いの矩形ゾーンから継続発生し、ふわっと舞って消える(詳細は emitZone 直後の注記)。
+    const zoneHeight = SHOT.beamThickness * v.dustSpreadYMul;
+    this.dustZone = new Phaser.Geom.Rectangle(
+      -SHOT.beamLength / 2,
+      -zoneHeight / 2,
+      SHOT.beamLength,
+      zoneHeight,
+    );
+    this.dust = this.scene.add
+      .particles(0, 0, TEX.spark, {
+        lifespan: v.dustLifespanMs,
+        speed: { min: v.dustSpeedMin, max: v.dustSpeedMax },
+        angle: { min: 0, max: 360 },
+        scale: { start: v.dustScaleStart, end: 0 },
+        alpha: { start: v.dustAlphaStart, end: 0 },
+        tint: v.color,
+        blendMode: Phaser.BlendModes.ADD,
+        frequency: v.dustFrequencyMs,
+        quantity: v.dustQuantity,
+        emitZone: { type: 'random', source: this.dustZone, quantity: v.dustQuantity },
+      })
+      .setDepth(17);
+    // 生成と同フレームで fire() されるため、ambient エミッターと同様「生成即発生」に任せる
+    // (emitting:false + start() はこの Phaser 版で継続フローが復帰せず1発しか出ない実績不具合を回避)。
   }
 
   /**
@@ -174,6 +203,8 @@ export class Beam extends Phaser.GameObjects.Rectangle {
     // 装飾レイヤー(物理なし)を本体と同じ中心へ追従させる。
     this.glow?.setPosition(cx, this.owner.y);
     this.core?.setPosition(cx, this.owner.y);
+    // 光の粉エミッターも追従(既出の粒子は自走、新規粒子が新位置から湧き軸に沿う)。
+    this.dust?.setPosition(cx, this.owner.y);
   }
 
   /** 破棄時に UPDATE 購読・tween・装飾レイヤー・参照・持続ビーム音を確実に解放する(リーク防止)。 */
@@ -186,6 +217,9 @@ export class Beam extends Phaser.GameObjects.Rectangle {
     this.glow = undefined;
     this.core?.destroy();
     this.core = undefined;
+    this.dust?.destroy();
+    this.dust = undefined;
+    this.dustZone = undefined;
     this.owner = undefined;
     this.lastHitAt.clear();
     super.destroy(fromScene);
