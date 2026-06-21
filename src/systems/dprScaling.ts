@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { cappedDpr, setUiScale } from '../config/uiScale';
+import { getViewportSize } from './viewport';
 
 // 高DPI(Retina)対応: canvas のバッキング解像度を物理pxにし、CSS表示は画面いっぱい(等倍)。
 //
@@ -27,10 +28,21 @@ export function initHiDpiScaling(game: Phaser.Game): void {
     setUiScale(dpr);
     // boot 前に window リサイズが来た場合は canvas/scale 未準備のためスキップ(READY で再実行)。
     if (!game.scale || !game.canvas) return;
+    // 実ビューポート寸法は visualViewport 優先で取得する。モバイルブラウザでは
+    // window.innerWidth/innerHeight が回転直後に縦向きの古い値を返し、横向きでも canvas を
+    // 縦向き幅で作って左右に黒帯が出るため(viewport.ts 参照)。
+    const { width, height } = getViewportSize();
     // zoom を先に設定してから resize する。resize() が zoom を見て canvas.style を
     // cssW(=物理px*zoom) に設定し、refresh() が displayScale を dpr に揃える。
     game.scale.setZoom(1 / dpr);
-    game.scale.resize(window.innerWidth * dpr, window.innerHeight * dpr);
+    game.scale.resize(width * dpr, height * dpr);
+  };
+
+  // 回転直後は寸法が未確定なことがあるため、確定後にも測り直す(stale 値での誤サイズを回復)。
+  const applySettled = (): void => {
+    apply();
+    if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(apply);
+    window.setTimeout(apply, 250);
   };
 
   // uiScale だけは同期的に確定させる(各シーンの create 時点で getUiScale() が正しい値を返す)。
@@ -39,5 +51,9 @@ export function initHiDpiScaling(game: Phaser.Game): void {
   // canvas/ScaleManager 準備後に解像度を反映し、以降はリサイズ/回転で再適用。
   game.events.once(Phaser.Core.Events.READY, apply);
   window.addEventListener('resize', apply);
-  window.addEventListener('orientationchange', apply);
+  // orientationchange は寸法未確定のことがあるため遅延込みで再適用する。
+  window.addEventListener('orientationchange', applySettled);
+  // visualViewport は回転・ツールバー出入りの確定後に正しい寸法で発火する信頼できる信号。
+  window.visualViewport?.addEventListener('resize', apply);
+  window.visualViewport?.addEventListener('scroll', apply);
 }

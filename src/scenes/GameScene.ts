@@ -38,6 +38,7 @@ import {
   shouldSpawnHardModeSecretBoss,
 } from '../systems/difficulty';
 import { shouldEmpowerPlayer } from '../systems/empowerment';
+import { getViewportSize } from '../systems/viewport';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -911,10 +912,10 @@ export class GameScene extends Phaser.Scene {
 
   private setupOrientationHandling(): void {
     const check = (): void => {
-      // FIT モードでは scale.width/height は論理サイズ(固定)、displaySize は
-      // アスペクト比維持で常に 16:9 になる。実ビューポート(端末の向き)を反映する
-      // window のサイズで縦持ちを判定する。
-      const portrait = window.innerHeight > window.innerWidth;
+      // 実ビューポート(端末の向き)で縦持ちを判定する。dprScaling と同じ visualViewport 優先の
+      // 寸法ソースに統一し、回転直後の stale 値による誤判定(横向きなのに縦持ち扱い)を防ぐ。
+      const { width: vw, height: vh } = getViewportSize();
+      const portrait = vh > vw;
       const orientationActive = this.scene.isActive(SCENE_KEYS.orientation);
       if (portrait && !orientationActive) {
         this.scene.launch(SCENE_KEYS.orientation);
