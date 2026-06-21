@@ -60,10 +60,11 @@ describe('強化ビーム帯の多層描画: グロー+コア+脈動', () => {
     expect(v.coreThicknessMul).toBeGreaterThan(0);
   });
 
-  it('各レイヤーのピークアルファが 0〜1 で、コアが最も明るくグローが最も淡い', () => {
+  it('各レイヤーのピークアルファが眩しすぎない(全て 1 未満)かつ序列を維持', () => {
+    // ADD 合成で重なると明るくなるため、各レイヤー単体では 1 未満に抑え、眩しさを防ぐ。
     for (const a of [v.bodyAlpha, v.glowAlpha, v.coreAlpha]) {
       expect(a).toBeGreaterThan(0);
-      expect(a).toBeLessThanOrEqual(1);
+      expect(a).toBeLessThan(1);
     }
     expect(v.coreAlpha).toBeGreaterThanOrEqual(v.bodyAlpha);
     expect(v.bodyAlpha).toBeGreaterThan(v.glowAlpha);
@@ -87,5 +88,31 @@ describe('強化ビーム帯の多層描画: グロー+コア+脈動', () => {
 
   it('コア色が白熱(白系)で本体より明るい', () => {
     expect(v.coreColor).toBe(0xffffff);
+  });
+});
+
+describe('強化ビームの光の粉: ビーム軸に舞う粒子', () => {
+  const v = EFFECTS.beam;
+
+  it('継続発生のための間隔・寿命・1回数が正', () => {
+    expect(v.dustFrequencyMs).toBeGreaterThan(0);
+    expect(v.dustLifespanMs).toBeGreaterThan(0);
+    expect(v.dustQuantity).toBeGreaterThanOrEqual(1);
+  });
+
+  it('漂う速度範囲が破綻していない(0 < min <= max)', () => {
+    expect(v.dustSpeedMin).toBeGreaterThan(0);
+    expect(v.dustSpeedMax).toBeGreaterThanOrEqual(v.dustSpeedMin);
+  });
+
+  it('開始スケール・開始アルファが 0〜1 の妥当な範囲', () => {
+    expect(v.dustScaleStart).toBeGreaterThan(0);
+    expect(v.dustScaleStart).toBeLessThanOrEqual(1);
+    expect(v.dustAlphaStart).toBeGreaterThan(0);
+    expect(v.dustAlphaStart).toBeLessThanOrEqual(1);
+  });
+
+  it('発生ゾーンの縦幅倍率が正(帯の周囲に湧かせる)', () => {
+    expect(v.dustSpreadYMul).toBeGreaterThan(0);
   });
 });
