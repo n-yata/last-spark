@@ -35,8 +35,13 @@ export class CharacterRig {
   private attackStartMs = -1;
   /** hit(被弾)トリガ時刻。負なら未発火。 */
   private hitStartMs = -1;
-  /** 被弾白フラッシュ(setTintFill)を適用中か。立ち下がりで clearTint するために持つ。 */
+  /** 被弾白フラッシュ(setTintFill)を適用中か。立ち下がりで baseTint へ戻すために持つ。 */
   private flashApplied = false;
+  /**
+   * 被弾フラッシュが乗る前の基準ティント(周回報酬の配色等)。白フラッシュの立ち下がりで
+   * clearTint() ではなくこの値へ戻すことで、setTint() で付与した恒常的な配色を保持する。
+   */
+  private baseTint = 0xffffff;
   /** 歩行位相を進める内部時計(walk 中のみ進行)。 */
   private walkClockMs = 0;
   private lastUpdateMs = -1;
@@ -145,7 +150,7 @@ export class CharacterRig {
     } else if (this.flashApplied) {
       this.flashApplied = false;
       for (const part of this.parts) {
-        part.image.clearTint();
+        part.image.setTint(this.baseTint);
       }
     }
   }
@@ -191,15 +196,20 @@ export class CharacterRig {
     part.image.setRotation(rotation);
   }
 
-  /** ティント(ボス stagger 等)を全パーツへ適用。 */
+  /**
+   * ティント(ボス stagger・周回報酬の配色等)を全パーツへ適用する。
+   * baseTint として記憶し、被弾フラッシュの立ち下がりでもこの色へ復帰する。
+   */
   setTint(color: number): void {
+    this.baseTint = color;
     for (const part of this.parts) {
       part.image.setTint(color);
     }
   }
 
-  /** ティント解除。 */
+  /** ティント解除(基準色を無着色へ戻す)。 */
   clearTint(): void {
+    this.baseTint = 0xffffff;
     for (const part of this.parts) {
       part.image.clearTint();
     }

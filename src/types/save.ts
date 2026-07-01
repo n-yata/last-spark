@@ -25,6 +25,11 @@ export interface SaveData {
   clearedStages: string[];
   /** ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーを持たない。 */
   bestTimeMs?: Record<string, number>;
+  /**
+   * 周回数(New Game+)。初期値1。全ステージクリア後に次の周回へ進むたびに+1され、
+   * clearedStages はリセットされるが bestTimeMs は保持される(進捗データ、settings外)。
+   */
+  loopCount: number;
   /** ユーザー設定 */
   settings: GameSettings;
 }

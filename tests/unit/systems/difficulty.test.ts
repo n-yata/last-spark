@@ -3,10 +3,11 @@ import {
   applyDifficultyToEnemySpawns,
   applyDifficultyToStageTuning,
   difficultyLabel,
+  loopScaling,
   playerDamageMultiplier,
   pollutionDamageMultiplier,
   shouldSpawnHardModeSecretBoss,
-  shouldShowStoryForDifficulty,
+  shouldShowStory,
   toggleDifficulty,
 } from '../../../src/systems/difficulty';
 import { NEUTRAL_STAGE_TUNING } from '../../../src/config/balance';
@@ -40,8 +41,17 @@ describe('difficulty tuning', () => {
   });
 
   it('normal はストーリーを表示し、hard はストーリーを表示しない', () => {
-    expect(shouldShowStoryForDifficulty('normal')).toBe(true);
-    expect(shouldShowStoryForDifficulty('hard')).toBe(false);
+    expect(shouldShowStory('normal', 1)).toBe(true);
+    expect(shouldShowStory('hard', 1)).toBe(false);
+  });
+
+  it('normal でも2周目以降はストーリーを表示しない', () => {
+    expect(shouldShowStory('normal', 2)).toBe(false);
+    expect(shouldShowStory('normal', 3)).toBe(false);
+  });
+
+  it('hard は周回数によらずストーリーを表示しない', () => {
+    expect(shouldShowStory('hard', 2)).toBe(false);
   });
 
   it('裏ボスは hard の stage6 だけで出現する', () => {
@@ -81,5 +91,69 @@ describe('difficulty tuning', () => {
     expect(added[0].x).toBeGreaterThan(spawns[1].x);
     expect(added[1]).toMatchObject({ pattern: spawns[3].pattern, y: spawns[3].y });
     expect(added[1].x).toBeGreaterThan(spawns[3].x);
+  });
+
+  // ---- 周回スケーリング(loopCount) ----
+
+  it('loopScaling は1周目で無強化(全て1.0)を返す', () => {
+    expect(loopScaling(1)).toEqual({
+      hp: 1.0,
+      spawn: 1.0,
+      playerDmg: 1.0,
+      turretInterval: 1.0,
+      walkerSpeed: 1.0,
+    });
+  });
+
+  it('loopScaling は周回数が増えるほど強化幅が大きくなる', () => {
+    const loop1 = loopScaling(1);
+    const loop2 = loopScaling(2);
+    const loop3 = loopScaling(3);
+    expect(loop2.hp).toBeGreaterThan(loop1.hp);
+    expect(loop3.hp).toBeGreaterThan(loop2.hp);
+    expect(loop2.turretInterval).toBeLessThan(loop1.turretInterval);
+    expect(loop3.turretInterval).toBeLessThan(loop2.turretInterval);
+  });
+
+  it('loopScaling は3周目で上限に達し、4周目以降は同じ値のまま頭打ちになる', () => {
+    const loop3 = loopScaling(3);
+    expect(loopScaling(4)).toEqual(loop3);
+    expect(loopScaling(10)).toEqual(loop3);
+  });
+
+  it('difficulty系の3関数は loopCount 省略時(既定値)で従来と同じ数値を返す(非破壊)', () => {
+    expect(applyDifficultyToStageTuning(NEUTRAL_STAGE_TUNING, 'normal')).toEqual(
+      applyDifficultyToStageTuning(NEUTRAL_STAGE_TUNING, 'normal', 1),
+    );
+    expect(applyDifficultyToStageTuning(NEUTRAL_STAGE_TUNING, 'hard')).toEqual(
+      applyDifficultyToStageTuning(NEUTRAL_STAGE_TUNING, 'hard', 1),
+    );
+    expect(playerDamageMultiplier('hard')).toBe(playerDamageMultiplier('hard', 1));
+  });
+
+  it('周回数が増えるとステージ係数がさらに強化される(hard基準に周回乗数が重なる)', () => {
+    const hardLoop1 = applyDifficultyToStageTuning(NEUTRAL_STAGE_TUNING, 'hard', 1);
+    const hardLoop2 = applyDifficultyToStageTuning(NEUTRAL_STAGE_TUNING, 'hard', 2);
+    expect(hardLoop2.enemyHpFactor).toBeGreaterThan(hardLoop1.enemyHpFactor);
+    expect(hardLoop2.walkerSpeedFactor).toBeGreaterThan(hardLoop1.walkerSpeedFactor);
+    expect(hardLoop2.turretIntervalFactor).toBeLessThan(hardLoop1.turretIntervalFactor);
+  });
+
+  it('周回数が増えると被ダメージ倍率も重なって上がる', () => {
+    expect(playerDamageMultiplier('normal', 2)).toBeGreaterThan(playerDamageMultiplier('normal', 1));
+    expect(playerDamageMultiplier('hard', 3)).toBeGreaterThan(playerDamageMultiplier('hard', 2));
+  });
+
+  it('周回数が増えると道中敵配置もさらに増える', () => {
+    // normal(素の敵配置倍率=1)を基準にすることで、hard基準の倍率で追加候補の枠(奇数index)が
+    // 早々に埋まってしまい周回差が見えなくなる事態を避ける。
+    const spawns: EnemySpawn[] = Array.from({ length: 20 }, (_, i) => ({
+      pattern: i % 2 === 0 ? 'walker' : 'turret',
+      x: i * 100,
+      y: 420,
+    }));
+    const loop1 = applyDifficultyToEnemySpawns(spawns, 'normal', 1);
+    const loop3 = applyDifficultyToEnemySpawns(spawns, 'normal', 3);
+    expect(loop3.length).toBeGreaterThan(loop1.length);
   });
 });

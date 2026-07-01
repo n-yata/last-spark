@@ -15,11 +15,12 @@ const DEFAULT_SETTINGS = {
 } as const;
 
 describe('defaultSaveData', () => {
-  it('未プレイ状態の既定値を返す(clearedStages=[], bestTimeMs 未設定)', () => {
+  it('未プレイ状態の既定値を返す(clearedStages=[], bestTimeMs 未設定, loopCount=1)', () => {
     const d = defaultSaveData();
     expect(d.version).toBe(SAVE_VERSION);
     expect(d.clearedStages).toEqual([]);
     expect(d.bestTimeMs).toBeUndefined();
+    expect(d.loopCount).toBe(1);
     expect(d.settings).toEqual(DEFAULT_SETTINGS);
   });
 });
@@ -57,6 +58,27 @@ describe('isValidSaveData', () => {
 
   it('bestTimeMs が正しいレコードなら妥当', () => {
     const d = { ...defaultSaveData(), bestTimeMs: { stage1: 1000, stage3: 2000 } };
+    expect(isValidSaveData(d)).toBe(true);
+  });
+
+  it('loopCount が0以下の場合は不正', () => {
+    const d = { ...defaultSaveData(), loopCount: 0 };
+    expect(isValidSaveData(d)).toBe(false);
+  });
+
+  it('loopCount が整数でない場合は不正', () => {
+    const d = { ...defaultSaveData(), loopCount: 1.5 };
+    expect(isValidSaveData(d)).toBe(false);
+  });
+
+  it('loopCount を欠く場合は不正', () => {
+    const withoutLoopCount: Record<string, unknown> = { ...defaultSaveData() };
+    delete withoutLoopCount.loopCount;
+    expect(isValidSaveData(withoutLoopCount)).toBe(false);
+  });
+
+  it('loopCount が2以上でも妥当', () => {
+    const d = { ...defaultSaveData(), loopCount: 3 };
     expect(isValidSaveData(d)).toBe(true);
   });
 
@@ -361,8 +383,81 @@ describe('SaveManager', () => {
     const withoutBuster = {
       version: SAVE_VERSION,
       clearedStages: [],
+      loopCount: 1,
       settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal' },
     };
     expect(isValidSaveData(withoutBuster)).toBe(false);
+  });
+
+  // ---- v5 → v6 マイグレーション(loopCount 補完) ----
+
+  it('v5(loopCount なし)を現行版へ移行し loopCount=1 を補完する', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.save,
+      JSON.stringify({
+        version: 5,
+        clearedStages: ['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6'],
+        bestTimeMs: { stage1: 11_111, stage6: 66_666 },
+        settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'hard', busterMode: true },
+      }),
+    );
+    const mgr = new SaveManager();
+    const data = mgr.getData();
+    expect(data.version).toBe(SAVE_VERSION);
+    expect(data.clearedStages).toEqual(['stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6']);
+    expect(data.bestTimeMs).toEqual({ stage1: 11_111, stage6: 66_666 });
+    expect(data.loopCount).toBe(1);
+    expect(data.settings.difficulty).toBe('hard');
+    expect(data.settings.busterMode).toBe(true);
+  });
+
+  it('v1(cleared:true)を現行バージョンへマイグレートすると loopCount=1 が補完される', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.save,
+      JSON.stringify({
+        version: 1,
+        cleared: true,
+        bestTimeMs: 8_888,
+        settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8 },
+      }),
+    );
+    const mgr = new SaveManager();
+    expect(mgr.getData().loopCount).toBe(1);
+  });
+
+  // ---- advanceLoop ----
+
+  describe('advanceLoop', () => {
+    it('loopCount を+1し、clearedStages をリセットするが bestTimeMs は保持する', () => {
+      const mgr = new SaveManager();
+      mgr.markStageCleared('stage1', 10_000);
+      mgr.markStageCleared('stage6', 60_000);
+      expect(mgr.getData().loopCount).toBe(1);
+
+      mgr.advanceLoop();
+
+      const data = mgr.getData();
+      expect(data.loopCount).toBe(2);
+      expect(data.clearedStages).toEqual([]);
+      expect(data.bestTimeMs).toEqual({ stage1: 10_000, stage6: 60_000 });
+    });
+
+    it('複数回呼ぶたびに loopCount が積み上がる', () => {
+      const mgr = new SaveManager();
+      mgr.advanceLoop();
+      mgr.advanceLoop();
+      mgr.advanceLoop();
+      expect(mgr.getData().loopCount).toBe(4);
+    });
+
+    it('保存され、再読み込み後も loopCount と bestTimeMs が維持される', () => {
+      const mgr = new SaveManager();
+      mgr.markStageCleared('stage1', 5_000);
+      mgr.advanceLoop();
+      const reloaded = new SaveManager();
+      expect(reloaded.getData().loopCount).toBe(2);
+      expect(reloaded.getData().clearedStages).toEqual([]);
+      expect(reloaded.getData().bestTimeMs).toEqual({ stage1: 5_000 });
+    });
   });
 });

@@ -86,6 +86,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.empowered = value;
   }
 
+  /** 周回数(New Game+)に応じた配色を全パーツへ適用する(見た目の報酬)。CharacterRig へ委譲する。 */
+  setLoopTint(color: number): void {
+    this.rig.setTint(color);
+  }
+
   /** このステージの梯子領域を設定する(重なり判定用の矩形へ変換して保持)。 */
   setLadders(ladders: LadderRect[]): void {
     this.ladderBoxes = ladders.map((l) => ({

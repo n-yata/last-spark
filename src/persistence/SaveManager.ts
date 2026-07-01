@@ -15,12 +15,18 @@ export function defaultSaveData(): SaveData {
     version: SAVE_VERSION,
     clearedStages: [],
     bestTimeMs: undefined,
+    loopCount: 1,
     settings: defaultSettings(),
   };
 }
 
 function isFiniteInRange(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
+}
+
+/** loopCount が「1以上の有限整数」かを検証する。 */
+function isValidLoopCount(value: unknown): value is number {
+  return isFiniteInRange(value, 1, Number.MAX_SAFE_INTEGER) && Number.isInteger(value);
 }
 
 function isDifficultyMode(value: unknown): value is DifficultyMode {
@@ -77,14 +83,16 @@ export function isValidSaveData(value: unknown): value is SaveData {
   if (d.version !== SAVE_VERSION) return false;
   if (!isStringArray(d.clearedStages)) return false;
   if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return false;
+  if (!isValidLoopCount(d.loopCount)) return false;
   if (!isValidSettings(d.settings)) return false;
   return true;
 }
 
 /**
  * 旧形式を現行形式へ移行する。
- * - v2/v3/v4 (clearedStages:string[] / bestTimeMs:Record): difficulty・busterMode を補完して移行する。
- *   (v2/v3 は difficulty なし→normal、v4 は busterMode なし→false を normalizeSettings が補完する)
+ * - v2/v3/v4/v5 (clearedStages:string[] / bestTimeMs:Record): difficulty・busterMode・loopCount を
+ *   補完して移行する。(v2/v3 は difficulty なし→normal、v4 は busterMode なし→false を
+ *   normalizeSettings が補完し、v5 以下は loopCount なし→1 を補完する)
  * - v1 (cleared:boolean / bestTimeMs:number): clearedStages を配列化して移行する。
  * 移行できない/不正な場合は undefined を返し、呼び出し側で既定値へフォールバックさせる。
  * 注記: かつての v3 は collectedLogs を持っていたが撤去済み。当時の v3 セーブに残る余分な
@@ -94,12 +102,12 @@ function migrate(value: unknown): SaveData | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const d = value as Record<string, unknown>;
 
-  // v2/v3/v4 → 現行: 進捗を保持し、settings の不足フィールド(difficulty/busterMode)を
-  // normalizeSettings で補完して version を引き上げる。
-  // これを欠くと既存プレイヤーの v2/v3/v4 セーブが既定値へ初期化され、クリア進捗が失われる。
+  // v2/v3/v4/v5 → 現行: 進捗を保持し、settings の不足フィールド(difficulty/busterMode)と
+  // loopCount を補完して version を引き上げる。
+  // これを欠くと既存プレイヤーの v2〜v5 セーブが既定値へ初期化され、クリア進捗が失われる。
   const migratedSettings = normalizeSettings(d.settings);
   if (
-    (d.version === 2 || d.version === 3 || d.version === 4) &&
+    (d.version === 2 || d.version === 3 || d.version === 4 || d.version === 5) &&
     isStringArray(d.clearedStages) &&
     migratedSettings
   ) {
@@ -108,6 +116,7 @@ function migrate(value: unknown): SaveData | undefined {
       version: SAVE_VERSION,
       clearedStages: [...(d.clearedStages as string[])],
       bestTimeMs: isValidBestTimes(d.bestTimeMs) ? { ...(d.bestTimeMs as Record<string, number>) } : undefined,
+      loopCount: isValidLoopCount(d.loopCount) ? d.loopCount : 1,
       settings: migratedSettings,
     };
   }
@@ -127,6 +136,7 @@ function migrate(value: unknown): SaveData | undefined {
     version: SAVE_VERSION,
     clearedStages,
     bestTimeMs,
+    loopCount: 1,
     settings: legacySettings,
   };
 }
@@ -221,6 +231,17 @@ export class SaveManager {
   updateSettings(partial: Partial<GameSettings>): void {
     const next = this.getData();
     next.settings = { ...next.settings, ...partial };
+    this.save(next);
+  }
+
+  /**
+   * 次の周回へ進む。loopCount を+1し、clearedStages をリセットして stage1 から
+   * 再開できる状態にする。bestTimeMs(過去の最速記録)は周回に関係しない記録なので保持する。
+   */
+  advanceLoop(): void {
+    const next = this.getData();
+    next.loopCount += 1;
+    next.clearedStages = [];
     this.save(next);
   }
 }
