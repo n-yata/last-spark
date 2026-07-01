@@ -12,4 +12,5 @@ export const STORAGE_KEYS = {
 // v4: settings.difficulty を追加。旧セーブは normal を補完して移行する。
 // v5: settings.busterMode を追加。旧セーブ(v2/v3/v4)は busterMode=false を補完して移行する。
 // v6: loopCount(周回数、settings外の進捗データ)を追加。旧セーブ(v1〜v5)は loopCount=1 を補完して移行する。
-export const SAVE_VERSION = 6;
+// v7: settings.vibration(触覚フィードバック)を追加。旧セーブ(v2〜v6)は vibration=true を補完して移行する。
+export const SAVE_VERSION = 7;

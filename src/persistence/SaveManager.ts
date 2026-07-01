@@ -6,7 +6,14 @@ import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
 /** 既定のユーザー設定。 */
 export function defaultSettings(): GameSettings {
-  return { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal', busterMode: false };
+  return {
+    muted: false,
+    bgmVolume: 0.6,
+    seVolume: 0.8,
+    difficulty: 'normal',
+    busterMode: false,
+    vibration: true,
+  };
 }
 
 /** 既定のセーブデータ(未プレイ状態)。 */
@@ -41,12 +48,14 @@ function normalizeSettings(value: unknown): GameSettings | undefined {
   if (!isFiniteInRange(s.seVolume, 0, 1)) return undefined;
   if (s.difficulty !== undefined && !isDifficultyMode(s.difficulty)) return undefined;
   if (s.busterMode !== undefined && typeof s.busterMode !== 'boolean') return undefined;
+  if (s.vibration !== undefined && typeof s.vibration !== 'boolean') return undefined;
   return {
     muted: s.muted,
     bgmVolume: s.bgmVolume,
     seVolume: s.seVolume,
     difficulty: s.difficulty ?? 'normal',
     busterMode: s.busterMode ?? false,
+    vibration: s.vibration ?? true,
   };
 }
 
@@ -56,7 +65,8 @@ function isValidSettings(value: unknown): value is GameSettings {
   return (
     normalizeSettings(value) !== undefined &&
     isDifficultyMode(s.difficulty) &&
-    typeof s.busterMode === 'boolean'
+    typeof s.busterMode === 'boolean' &&
+    typeof s.vibration === 'boolean'
   );
 }
 
@@ -90,9 +100,9 @@ export function isValidSaveData(value: unknown): value is SaveData {
 
 /**
  * 旧形式を現行形式へ移行する。
- * - v2/v3/v4/v5 (clearedStages:string[] / bestTimeMs:Record): difficulty・busterMode・loopCount を
- *   補完して移行する。(v2/v3 は difficulty なし→normal、v4 は busterMode なし→false を
- *   normalizeSettings が補完し、v5 以下は loopCount なし→1 を補完する)
+ * - v2〜v6 (clearedStages:string[] / bestTimeMs:Record): difficulty・busterMode・vibration・
+ *   loopCount を補完して移行する。(v2/v3 は difficulty なし→normal、v4 は busterMode なし→false、
+ *   v6 以下は vibration なし→true を normalizeSettings が補完し、v5 以下は loopCount なし→1 を補完する)
  * - v1 (cleared:boolean / bestTimeMs:number): clearedStages を配列化して移行する。
  * 移行できない/不正な場合は undefined を返し、呼び出し側で既定値へフォールバックさせる。
  * 注記: かつての v3 は collectedLogs を持っていたが撤去済み。当時の v3 セーブに残る余分な
@@ -102,12 +112,12 @@ function migrate(value: unknown): SaveData | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const d = value as Record<string, unknown>;
 
-  // v2/v3/v4/v5 → 現行: 進捗を保持し、settings の不足フィールド(difficulty/busterMode)と
+  // v2〜v6 → 現行: 進捗を保持し、settings の不足フィールド(difficulty/busterMode/vibration)と
   // loopCount を補完して version を引き上げる。
-  // これを欠くと既存プレイヤーの v2〜v5 セーブが既定値へ初期化され、クリア進捗が失われる。
+  // これを欠くと既存プレイヤーの v2〜v6 セーブが既定値へ初期化され、クリア進捗が失われる。
   const migratedSettings = normalizeSettings(d.settings);
   if (
-    (d.version === 2 || d.version === 3 || d.version === 4 || d.version === 5) &&
+    (d.version === 2 || d.version === 3 || d.version === 4 || d.version === 5 || d.version === 6) &&
     isStringArray(d.clearedStages) &&
     migratedSettings
   ) {

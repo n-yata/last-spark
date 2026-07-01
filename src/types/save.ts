@@ -14,6 +14,11 @@ export interface GameSettings {
    * 全ステージで使えるようにする。難易度とは独立したトグル(既定 false)。
    */
   busterMode: boolean;
+  /**
+   * 触覚フィードバック(Vibration API)。ON のとき被弾・ボス撃破時に振動する(既定 true)。
+   * 非対応環境(iOS Safari / PC)では設定に関わらず何も起きない。
+   */
+  vibration: boolean;
 }
 
 export type DifficultyMode = 'normal' | 'hard';

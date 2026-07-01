@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   resolveHorizontalVelocity,
   shouldJump,
+  resolveJumpStart,
+  type JumpStartParams,
   resolveFacing,
   facingSign,
   shouldCutJump,
@@ -44,6 +46,81 @@ describe('shouldJump', () => {
   });
   it('入力が無ければ発動しない', () => {
     expect(shouldJump(baseInput, true)).toBe(false);
+  });
+});
+
+describe('resolveJumpStart(コヨーテタイム + 先行入力バッファ)', () => {
+  // 未成立状態(リセット済み)のタイムスタンプは -Infinity。
+  const base: JumpStartParams = {
+    jumpPressed: false,
+    onGround: false,
+    isJumping: false,
+    now: 1000,
+    lastGroundedAt: Number.NEGATIVE_INFINITY,
+    coyoteMs: PLAYER.coyoteMs,
+    jumpBufferedAt: Number.NEGATIVE_INFINITY,
+    jumpBufferMs: PLAYER.jumpBufferMs,
+  };
+
+  it('接地中の立ち上がり入力で発動する(従来挙動の回帰)', () => {
+    expect(resolveJumpStart({ ...base, jumpPressed: true, onGround: true })).toBe(true);
+  });
+
+  it('入力が無ければ接地中でも発動しない', () => {
+    expect(resolveJumpStart({ ...base, onGround: true })).toBe(false);
+  });
+
+  it('コヨーテ: 足場を離れて猶予内の入力なら発動する(境界: coyoteMs ちょうどは有効)', () => {
+    // 100ms 前まで接地していた(coyoteMs=100 ちょうど)
+    expect(
+      resolveJumpStart({ ...base, jumpPressed: true, lastGroundedAt: 1000 - PLAYER.coyoteMs }),
+    ).toBe(true);
+  });
+
+  it('コヨーテ: 猶予を1msでも超えたら発動しない', () => {
+    expect(
+      resolveJumpStart({ ...base, jumpPressed: true, lastGroundedAt: 1000 - PLAYER.coyoteMs - 1 }),
+    ).toBe(false);
+  });
+
+  it('コヨーテ: リセット済み(-Infinity)の空中入力では発動しない', () => {
+    expect(resolveJumpStart({ ...base, jumpPressed: true })).toBe(false);
+  });
+
+  it('コヨーテ: ジャンプ離陸済み(isJumping)なら猶予内でも発動しない(二段ジャンプ防止)', () => {
+    expect(
+      resolveJumpStart({ ...base, jumpPressed: true, isJumping: true, lastGroundedAt: 990 }),
+    ).toBe(false);
+  });
+
+  it('バッファ: 猶予内の先行入力があれば着地した瞬間に発動する(境界: jumpBufferMs ちょうどは有効)', () => {
+    expect(
+      resolveJumpStart({ ...base, onGround: true, jumpBufferedAt: 1000 - PLAYER.jumpBufferMs }),
+    ).toBe(true);
+  });
+
+  it('バッファ: 猶予を1msでも超えたら着地しても発動しない', () => {
+    expect(
+      resolveJumpStart({
+        ...base,
+        onGround: true,
+        jumpBufferedAt: 1000 - PLAYER.jumpBufferMs - 1,
+      }),
+    ).toBe(false);
+  });
+
+  it('バッファ: 空中では先行入力が残っていても発動しない(着地まで待つ)', () => {
+    expect(resolveJumpStart({ ...base, jumpBufferedAt: 950 })).toBe(false);
+  });
+
+  it('バッファ: リセット済み(-Infinity)なら着地しても発動しない(二重消費防止の前提)', () => {
+    expect(resolveJumpStart({ ...base, onGround: true })).toBe(false);
+  });
+
+  it('バッファ: 接地中でも isJumping なら発動しない', () => {
+    expect(
+      resolveJumpStart({ ...base, onGround: true, isJumping: true, jumpBufferedAt: 990 }),
+    ).toBe(false);
   });
 });
 

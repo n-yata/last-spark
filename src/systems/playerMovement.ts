@@ -14,6 +14,42 @@ export function shouldJump(input: InputState, onGround: boolean): boolean {
   return input.jumpPressed && onGround;
 }
 
+/** resolveJumpStart の入力。タイムスタンプは未成立状態を -Infinity で表す。 */
+export interface JumpStartParams {
+  /** このフレームのジャンプ立ち上がり入力 */
+  jumpPressed: boolean;
+  /** 接地中か */
+  onGround: boolean;
+  /** ジャンプ離陸済みか(上昇フェーズ中)。true の間は再ジャンプ不可 */
+  isJumping: boolean;
+  /** 現在時刻(ms) */
+  now: number;
+  /** 最後に接地していた時刻(ms)。ジャンプ発動時に呼び出し側で -Infinity へリセットする */
+  lastGroundedAt: number;
+  /** コヨーテタイム猶予(ms) */
+  coyoteMs: number;
+  /** 空中でジャンプ入力があった時刻(ms)。ジャンプ発動時に呼び出し側で -Infinity へリセットする */
+  jumpBufferedAt: number;
+  /** 先行入力バッファ猶予(ms) */
+  jumpBufferMs: number;
+}
+
+/**
+ * 今フレームでジャンプを開始すべきか(コヨーテタイム + 先行入力バッファ対応)。
+ * - 立ち上がり入力があり、接地中またはコヨーテ猶予内(足場を離れた直後)なら発動。
+ * - 接地した瞬間に、バッファ猶予内の先行入力(空中で押されたジャンプ)があれば発動。
+ * - isJumping(ジャンプ離陸済み)の間は発動しない(空中二段ジャンプ防止)。
+ *
+ * 二重消費の防止は呼び出し側の責務: 発動したら lastGroundedAt / jumpBufferedAt を
+ * -Infinity へリセットすること。
+ */
+export function resolveJumpStart(p: JumpStartParams): boolean {
+  if (p.isJumping) return false;
+  const withinCoyote = p.onGround || p.now - p.lastGroundedAt <= p.coyoteMs;
+  if (p.jumpPressed && withinCoyote) return true;
+  return p.onGround && p.now - p.jumpBufferedAt <= p.jumpBufferMs;
+}
+
 /**
  * 向きを決定する。移動入力がある時のみ更新し、停止時は直前の向きを維持する
  * (ショット方向の安定のため)。

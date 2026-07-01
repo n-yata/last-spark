@@ -83,15 +83,16 @@ interface GameSettings {
   seVolume: number;         // 0.0–1.0
   difficulty: 'normal' | 'hard'; // 難易度。hard は被ダメージ・敵係数を強化し、ストーリー演出を非表示
   busterMode: boolean;      // ON で stage6 の強化バスターを全ステージで使える(難易度とは独立、既定 false)
+  vibration: boolean;       // 触覚フィードバック(被弾・ボス撃破時の振動)。非対応環境では無効(既定 true)
 }
 ```
 
 **制約**:
 - 保存キーは `lastspark:save`(名前空間付き)。
 - `localStorage` 利用不可・破損時は既定値で起動し、ゲーム自体は継続可能(進捗が無いだけ)。
-- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 6`(`clearedStages` / `bestTimeMs:Record` / `settings.difficulty` / `settings.busterMode` / `loopCount`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、余分な `collectedLogs` は読み込み時に無視する。
+- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 7`(`clearedStages` / `bestTimeMs:Record` / `settings.difficulty` / `settings.busterMode` / `settings.vibration` / `loopCount`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、余分な `collectedLogs` は読み込み時に無視する。
   - v1(`cleared:boolean` / `bestTimeMs:number`)→現行 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。`loopCount` は1を補完。
-  - v2〜v5→現行 移行: 進捗を保持し、`settings.difficulty` 未設定なら `normal`、`settings.busterMode` 未設定なら `false`、`loopCount` 未設定なら `1` を補完して version を引き上げる。
+  - v2〜v6→現行 移行: 進捗を保持し、`settings.difficulty` 未設定なら `normal`、`settings.busterMode` 未設定なら `false`、`settings.vibration` 未設定なら `true`、`loopCount` 未設定なら `1` を補完して version を引き上げる。
 - API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。`advanceLoop()` で次の周回へ進む(`loopCount+1` かつ `clearedStages` をリセット、`bestTimeMs` は保持)。
 
 ### 周回要素(New Game+)
@@ -310,6 +311,10 @@ class SpawnSystem {
 **すり抜け床(ワンウェイ床)**: 地形は高さで `height>40`=地面(全面衝突)、それ以下=浮遊足場(ワンウェイ)に分け、別グループにする。プレイヤー/敵×足場の collider は `processCallback` を持ち、純粋関数 `shouldLandOnOneWay(bottom, velY, platformTop)`(下降中かつ足元が床上端付近)が真の時だけ衝突を有効化する。これにより足場は「上から着地・下から通過」になる(地面は従来どおり全面衝突)。接地ボスは地面のみと衝突する(飛行ボスは重力を切って滞空するため地形と衝突しない)。
 
 **梯子(ladder)**: `StageData.ladders` の矩形を `GameScene.buildLadders` が見た目(タイル)として敷き、矩形配列を `Player.setLadders` へ渡す(物理衝突はさせない)。Player は純粋関数 `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity` で把持状態を判定し、把持中は重力を切って(`setAllowGravity(false)`)上下入力で鉛直移動する。離脱時に重力を必ず戻す。梯子昇降中はプレイヤーの足場 collider を抑制し、ワンウェイ床を貫通して登り降りできる(梯子上端=直上の足場上端に揃え、登り切ると足場に乗れる動線)。これらの純粋ロジックは `systems/playerMovement.ts` に集約しユニットテスト可能にする。
+
+**ジャンプの手触り(コヨーテタイム / 先行入力バッファ)**: ジャンプ開始判定は純粋関数 `resolveJumpStart`(`systems/playerMovement.ts`)で行い、接地中の立ち上がり入力に加えて次の 2 つの猶予を認める。(1) **コヨーテタイム**: 足場を離れてから `PLAYER.coyoteMs`(100ms)以内の入力はジャンプ成立(足場の端ギリギリで「押したのに跳ばない」を防ぐ)。(2) **先行入力バッファ**: 空中の入力を `PLAYER.jumpBufferMs`(120ms)保持し、着地の瞬間に自動発動する(連続ジャンプのリズムを途切れさせない)。ジャンプ離陸済み(`isJumping`)の間は発動せず(空中二段ジャンプ防止)、発動時にタイムスタンプ(`lastGroundedAt` / `jumpBufferedAt`)を `-Infinity` へリセットして二重消費を防ぐ。梯子把持中は両方とも適用しない。
+
+**触覚フィードバック(Haptics)**: `systems/haptics.ts` のシングルトン(`getHaptics`)が Vibration API をラップし、プレイヤー被弾(実ダメージ時のみ・無敵中は発火しない)とボス撃破時に短い振動を出す。`navigator.vibrate` 非対応環境(iOS Safari / PC)では no-op で例外を出さない。`GameSettings.vibration`(オプションの「しんどう」トグル)で ON/OFF でき、`BootScene` 起動時と設定変更時に `setEnabled` で反映する。振動パターンは演出値のため `haptics.ts` 内の定数で持つ(`balance.ts` には置かない)。
 
 ### EffectsManager(Systemレイヤー)
 
@@ -592,6 +597,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 - **音量**: BGM/SE を連続スライダーではなく 5 段階ボタン(`src/ui/volumeSteps.ts`)で調整し、ミュートを切替。量子化・上下限・往復一致を純関数化してテスト可能にし、タッチ/マウス/キーボードのいずれでも操作できる(Phaser に標準スライダーが無い問題の現実解)。
 - **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛け、エリア探索中の道中雑魚配置数も増やす。さらに、ゲームプレイ集中モードとしてストーリー本文・開始/救出/エンディング演出を表示しない。stage4 の Purifier は hard 中のみ bloom(汚染床設置)頻度を下げ、汚染床ダメージは normal と同じ倍率にする。stage6 では ECLIPSE 撃破直後に RAY 同サイズの裏ボス `ShadowRayBoss` を追加出現させる。設定は保存され、新規開始・リトライ・次ステージから反映される。
 - **ポーズ/再開**: プレイ中は `PauseButton` から開き、ゲームを一時停止する。停止は物理ステップ境界に逃がし、再開・破壊的遷移(リトライ/タイトル等)は必ずポーズ解除後に行う。
+- **しんどう(振動)**: 触覚フィードバック(被弾・ボス撃破時の振動)の ON/OFF を音量パネル内で切替。ON へ切り替えた瞬間に試し振動を出して手元で確認できる。非対応環境ではトグルは表示されるが振動しない(無害)。
 - **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
 - **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。
 - メニュー生成は `stageSelect` の UI 流儀を踏襲し `optionsMenu.ts` 内のパネル生成関数として実装する(純ロジックは `volumeSteps.ts` / `controlsData.ts` に分離)。

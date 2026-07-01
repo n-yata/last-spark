@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getSound } from '../systems/SoundManager';
+import { getHaptics } from '../systems/haptics';
 import { SaveManager } from '../persistence/SaveManager';
 import type { GameSettings } from '../types/save';
 import { scaled, scaledFontPx } from '../config/uiScale';
@@ -143,7 +144,7 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
   const buildVolume = (): Phaser.GameObjects.Container => {
     const c = scene.add.container(0, 0);
     let y = height * 0.3;
-    const rowGap = Math.min(scaled(74), (height * 0.88 - y) / 4);
+    const rowGap = Math.min(scaled(74), (height * 0.88 - y) / 5);
 
     const addChannel = (label: string, role: 'bgm' | 'se'): void => {
       const rowY = y;
@@ -193,6 +194,19 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
         settings = { ...settings, muted: !settings.muted };
         save.updateSettings({ muted: settings.muted });
         sound.applySettings(settings);
+        playTap();
+        setPanel(buildVolume);
+      }),
+    );
+    y += rowGap * 0.85;
+
+    // 振動トグル: ON へ切り替えた瞬間に試し振動を出し、手元で効果を確認できるようにする。
+    c.add(
+      makeMenuButton(scene, width / 2, y, `しんどう: ${settings.vibration ? 'ON' : 'OFF'}`, () => {
+        settings = { ...settings, vibration: !settings.vibration };
+        save.updateSettings({ vibration: settings.vibration });
+        getHaptics().setEnabled(settings.vibration);
+        if (settings.vibration) getHaptics().vibrateHit();
         playTap();
         setPanel(buildVolume);
       }),

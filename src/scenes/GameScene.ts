@@ -29,6 +29,7 @@ import { chargeRatio } from '../systems/shot';
 import { shouldLandOnOneWay } from '../systems/playerMovement';
 import { shouldResumeGame } from '../systems/orientationGuard';
 import { getSound } from '../systems/SoundManager';
+import { getHaptics } from '../systems/haptics';
 import { selectExplorationBgm } from '../systems/soundSynth';
 import { paintStageBackground } from '../systems/backgroundPainter';
 import {
@@ -801,6 +802,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setVelocityX(0);
     getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
     getSound().playSe('bossDefeated');
+    getHaptics().vibrateBossDefeat();
     this.registry.set(HUD.bossHp, 0);
 
     if (this.shouldStartHardSecretBoss(boss)) {
