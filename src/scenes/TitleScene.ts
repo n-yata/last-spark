@@ -9,6 +9,7 @@ import { scaled, scaledFontPx } from '../config/uiScale';
 import { TITLE_TEX } from '../config/assetKeys';
 import { loopRayTint } from '../config/balance';
 import { createOptionsMenu } from '../ui/optionsMenu';
+import { formatBestTime } from '../stageSelect/stageCards';
 // 型のみの import はビルド時に消去される。
 import type { StageSelect } from '../stageSelect/stageSelect';
 import type { OptionsMenu } from '../ui/optionsMenu';
@@ -97,7 +98,7 @@ export class TitleScene extends Phaser.Scene {
     if (save.clearedStages.length > 0) {
       const allClear = isAllStagesCleared(save.clearedStages, STAGE_IDS);
       const stage1Best = save.bestTimeMs?.stage1;
-      const best = stage1Best !== undefined ? `  BEST ${this.formatTime(stage1Best)}` : '';
+      const best = stage1Best !== undefined ? `  BEST ${formatBestTime(stage1Best)}` : '';
       this.add
         .text(width / 2, height * 0.82, `${allClear ? 'ALL CLEAR' : 'CLEARED'}${best}${loopSuffix}`, {
           fontFamily: 'monospace',
@@ -233,10 +234,4 @@ export class TitleScene extends Phaser.Scene {
     }
   }
 
-  private formatTime(ms: number): string {
-    const totalSec = Math.floor(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
 }

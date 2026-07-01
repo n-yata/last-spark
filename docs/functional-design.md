@@ -53,7 +53,7 @@ Phaser の Scene を画面/状態の単位とする。
 |--------|------|
 | `BootScene` | 最小設定の初期化、Preload への遷移。表示スケール/向き設定 |
 | `PreloadScene` | アセット(スプライト/タイルマップ/音)の一括ロード、ローディング表示 |
-| `TitleScene` | タイトル画面(`LAST SPARK` ロゴ + 「タップでスタート」)。クリア済みフラグの表示 |
+| `TitleScene` | タイトル画面(`LAST SPARK` ロゴ + 「タップでスタート」)。クリア済みフラグの表示。カード式ステージセレクト(`src/stageSelect/`)を動的 import で遅延ロード |
 | `GameScene` | ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括 |
 | `UIScene` | HUD(プレイヤーライフ、ボスHP、チャージゲージ)。`GameScene` と並行起動 |
 | `GameOverScene` | ゲームオーバー表示とリトライ導線 |
@@ -601,6 +601,15 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 - **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
 - **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。
 - メニュー生成は `stageSelect` の UI 流儀を踏襲し `optionsMenu.ts` 内のパネル生成関数として実装する(純ロジックは `volumeSteps.ts` / `controlsData.ts` に分離)。
+
+### ステージセレクト(カード式)
+
+タイトル画面の「STAGE SELECT」導線から開くオーバーレイ。6ステージをカードのグリッド(3列)で表示し、進捗が一目で分かる画面にする。モデル構築・解放判定・レイアウト計算・タイム整形は純粋ロジック `stageSelect/stageCards.ts` に分離する(Phaser 非依存・テスト可能)。
+
+- **ミニプレビュー**: 各カード上部に、ステージ背景テーマ(`config/stageBackground.ts` の skyTop/skyBottom/accent/layers)から手続き生成した縮小プレビューを描く。空は `lerpColor` の帯(`fillGradientStyle` は WebGL 限定のため使わない)、シルエットは `generateSilhouetteColumns`(決定論)の縮小描画で、外部アセットは追加しない。
+- **進捗表示**: 今周回でクリア済みのステージに CLEAR バッジ、ベストタイム(周回で消えない `bestTimeMs`)があれば `BEST m:ss` を表示する。タイム整形 `formatBestTime` は TitleScene / ClearScene と共通。
+- **段階解放**: stage1 は常に解放。stage n は「stage n-1 を一度でもクリアした記録がある(今周回の `clearedStages` **または** 過去記録 `bestTimeMs`)」場合に解放する。**解放判定に周回で消えない `bestTimeMs` を含めるため、New Game+ で `clearedStages` がリセットされても一度到達したステージは選び直せる**。未解放カードは暗転 + `LOCKED` 表示でタップ無効。
+- ポーズ中のステージ移動パネル(`optionsMenu.ts`)は従来のテキストリストのまま(カード化はタイトルのみ)だが、**解放ルールは共通**(`isStageUnlocked` を共用): 未解放ステージは `[LOCKED]` 表示の非活性行になり、この経路からもロックを素通りできない。
 
 ## アセット / ファイル構造(ランタイム読み込み)
 

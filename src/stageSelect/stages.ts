@@ -13,6 +13,11 @@ const STAGE_LABELS: Record<string, string> = {
   stage6: 'ECLIPSE支配中枢',
 };
 
+/** ステージ名(番号を含まない)を返す。未知 ID は ID をそのまま返す。 */
+export function stageName(id: string): string {
+  return STAGE_LABELS[id] ?? id;
+}
+
 /** プレイ可能なステージ一覧(STAGES 登録順)。STAGE_IDS から導出し定義の二重管理を避ける。 */
 export const PLAYABLE_STAGES: ReadonlyArray<{ id: string; label: string }> = STAGE_IDS.map(
   (id, index) => ({ id, label: `STAGE ${index + 1}  ${STAGE_LABELS[id] ?? id}` }),
