@@ -32,10 +32,17 @@ export function initHiDpiScaling(game: Phaser.Game): void {
     // window.innerWidth/innerHeight が回転直後に縦向きの古い値を返し、横向きでも canvas を
     // 縦向き幅で作って左右に黒帯が出るため(viewport.ts 参照)。
     const { width, height } = getViewportSize();
-    // zoom を先に設定してから resize する。resize() が zoom を見て canvas.style を
-    // cssW(=物理px*zoom) に設定し、refresh() が displayScale を dpr に揃える。
-    game.scale.setZoom(1 / dpr);
+    // resize を先に行い、setZoom を後に呼ぶ(順序が重要)。
+    // resize() は zoom===1 のとき canvas.style を書き換えない(styleWidth!==width の場合のみ
+    // 更新する)ため、dpr=1 では style が更新されない。一方 setZoom() は _resetZoom 経由で
+    // 「現在の gameSize × zoom」を style に書くので、resize で gameSize を新寸法にした後に
+    // setZoom を呼べば、dpr に依らず canvas.style が新しい CSS 幅(=cssW)に揃う。
+    // (逆順だと setZoom が旧 gameSize 基準の style を焼き付け、dpr=1 の resize が
+    //  それを直さないため、リサイズ後に表示がビューポートからはみ出す)
+    // style 更新は setZoom → refresh() 内で行われ、直後に canvasBounds/displayScale が
+    // 再計測されるため、pointer 変換(物理px)と表示の一致は保たれる。
     game.scale.resize(width * dpr, height * dpr);
+    game.scale.setZoom(1 / dpr);
   };
 
   // 回転直後は寸法が未確定なことがあるため、確定後にも測り直す(stale 値での誤サイズを回復)。
