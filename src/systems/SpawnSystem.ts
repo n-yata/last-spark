@@ -59,11 +59,11 @@ export class SpawnSystem {
   }
 
   /** ステージデータを読み込み、出現待ち敵を準備する。 */
-  loadStage(stageId: string, difficulty: DifficultyMode = 'normal'): StageData {
+  loadStage(stageId: string, difficulty: DifficultyMode = 'normal', loopCount = 1): StageData {
     this.stage = getStageData(stageId);
-    this.tuning = applyDifficultyToStageTuning(getStageTuning(stageId), difficulty);
+    this.tuning = applyDifficultyToStageTuning(getStageTuning(stageId), difficulty, loopCount);
     // x 昇順にして左から順に出現判定する
-    this.pending = applyDifficultyToEnemySpawns(this.stage.enemies, difficulty).sort(
+    this.pending = applyDifficultyToEnemySpawns(this.stage.enemies, difficulty, loopCount).sort(
       (a, b) => a.x - b.x,
     );
     this.bossTriggered = false;

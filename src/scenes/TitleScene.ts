@@ -7,6 +7,7 @@ import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { scaled, scaledFontPx } from '../config/uiScale';
 import { TITLE_TEX } from '../config/assetKeys';
+import { loopRayTint } from '../config/balance';
 import { createOptionsMenu } from '../ui/optionsMenu';
 // 型のみの import はビルド時に消去される。
 import type { StageSelect } from '../stageSelect/stageSelect';
@@ -36,8 +37,11 @@ export class TitleScene extends Phaser.Scene {
     this.stageSelect = undefined;
     this.optionsMenu = undefined;
 
+    const save = new SaveManager().getData();
+
     // 背景: キービジュアルの一枚絵があれば cover 配置で敷く。未ロード時は簡易シルエットへ。
-    this.drawBackground(width, height);
+    // 周回数に応じて発光ラインの色味を変え、見た目の報酬(タイトル演出変化)とする。
+    this.drawBackground(width, height, save.loopCount);
 
     // スタート判定は全画面ゾーンで受ける。最背面(最初に追加)に置くことで、後から重ねる
     // STAGE SELECT ボタンが Phaser の topOnly(既定 true)で前面となり、スタートに巻き込まれない。
@@ -88,18 +92,28 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // クリア状況の表示。全6ステージ制覇なら「ALL CLEAR」、1ステージ以上なら「CLEARED」。
-    // BEST はステージ1のタイムを代表値とする。
-    const save = new SaveManager().getData();
+    // BEST はステージ1のタイムを代表値とする。周回数が2以上なら「LOOP n」を併記する(見た目の報酬)。
+    const loopSuffix = save.loopCount >= 2 ? `  LOOP ${save.loopCount}` : '';
     if (save.clearedStages.length > 0) {
       const allClear = isAllStagesCleared(save.clearedStages, STAGE_IDS);
       const stage1Best = save.bestTimeMs?.stage1;
       const best = stage1Best !== undefined ? `  BEST ${this.formatTime(stage1Best)}` : '';
       this.add
-        .text(width / 2, height * 0.82, `${allClear ? 'ALL CLEAR' : 'CLEARED'}${best}`, {
+        .text(width / 2, height * 0.82, `${allClear ? 'ALL CLEAR' : 'CLEARED'}${best}${loopSuffix}`, {
           fontFamily: 'monospace',
           fontSize: scaledFontPx(16),
           color: allClear ? '#fff27a' : '#9fffe8',
           fontStyle: allClear ? 'bold' : 'normal',
+        })
+        .setOrigin(0.5)
+        .setShadow(0, scaled(2), '#05080d', scaled(5), true, true);
+    } else if (save.loopCount >= 2) {
+      // clearedStages はリセットされていても(周回中)、周回数は表示して報酬感を残す。
+      this.add
+        .text(width / 2, height * 0.82, `LOOP ${save.loopCount}`, {
+          fontFamily: 'monospace',
+          fontSize: scaledFontPx(16),
+          color: '#9fffe8',
         })
         .setOrigin(0.5)
         .setShadow(0, scaled(2), '#05080d', scaled(5), true, true);
@@ -175,8 +189,10 @@ export class TitleScene extends Phaser.Scene {
    * (画面比が論理解像度と異なっても隙間を作らず、はみ出しはトリミング)。さらに上下へ
    * 薄い暗幕を重ね、絵の明部(夜明け・発光)に乗るロゴ/導線テキストの視認性を確保する。
    * 未ロード時は従来の簡易シルエット(drawBackdrop)へフォールバックする。
+   * loopCount が2以上のときは周回配色(loopRayTint)の薄いオーバーレイを重ね、
+   * 見た目の報酬(タイトル演出変化)として周回を重ねた実感を出す。
    */
-  private drawBackground(width: number, height: number): void {
+  private drawBackground(width: number, height: number, loopCount: number): void {
     const bgKey = TITLE_TEX.background;
     if (this.textures.exists(bgKey)) {
       const src = this.textures.get(bgKey).getSourceImage();
@@ -185,17 +201,21 @@ export class TitleScene extends Phaser.Scene {
       // ロゴ帯(上部)と導線帯(中央〜下部)を軽く沈めて文字を読みやすくする暗幕。
       this.add.rectangle(0, 0, width, height * 0.46, 0x05080d, 0.4).setOrigin(0);
       this.add.rectangle(0, height * 0.6, width, height * 0.4, 0x05080d, 0.35).setOrigin(0);
-      return;
+    } else {
+      this.drawBackdrop(width, height, loopCount);
     }
-    this.drawBackdrop(width, height);
+    if (loopCount >= 2) {
+      this.add.rectangle(0, 0, width, height, loopRayTint(loopCount), 0.08).setOrigin(0);
+    }
   }
 
-  private drawBackdrop(width: number, height: number): void {
+  private drawBackdrop(width: number, height: number, loopCount: number): void {
     const g = this.add.graphics();
-    // 遠景の発光ライン(地平線)
+    // 遠景の発光ライン(地平線)。周回数に応じて色を変え、周回を重ねた実感を出す。
+    const glowColor = loopRayTint(loopCount);
     g.fillStyle(0x12303a, 0.5);
     g.fillRect(0, height * 0.7, width, height * 0.3);
-    g.lineStyle(scaled(2), 0x37f7d8, 0.25);
+    g.lineStyle(scaled(2), glowColor, 0.25);
     g.lineBetween(0, height * 0.7, width, height * 0.7);
     // 崩れたビルのシルエット。配置/横幅の絶対px は scaled() で物理px換算する
     // (左端側は絶対座標、右端側は画面幅基準。w は全て絶対px)。

@@ -11,4 +11,5 @@ export const STORAGE_KEYS = {
 //     との互換のため version 番号は据え置いた(余分な collectedLogs フィールドは読み込み時に無視)。
 // v4: settings.difficulty を追加。旧セーブは normal を補完して移行する。
 // v5: settings.busterMode を追加。旧セーブ(v2/v3/v4)は busterMode=false を補完して移行する。
-export const SAVE_VERSION = 5;
+// v6: loopCount(周回数、settings外の進捗データ)を追加。旧セーブ(v1〜v5)は loopCount=1 を補完して移行する。
+export const SAVE_VERSION = 6;

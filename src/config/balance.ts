@@ -577,6 +577,19 @@ export const STAGE = {
   gravityY: 1200,
 } as const;
 
+/**
+ * 周回数(New Game+)に応じた RAY の配色(実行時 tint、CharacterRig.setTint 経由)。
+ * index 0 = 1周目(無着色)。周回3(index 2)で上限とし、以降も同じ色を使う。
+ * 具体的な色指定はビジュアル調整のプレースホルダ(実機確認のうえ確定させる)。
+ */
+const LOOP_RAY_TINT = [0xffffff, 0xff9a6c, 0x9a7cff] as const;
+
+/** loopCount(1始まり)に対応する RAY の周回配色を返す。3周目以降は頭打ちで固定する。 */
+export function loopRayTint(loopCount: number): number {
+  const index = Math.min(Math.max(Math.floor(loopCount), 1), LOOP_RAY_TINT.length) - 1;
+  return LOOP_RAY_TINT[index];
+}
+
 export const LADDER = {
   // 梯子の昇降速度(px/s)。横移動より遅めにして「登る手応え」を出す。
   climbSpeed: 130,

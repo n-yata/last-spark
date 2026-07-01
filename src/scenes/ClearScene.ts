@@ -16,6 +16,11 @@ interface ClearData {
    * stage6 エンディング直後の最終クリアは、余韻を残すため長め(2000ms)を渡す。
    */
   inputDelayMs?: number;
+  /**
+   * 真なら、最終クリア画面で「次の周回へ進む」「タイトルへ」の2択を提示する(New Game+)。
+   * 最終クリア(nextStageId 無し)のときのみ意味を持つ。
+   */
+  offerNextLoop?: boolean;
 }
 
 /** 入力受付までの既定待機時間(ms)。演出を一拍読ませてから送りを受け付ける。 */
@@ -78,6 +83,13 @@ export class ClearScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
+    const offerNextLoop = isFinal && (data?.offerNextLoop ?? false);
+
+    if (offerNextLoop) {
+      this.createLoopChoice(width, height, data?.inputDelayMs ?? DEFAULT_INPUT_DELAY_MS);
+      return;
+    }
+
     const back = this.add
       .text(width / 2, height * 0.78, isFinal ? 'TAP TO TITLE' : 'TAP TO CONTINUE', {
         fontFamily: 'monospace',
@@ -99,6 +111,57 @@ export class ClearScene extends Phaser.Scene {
       };
       this.input.once(Phaser.Input.Events.POINTER_DOWN, proceed);
       this.input.keyboard?.once('keydown', proceed);
+    });
+  }
+
+  /**
+   * 最終クリア(ALL CLEAR)時、次の周回へ進むかタイトルへ戻るかの2択を提示する(New Game+導線)。
+   * タップ領域は誤操作を避けるため画面下半分を上下に分け、それぞれ十分広く確保する。
+   */
+  private createLoopChoice(width: number, height: number, inputDelayMs: number): void {
+    const optionY = height * 0.78;
+
+    const nextLoopText = this.add
+      .text(width / 2, optionY, '次の周回へ進む', {
+        fontFamily: 'monospace',
+        fontSize: scaledFontPx(22),
+        color: '#fff27a',
+      })
+      .setOrigin(0.5);
+    this.tweens.add({ targets: nextLoopText, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
+
+    this.add
+      .text(width / 2, optionY + scaled(48), 'タイトルへ戻る', {
+        fontFamily: 'monospace',
+        fontSize: scaledFontPx(16),
+        color: '#7fe9dd',
+      })
+      .setOrigin(0.5);
+
+    // 演出を読ませるため、短い猶予の後に入力を受け付ける。
+    this.time.delayedCall(inputDelayMs, () => {
+      // 画面下半分を上下に分け、それぞれ十分広いタップ領域を確保する(モバイル誤操作対策)。
+      const nextLoopZone = this.add
+        .zone(0, height * 0.68, width, height * 0.16)
+        .setOrigin(0)
+        .setInteractive();
+      const titleZone = this.add
+        .zone(0, height * 0.84, width, height * 0.16)
+        .setOrigin(0)
+        .setInteractive();
+
+      nextLoopZone.on(Phaser.Input.Events.POINTER_DOWN, () => {
+        getSound().playSe('uiTap');
+        new SaveManager().advanceLoop();
+        transitionTo(this, SCENE_KEYS.game, { stageId: 'stage1' });
+      });
+      titleZone.on(Phaser.Input.Events.POINTER_DOWN, () => {
+        getSound().playSe('uiTap');
+        transitionTo(this, SCENE_KEYS.title);
+      });
+
+      // キーボード操作は既定で「次の周回へ」を選ぶ(タップ環境の主導線を優先)。
+      this.input.keyboard?.once('keydown', () => nextLoopZone.emit(Phaser.Input.Events.POINTER_DOWN));
     });
   }
 

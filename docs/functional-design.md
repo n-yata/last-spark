@@ -70,9 +70,10 @@ Phaser の Scene を画面/状態の単位とする。
 
 ```typescript
 interface SaveData {
-  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 4)
-  clearedStages: string[];          // クリア済みステージID(全6ステージ対応)
-  bestTimeMs?: Record<string, number>; // ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーなし
+  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 6)
+  clearedStages: string[];          // クリア済みステージID(全6ステージ対応)。周回開始でリセットされる
+  bestTimeMs?: Record<string, number>; // ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーなし。周回してもリセットされない
+  loopCount: number;                // 周回数(New Game+)。初期値1。settings外の進捗データ
   settings: GameSettings;           // ユーザー設定
 }
 
@@ -81,16 +82,36 @@ interface GameSettings {
   bgmVolume: number;        // 0.0–1.0
   seVolume: number;         // 0.0–1.0
   difficulty: 'normal' | 'hard'; // 難易度。hard は被ダメージ・敵係数を強化し、ストーリー演出を非表示
+  busterMode: boolean;      // ON で stage6 の強化バスターを全ステージで使える(難易度とは独立、既定 false)
 }
 ```
 
 **制約**:
 - 保存キーは `lastspark:save`(名前空間付き)。
 - `localStorage` 利用不可・破損時は既定値で起動し、ゲーム自体は継続可能(進捗が無いだけ)。
-- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 4`(`clearedStages` / `bestTimeMs:Record` / `settings.difficulty`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、余分な `collectedLogs` は読み込み時に無視する。
-  - v1(`cleared:boolean` / `bestTimeMs:number`)→現行 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。
-  - v2 / v3→現行 移行: 進捗を保持し、`settings.difficulty` 未設定なら `normal` を補完して version を引き上げる。
-- API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。
+- `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 6`(`clearedStages` / `bestTimeMs:Record` / `settings.difficulty` / `settings.busterMode` / `loopCount`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、余分な `collectedLogs` は読み込み時に無視する。
+  - v1(`cleared:boolean` / `bestTimeMs:number`)→現行 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。`loopCount` は1を補完。
+  - v2〜v5→現行 移行: 進捗を保持し、`settings.difficulty` 未設定なら `normal`、`settings.busterMode` 未設定なら `false`、`loopCount` 未設定なら `1` を補完して version を引き上げる。
+- API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。`advanceLoop()` で次の周回へ進む(`loopCount+1` かつ `clearedStages` をリセット、`bestTimeMs` は保持)。
+
+### 周回要素(New Game+)
+
+**責務**: 全ステージクリア後にもう一周プレイできる導線を提供し、周回ごとに敵を段階的に強化する・ストーリー演出を省く・見た目の配色を変えることでリプレイ性を高める。
+
+**フロー**:
+- stage6 のエンディング演出後、`ClearScene`(ALL CLEAR画面)で「次の周回へ進む」「タイトルへ戻る」の2択を提示する(`ClearData.offerNextLoop`)。
+- 「次の周回へ」選択で `SaveManager.advanceLoop()` を呼び、stage1 から再開する。
+
+**段階的強化(`systems/difficulty.ts`)**:
+- `loopScaling(loopCount)` が周回数に応じた乗数(HP・敵配置数・被ダメージ・turret間隔・walker速度)を返し、既存の難易度係数(`normal`/`hard`)へ後段で重ねて乗算する。
+- 3周目で上限に達し、4周目以降は同じ乗数のまま頭打ちになる(青天井にしない)。
+
+**ストーリー演出**:
+- `shouldShowStory(difficulty, loopCount)` が `difficulty === 'normal' && loopCount < 2` を返す。2周目以降は難易度を問わずストーリー演出(開始/救出/エンディング)をスキップする(hard mode の既存スキップ挙動と同じゲートを共有)。
+
+**見た目の報酬**:
+- `config/balance.ts` の `loopRayTint(loopCount)` が周回数に応じた配色(1周目は無着色)を返し、`Player.setLoopTint()` → `CharacterRig.setTint()` で全パーツへ適用する。被弾フラッシュ(白)の立ち下がりでも `CharacterRig` が保持する基準ティント(`baseTint`)へ復帰し、周回配色が消えないようにする。
+- `TitleScene` は周回数に応じて `LOOP {n}` を表示し、背景の発光ライン・薄いオーバーレイの色味を変える。
 
 ### 実行時モデル: 主要 Entity
 

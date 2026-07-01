@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
 import { HUD } from '../config/registryKeys';
-import { STAGE, BOSS, FLYING_BOSS, HAZARD, SHADOW_RAY } from '../config/balance';
+import { STAGE, BOSS, FLYING_BOSS, HAZARD, SHADOW_RAY, loopRayTint } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
 import { getStageData, type StageData } from '../config/stages';
@@ -34,7 +34,7 @@ import { paintStageBackground } from '../systems/backgroundPainter';
 import {
   playerDamageMultiplier,
   pollutionDamageMultiplier,
-  shouldShowStoryForDifficulty,
+  shouldShowStory,
   shouldSpawnHardModeSecretBoss,
 } from '../systems/difficulty';
 import { shouldEmpowerPlayer } from '../systems/empowerment';
@@ -102,6 +102,8 @@ export class GameScene extends Phaser.Scene {
   private difficulty: DifficultyMode = 'normal';
   /** create 時点のバスターモード。ON なら全ステージで RAY を強化する。 */
   private busterMode = false;
+  /** create 時点の周回数(New Game+)。1が初回。難易度係数・ストーリー表示・RAY配色に影響する。 */
+  private loopCount = 1;
   /** hard mode 裏ボス Shadow RAY が現在進行中か。 */
   private shadowRayActive = false;
   /** ECLIPSE 撃破後の裏ボスを同一ステージ内で二重起動しないためのフラグ。 */
@@ -151,7 +153,8 @@ export class GameScene extends Phaser.Scene {
     this.stage = getStageData(this.stageId);
     this.difficulty = this.saveManager.getData().settings.difficulty;
     this.busterMode = this.saveManager.getData().settings.busterMode;
-    this.storyEnabled = shouldShowStoryForDifficulty(this.difficulty);
+    this.loopCount = this.saveManager.getData().loopCount;
+    this.storyEnabled = shouldShowStory(this.difficulty, this.loopCount);
     this.story = this.storyEnabled ? getStageStory(this.stageId) : undefined;
     this.physics.world.setBounds(0, 0, this.stage.width, STAGE.height + 200);
 
@@ -455,6 +458,10 @@ export class GameScene extends Phaser.Scene {
     if (shouldEmpowerPlayer(this.stageId, this.busterMode)) {
       this.player.setEmpowered(true);
     }
+    // 周回数に応じた見た目の報酬(RAY配色)。1周目(loopCount=1)は無着色のまま適用しない。
+    if (this.loopCount >= 2) {
+      this.player.setLoopTint(loopRayTint(this.loopCount));
+    }
     // 地面は全面衝突、足場はワンウェイ(上から着地・下から通過、梯子中は貫通)。
     this.physics.add.collider(this.player, this.groundGroup);
     this.physics.add.collider(this.player, this.platformGroup, undefined, this.oneWayProcess);
@@ -495,7 +502,7 @@ export class GameScene extends Phaser.Scene {
         onBossDefeated: (boss) => this.handleClear(boss),
         onPlayerDeath: () => this.handleGameOver(),
       },
-      { playerDamageMultiplier: playerDamageMultiplier(this.difficulty) },
+      { playerDamageMultiplier: playerDamageMultiplier(this.difficulty, this.loopCount) },
     );
     this.combat.registerColliders({
       player: this.player,
@@ -524,7 +531,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);
-    this.spawn.loadStage(this.stageId, this.difficulty);
+    this.spawn.loadStage(this.stageId, this.difficulty, this.loopCount);
     this.spawn.onBossTrigger(() => {
       // ボスを出現させ、(stage3 のみ)ケージの人影を見た内心 → ECLIPSE の語りかけ、の順に重ねる。
       // terraFound 内心はその本文を持つステージ(stage3)でのみ表示され、他ステージでは空になる。
@@ -898,7 +905,12 @@ export class GameScene extends Phaser.Scene {
     this.scene.stop(SCENE_KEYS.ui);
     this.saveManager.markStageCleared(this.stageId, clearTimeMs);
     // nextStageId 無し = 最終クリア(ALL CLEAR / TAP TO TITLE)。余韻のため入力受付を一拍遅らせる。
-    transitionTo(this, SCENE_KEYS.clear, { clearTimeMs, inputDelayMs: ENDING_CLEAR_INPUT_DELAY_MS });
+    // offerNextLoop: 次の周回(New Game+)へ進む選択肢を ClearScene に提示させる。
+    transitionTo(this, SCENE_KEYS.clear, {
+      clearTimeMs,
+      inputDelayMs: ENDING_CLEAR_INPUT_DELAY_MS,
+      offerNextLoop: true,
+    });
   }
 
   private handleGameOver(): void {
