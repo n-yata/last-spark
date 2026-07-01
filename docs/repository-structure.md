@@ -20,6 +20,7 @@ last-spark/
 │   ├── systems/                # System レイヤー(入力・戦闘・出現・ボスAI)
 │   ├── persistence/            # Persistence レイヤー(SaveManager)
 │   ├── config/                 # ゲーム定数・バランス値・Phaser 設定
+│   ├── stageSelect/            # タイトルのステージ選択(カード式UI + 純ロジック)
 │   ├── ui/                     # HUD/仮想ボタンなど描画コンポーネント
 │   └── types/                  # 共通型定義
 ├── tests/                      # テストコード
@@ -176,6 +177,19 @@ State を持つ System クラス:
 **依存関係**:
 - 依存可能: `config/`, `types/`、および `systems/` 内の **Phaser 非依存の純粋関数モジュール**(camelCase ファイル: `hudFx.ts` 等。entities と同じく最下位ロジック扱い)
 - 依存禁止: `systems/` の System クラス、`persistence/`(`UIScene` から状態を受け取って描画するのみ)
+
+#### src/stageSelect/ (ステージ選択)
+
+**役割**: タイトル画面のステージ選択(カード式)。初期表示を軽く保つため TitleScene から動的 import で遅延ロードされる。
+
+**配置ファイル**:
+- `stageSelect.ts`: カードグリッドの描画・入力配線(枠/ミニプレビュー/バッジ/LOCKED/タップ)
+- `stageCards.ts`: カードモデル構築・解放判定(`isStageUnlocked`)・タイム整形(`formatBestTime`)・グリッド配置(`cardGridLayout`)の純粋ロジック(Phaser 非依存・テスト可能)
+- `stages.ts`: ステージ一覧データ(`PLAYABLE_STAGES` / `stageName`。Phaser 非依存)
+
+**依存関係**:
+- 依存可能: `config/`(`stageBackground` のテーマ/シルエット生成を含む), `types/`, `persistence/`(進捗の読み取り), `ui/`(`menuButton`), `systems/SoundManager`(効果音)
+- 依存禁止: `scenes/`, `entities/`
 
 #### src/types/ (共通型定義)
 

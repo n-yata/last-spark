@@ -4,6 +4,7 @@ import { SaveManager } from '../persistence/SaveManager';
 import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { scaled, scaledFontPx } from '../config/uiScale';
+import { formatBestTime } from '../stageSelect/stageCards';
 
 interface ClearData {
   clearTimeMs: number;
@@ -63,7 +64,7 @@ export class ClearScene extends Phaser.Scene {
       .setShadow(0, 0, '#37f7d8', scaled(18), true, true);
 
     this.add
-      .text(width / 2, height * 0.46, `TIME  ${this.formatTime(clearTimeMs)}`, {
+      .text(width / 2, height * 0.46, `TIME  ${formatBestTime(clearTimeMs)}`, {
         fontFamily: 'monospace',
         fontSize: scaledFontPx(24),
         color: '#9fffe8',
@@ -165,10 +166,4 @@ export class ClearScene extends Phaser.Scene {
     });
   }
 
-  private formatTime(ms: number): string {
-    const totalSec = Math.floor(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
 }

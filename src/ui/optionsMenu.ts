@@ -6,6 +6,7 @@ import type { GameSettings } from '../types/save';
 import { scaled, scaledFontPx } from '../config/uiScale';
 import { makeMenuButton } from './menuButton';
 import { PLAYABLE_STAGES } from '../stageSelect/stages';
+import { isStageUnlocked } from '../stageSelect/stageCards';
 import { getControlEntries } from './controlsData';
 import { adjustStep, stepToVolume, volumeToStep, volumeBar, volumePercent } from './volumeSteps';
 import { difficultyLabel, toggleDifficulty } from '../systems/difficulty';
@@ -322,16 +323,30 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
     return c;
   };
 
-  // ステージ選択サブパネル(stageSelect と同様、全ステージから選べる)。
+  // ステージ選択サブパネル。タイトルのカード式ステージセレクトと同じ解放ルールを適用し、
+  // 未解放ステージはこの経路からも選べない(ロックの素通りを防ぐ)。
   const buildStageList = (): Phaser.GameObjects.Container => {
     const c = scene.add.container(0, 0);
     const nav = config.stageNav;
     if (!nav) return c;
+    const progress = save.getData();
     const top = height * 0.22;
     const bottom = height * 0.9;
     const rows = PLAYABLE_STAGES.length + 1;
     const gap = Math.min(scaled(50), (bottom - top) / (rows - 1));
     PLAYABLE_STAGES.forEach((stage, i) => {
+      if (!isStageUnlocked(i, progress.clearedStages, progress.bestTimeMs)) {
+        c.add(
+          scene.add
+            .text(width / 2, top + gap * i, `${stage.label}  [LOCKED]`, {
+              fontFamily: 'monospace',
+              fontSize: scaledFontPx(18),
+              color: COLOR_MUTED,
+            })
+            .setOrigin(0.5),
+        );
+        return;
+      }
       c.add(
         makeMenuButton(scene, width / 2, top + gap * i, stage.label, () => {
           // 効果音・遷移は onSelectStage 側に委譲し二重再生を避ける。
