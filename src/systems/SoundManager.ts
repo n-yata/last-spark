@@ -48,6 +48,7 @@ export class SoundManager {
     seVolume: 0.8,
     difficulty: 'normal',
     busterMode: false,
+    vibration: true,
   };
 
   private currentBgmKey?: BgmKey;

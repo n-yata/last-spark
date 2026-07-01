@@ -102,6 +102,7 @@ State を持つ System クラス:
 - `SpawnSystem.ts`: 敵出現・ボストリガ(ボス全身が画面内に見える位置まで発火を遅らせる)
 - `SoundManager.ts`: サウンド出力サービス(Web Audio で BGM/SE を合成。`getSound()` シングルトンで全シーン横断。外部音源ファイルは使わない)
 - `EffectsManager.ts`: 戦闘演出(パーティクル爆発・カメラシェイク・ボス撃破シーケンス)の統括。チューニング値は `config/effects.ts` に集約
+- `haptics.ts`: 触覚フィードバック(Vibration API のラッパ。`getHaptics()` シングルトン。非対応環境では no-op。`SoundManager` と同じ出力専用サービス)
 
 純粋ロジック関数群(camelCase。Phaser/Web Audio 非依存・テスト可能):
 - `bossAi.ts`: ボス行動抽選(`pickNext*BossAction` 等。系統別の重みテーブル)
@@ -109,7 +110,7 @@ State を持つ System クラス:
 - `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュール・探索 BGM 選択
 - `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(ui からも参照可)
 - `shot.ts` / `shotControl.ts`: ショット仕様の生成と、タップ/チャージ/連射の状態機械(`stepShot`)
-- `playerMovement.ts`: 着地判定・梯子把持/昇降の純粋関数(`shouldLandOnOneWay` / `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity`)
+- `playerMovement.ts`: 着地判定・ジャンプ開始(コヨーテタイム/先行入力バッファ `resolveJumpStart`)・梯子把持/昇降の純粋関数(`shouldLandOnOneWay` / `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity`)
 - `combatRules.ts` / `hazardRules.ts`: ダメージ・無敵・ハザード(スリップダメージ)判定の純粋ロジック
 - `rigAnimation.ts`: `CharacterRig` のパーツ変位算出(歩行スイング・反動・けぞり等)
 - `storyDirector.ts`: `StoryEvent`→`TextRequest[]` 変換と `TEXT_STYLES`(`StoryTextKind`→スタイル)

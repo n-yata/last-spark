@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   seVolume: 0.8,
   difficulty: 'normal',
   busterMode: false,
+  vibration: true,
 } as const;
 
 describe('defaultSaveData', () => {
@@ -423,6 +424,75 @@ describe('SaveManager', () => {
     );
     const mgr = new SaveManager();
     expect(mgr.getData().loopCount).toBe(1);
+  });
+
+  // ---- v6 → v7 マイグレーション(vibration 補完) ----
+
+  it('v6(vibration なし)を現行版へ移行し vibration=true を補完する(進捗・設定は維持)', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.save,
+      JSON.stringify({
+        version: 6,
+        clearedStages: ['stage1', 'stage2'],
+        bestTimeMs: { stage1: 12_345 },
+        loopCount: 3,
+        settings: { muted: true, bgmVolume: 0.4, seVolume: 0.7, difficulty: 'hard', busterMode: true },
+      }),
+    );
+    const mgr = new SaveManager();
+    const data = mgr.getData();
+    expect(data.version).toBe(SAVE_VERSION);
+    // クリア進捗・ベストタイム・周回数が失われていない
+    expect(data.clearedStages).toEqual(['stage1', 'stage2']);
+    expect(data.bestTimeMs).toEqual({ stage1: 12_345 });
+    expect(data.loopCount).toBe(3);
+    // 既存の設定は引き継がれ、vibration は true で補完される
+    expect(data.settings.difficulty).toBe('hard');
+    expect(data.settings.busterMode).toBe(true);
+    expect(data.settings.muted).toBe(true);
+    expect(data.settings.vibration).toBe(true);
+  });
+
+  // ---- vibration の保存・復元・検証 ----
+
+  it('vibration: false を保存・復元できる', () => {
+    const mgr = new SaveManager();
+    mgr.updateSettings({ vibration: false });
+    const reloaded = new SaveManager();
+    expect(reloaded.getData().settings.vibration).toBe(false);
+    // 他の設定は維持される
+    expect(reloaded.getData().settings.busterMode).toBe(false);
+  });
+
+  it('vibration が boolean 以外のセーブは既定値へフォールバックする', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.save,
+      JSON.stringify({
+        version: SAVE_VERSION,
+        clearedStages: ['stage1'],
+        loopCount: 1,
+        settings: {
+          muted: false,
+          bgmVolume: 0.6,
+          seVolume: 0.8,
+          difficulty: 'normal',
+          busterMode: false,
+          vibration: 'on',
+        },
+      }),
+    );
+    const mgr = new SaveManager();
+    expect(mgr.getData()).toEqual(defaultSaveData());
+  });
+
+  it('現行版で vibration フィールドを欠くセーブは妥当でない(isValidSaveData)', () => {
+    const withoutVibration = {
+      version: SAVE_VERSION,
+      clearedStages: [],
+      loopCount: 1,
+      settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal', busterMode: false },
+    };
+    expect(isValidSaveData(withoutVibration)).toBe(false);
   });
 
   // ---- advanceLoop ----

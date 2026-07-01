@@ -16,7 +16,7 @@ import {
 import { isDead, isInvincible, resolveInvincibleDamage } from '../systems/combatRules';
 import {
   resolveHorizontalVelocity,
-  shouldJump,
+  resolveJumpStart,
   resolveFacing,
   facingSign,
   shouldCutJump,
@@ -27,6 +27,7 @@ import {
   type Box,
 } from '../systems/playerMovement';
 import { getSound } from '../systems/SoundManager';
+import { getHaptics } from '../systems/haptics';
 import { CharacterRig } from './CharacterRig';
 import type { MotionState } from '../systems/rigAnimation';
 import { Projectile } from './Projectile';
@@ -44,6 +45,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private lastShotAt = 0;
   private invincibleUntil = 0;
   private isJumping = false;
+  // コヨーテタイム/先行入力バッファ用のタイムスタンプ。未成立(リセット済み)は -Infinity。
+  private lastGroundedAt = Number.NEGATIVE_INFINITY;
+  private jumpBufferedAt = Number.NEGATIVE_INFINITY;
   private onLadder = false;
   private ladderBoxes: Box[] = [];
   private projectiles?: Phaser.Physics.Arcade.Group;
@@ -185,6 +189,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.setVelocityY(climbVelocity(input.climbDir, LADDER.climbSpeed));
       this.facing = resolveFacing(this.facing, input.moveDir);
       this.isJumping = false;
+      // 梯子把持中はコヨーテ/先行入力を適用しない(離脱ジャンプは別経路で処理済み)。
+      this.lastGroundedAt = Number.NEGATIVE_INFINITY;
+      this.jumpBufferedAt = Number.NEGATIVE_INFINITY;
       this.updateShot(input, now);
       this.updateBlink(now);
       this.updateRig(input, now);
@@ -205,10 +212,33 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     this.setVelocityX(resolveHorizontalVelocity(input.moveDir));
     this.facing = resolveFacing(this.facing, input.moveDir);
 
-    // ジャンプ開始(接地中の立ち上がり入力)
-    if (shouldJump(input, this.onGround)) {
+    // コヨーテタイム/先行入力バッファの状態更新。
+    // 接地中は最終接地時刻を更新し、空中の立ち上がり入力は着地時の自動発動用に記録する。
+    // 梯子離脱ジャンプの入力は離脱処理で消費済みのため記録しない(着地時の二重発動防止)。
+    if (this.onGround) {
+      this.lastGroundedAt = now;
+    } else if (input.jumpPressed && !wasOnLadder) {
+      this.jumpBufferedAt = now;
+    }
+
+    // ジャンプ開始(接地中 or コヨーテ猶予内の入力、または着地時のバッファ入力)
+    if (
+      resolveJumpStart({
+        jumpPressed: input.jumpPressed,
+        onGround: this.onGround,
+        isJumping: this.isJumping,
+        now,
+        lastGroundedAt: this.lastGroundedAt,
+        coyoteMs: PLAYER.coyoteMs,
+        jumpBufferedAt: this.jumpBufferedAt,
+        jumpBufferMs: PLAYER.jumpBufferMs,
+      })
+    ) {
       this.setVelocityY(PLAYER.jumpVelocity);
       this.isJumping = true;
+      // コヨーテ/バッファの二重消費を防ぐ(1回の入力・1回の接地につきジャンプ1回)。
+      this.lastGroundedAt = Number.NEGATIVE_INFINITY;
+      this.jumpBufferedAt = Number.NEGATIVE_INFINITY;
       getSound().playSe('jump');
     }
 
@@ -363,9 +393,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     );
     this.hp = next.hp;
     this.invincibleUntil = next.invincibleUntil;
-    // 実際に被弾が通った時のみリグをのけぞらせる(無敵中は無反応)。
+    // 実際に被弾が通った時のみリグをのけぞらせ、触覚フィードバックを出す(無敵中は無反応)。
     if (!wasInvincible) {
       this.rig.triggerHit(now);
+      getHaptics().vibrateHit();
     }
     if (this.isDead()) {
       this.setVelocity(0, 0);
