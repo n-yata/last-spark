@@ -44,6 +44,14 @@ Title / GameOver / Clear / Options(Title・Pause 双方) / StageSelect の全メ
    見た目だけの差し替えではなく、縦積みメニューの行間・レンジ設計に跳ねる。
    400px 高(Pixel5横)を最小ケースとして机上計算+実スクショの両方で確認するのが安全。
 
+## 追記: master(PR #118 クリアリザルト強化)との統合
+
+作業中に別セッションの PR #118 が master へ入り、ClearScene / stageSelect / repository-structure.md
+が競合した。ClearScene は「#118 のカウントアップ・ランク演出」と「本作業の NeonButton 周回2択」が
+別領域だったため合成は素直に成立(import 行と docs の依存記述のみ手動解消)。
+並行セッションと同じファイルを触る作業では、**コミット直前に必ず origin/master を再フェッチして
+差分を確認する**こと(今回もその手順で早期に気づけた)。
+
 ## 次回への改善提案
 
 - リザルト画面リッチ化・タイトル格上げ(候補として温存中)では NeonButton をそのまま使える。

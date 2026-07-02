@@ -70,9 +70,12 @@
 
 ## フェーズ4: ドキュメント・仕上げ
 
-- [ ] docs の同期確認(functional-design.md / repository-structure.md に UI 部品の記載があれば追従)
-- [ ] クルトワ(security-engineer)のセキュリティレビュー
-- [ ] 振り返りを `retrospective.md` に記録(モード3)
+- [x] docs の同期確認(repository-structure.md の ui/ 配置ファイルと stageSelect 依存記述を neonButton へ追従。
+      functional-design.md はボタン実装の言及なしのため変更不要)
+- [x] クルトワ(security-engineer)のセキュリティレビュー(Critical/High/Medium なし)
+- [x] 振り返りを `retrospective.md` に記録(モード3)
+- [x] (追加対応)master の PR #118(クリアリザルト強化)を取り込みコンフリクト解消
+      (ClearScene: カウントアップ/ランク演出 + NeonButton 周回2択の合成。検証・スクショ確認済み)
 
 ---
 
