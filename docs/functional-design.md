@@ -57,7 +57,7 @@ Phaser の Scene を画面/状態の単位とする。
 | `GameScene` | ステージ本体。プレイヤー/敵/ボス/弾/カメラ/物理を統括 |
 | `UIScene` | HUD(プレイヤーライフ、ボスHP、チャージゲージ)。`GameScene` と並行起動 |
 | `GameOverScene` | ゲームオーバー表示とリトライ導線 |
-| `ClearScene` | ボス撃破時のクリア演出。クリア状況(ステージ単位)を保存しタイトル/次ステージへ。最終ステージ全クリアで「ALL CLEAR」を表示 |
+| `ClearScene` | ボス撃破時のクリアリザルト。タイムのカウントアップ演出、ベスト更新時の NEW RECORD、戦績(被ダメージ/撃破数)、S/A/B ランクのポップ表示を行い、クリア状況・最速タイム・最高ランク(ステージ単位)を保存してタイトル/次ステージへ。最終ステージ全クリアで「ALL CLEAR」を表示。ランク判定・記録更新判定は純粋ロジック `systems/clearResult.ts`(S=無被弾 / A=被ダメ maxHp×25%以下 / B=それ超。閾値は `balance.ts` の `RANK`)。NEW RECORD は既存ベスト更新時のみ(初回クリアでは出さない)。戦績の集計(kills/damageTaken)は GameScene が行い、救出演出(stage3)・エンディング(stage6)経由でもリザルトへ引き継ぐ |
 | `CutsceneScene`(オーバーレイ) | 演出シーン。静止画的演出+交互テキスト(TERRA/RAY)+ト書き+ナレーションをタップ送りで再生し、完了後に指定遷移を呼ぶ。Stage 1 開始演出・Stage 3 救出後演出・Stage 4-5 開始演出・Stage 6 エンディングで使用(BGM は起動データで差し替え可能) |
 | `OrientationScene`(オーバーレイ) | 縦持ち検知時に「横向きにしてください」案内を最前面表示 |
 | `PauseScene`(オーバーレイ) | タイトル/プレイ中(ポーズ)双方から開く統合オプションメニュー。音量(BGM/SE 5段階・ミュート)、難易度(normal/hard)、ポーズ/再開、操作説明、ステージ移動(リトライ/タイトルへ戻る/ステージ選択)を1つのオーバーレイに集約。`GameScene` 上では物理を止めて `launch` し、破壊的遷移は resume 後に実行する |
@@ -70,9 +70,10 @@ Phaser の Scene を画面/状態の単位とする。
 
 ```typescript
 interface SaveData {
-  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 6)
+  version: number;                  // セーブ構造のバージョン(マイグレーション用、現行 7)
   clearedStages: string[];          // クリア済みステージID(全6ステージ対応)。周回開始でリセットされる
   bestTimeMs?: Record<string, number>; // ステージ別クリア最速タイム(ミリ秒)。未クリアのステージはキーなし。周回してもリセットされない
+  bestRank?: Record<string, 'S' | 'A' | 'B'>; // ステージ別の最高ランク(被ダメージ基準)。より良いランクのみ上書き。周回してもリセットされない。任意フィールドのため version 据え置きで追加
   loopCount: number;                // 周回数(New Game+)。初期値1。settings外の進捗データ
   settings: GameSettings;           // ユーザー設定
 }
@@ -93,7 +94,8 @@ interface GameSettings {
 - `version` 不一致時は、旧形式からのマイグレーションを試み、移行不能なら安全側にフォールバック(既定値で再生成)。現行構造は `version: 7`(`clearedStages` / `bestTimeMs:Record` / `settings.difficulty` / `settings.busterMode` / `settings.vibration` / `loopCount`)。なお当時の v3 セーブが持っていた `collectedLogs` フィールド(科学者ログ収集)は撤去済みで、余分な `collectedLogs` は読み込み時に無視する。
   - v1(`cleared:boolean` / `bestTimeMs:number`)→現行 移行: `cleared:true`→`clearedStages:['stage1']`、`bestTimeMs:number`→`{ stage1: value }`。`loopCount` は1を補完。
   - v2〜v6→現行 移行: 進捗を保持し、`settings.difficulty` 未設定なら `normal`、`settings.busterMode` 未設定なら `false`、`settings.vibration` 未設定なら `true`、`loopCount` 未設定なら `1` を補完して version を引き上げる。
-- API: `markStageCleared(stageId, timeMs?)` でステージ単位に記録(最速タイムのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。`advanceLoop()` で次の周回へ進む(`loopCount+1` かつ `clearedStages` をリセット、`bestTimeMs` は保持)。
+- API: `markStageCleared(stageId, timeMs?, rank?)` でステージ単位に記録(最速タイム・最高ランクのみ更新)。`markCleared(timeMs)` は `stage1` への委譲で後方互換。`isStageCleared(stageId)` で到達判定。`advanceLoop()` で次の周回へ進む(`loopCount+1` かつ `clearedStages` をリセット、`bestTimeMs` / `bestRank` は保持)。
+- `bestRank` は**バージョン据え置き(v7)の任意フィールド**として追加した(`bestTimeMs` と同方式)。旧 v7 セーブはキー無しのまま妥当で、必須フィールド追加時(busterMode/vibration)のようなバージョン繰り上げ・マイグレーションを要しない。存在する場合のみ「ステージID→'S'|'A'|'B'」として検証し、不正値は既定値へフォールバックする。
 
 ### 周回要素(New Game+)
 
@@ -607,7 +609,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 タイトル画面の「STAGE SELECT」導線から開くオーバーレイ。6ステージをカードのグリッド(3列)で表示し、進捗が一目で分かる画面にする。モデル構築・解放判定・レイアウト計算・タイム整形は純粋ロジック `stageSelect/stageCards.ts` に分離する(Phaser 非依存・テスト可能)。
 
 - **ミニプレビュー**: 各カード上部に、ステージ背景テーマ(`config/stageBackground.ts` の skyTop/skyBottom/accent/layers)から手続き生成した縮小プレビューを描く。空は `lerpColor` の帯(`fillGradientStyle` は WebGL 限定のため使わない)、シルエットは `generateSilhouetteColumns`(決定論)の縮小描画で、外部アセットは追加しない。
-- **進捗表示**: 今周回でクリア済みのステージに CLEAR バッジ、ベストタイム(周回で消えない `bestTimeMs`)があれば `BEST m:ss` を表示する。タイム整形 `formatBestTime` は TitleScene / ClearScene と共通。
+- **進捗表示**: 今周回でクリア済みのステージに CLEAR バッジ、ベストタイム(周回で消えない `bestTimeMs`)があれば `BEST m:ss`、最高ランク(`bestRank`)があればカード右下にランク字(色は ClearScene と共有の `rankColor`)を表示する。タイム整形 `formatBestTime` は TitleScene / ClearScene と共通。
 - **段階解放**: stage1 は常に解放。stage n は「stage n-1 を一度でもクリアした記録がある(今周回の `clearedStages` **または** 過去記録 `bestTimeMs`)」場合に解放する。**解放判定に周回で消えない `bestTimeMs` を含めるため、New Game+ で `clearedStages` がリセットされても一度到達したステージは選び直せる**。未解放カードは暗転 + `LOCKED` 表示でタップ無効。
 - ポーズ中のステージ移動パネル(`optionsMenu.ts`)は従来のテキストリストのまま(カード化はタイトルのみ)だが、**解放ルールは共通**(`isStageUnlocked` を共用): 未解放ステージは `[LOCKED]` 表示の非活性行になり、この経路からもロックを素通りできない。
 

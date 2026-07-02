@@ -9,6 +9,7 @@ import {
   lerpColor,
 } from '../config/stageBackground';
 import { SaveManager } from '../persistence/SaveManager';
+import { rankColor } from '../systems/clearResult';
 import {
   buildStageCardModels,
   cardGridLayout,
@@ -170,6 +171,19 @@ export function createStageSelect(
             color: COLOR_VALUE,
           })
           .setOrigin(0, 1),
+      );
+    }
+    // 最高ランク(右下、BEST の反対側)。色は ClearScene のランク表示と共有する。
+    if (model.bestRank !== undefined) {
+      container.add(
+        scene.add
+          .text(rect.x + rect.width - pad * 1.5, rect.y + rect.height - pad, model.bestRank, {
+            fontFamily: 'monospace',
+            fontSize: scaledFontPx(14),
+            color: rankColor(model.bestRank),
+            fontStyle: 'bold',
+          })
+          .setOrigin(1, 1),
       );
     }
 
