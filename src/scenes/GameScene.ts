@@ -40,6 +40,7 @@ import {
 } from '../systems/difficulty';
 import { shouldEmpowerPlayer } from '../systems/empowerment';
 import { getViewportSize } from '../systems/viewport';
+import { resolveRank, isNewRecord } from '../systems/clearResult';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
@@ -122,6 +123,10 @@ export class GameScene extends Phaser.Scene {
   private inPostBoss = false;
   /** 撃破時刻で確定したクリアタイム(救出演出後のクリア遷移へ持ち越す)。 */
   private pendingClearTimeMs = 0;
+  /** 撃破時刻で確定した被ダメージ(救出演出後のクリア遷移へ持ち越す)。 */
+  private pendingDamageTaken = 0;
+  /** このステージで倒した雑魚敵の数(リザルト表示用)。 */
+  private kills = 0;
   /** オプションメニューによるポーズ中か(OrientationScene の resume 競合回避にも使う)。 */
   private paused = false;
   /** ポーズ起動キー(ESC / P)。キーボードプレイ時の導線。 */
@@ -148,6 +153,9 @@ export class GameScene extends Phaser.Scene {
     this.inPostBoss = false;
     this.shadowRayActive = false;
     this.shadowRaySpawned = false;
+    // リザルト集計はステージ再入(リトライ/次ステージ継続)ごとにリセットする。
+    this.kills = 0;
+    this.pendingDamageTaken = 0;
     this.cageBars = undefined;
     // 前ステージ/前プレイの未消化な表示要求が残っていれば破棄する。
     this.registry.set(STORY.pending, []);
@@ -376,6 +384,8 @@ export class GameScene extends Phaser.Scene {
       clearTimeMs: this.pendingClearTimeMs,
       stageId: this.stageId,
       nextStageId: this.stage.nextStageId,
+      damageTaken: this.pendingDamageTaken,
+      kills: this.kills,
     });
   }
 
@@ -485,6 +495,7 @@ export class GameScene extends Phaser.Scene {
           getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
         },
         onEnemyDefeated: (enemy) => {
+          this.kills += 1;
           this.effects.enemyKilled(enemy.x, enemy.y);
           getSound().playSe('enemyDefeated');
           if (!this.firstEnemyInnerDone) {
@@ -797,8 +808,10 @@ export class GameScene extends Phaser.Scene {
 
   private handleClear(boss: Boss): void {
     if (this.ended || this.inPostBoss) return;
-    // クリアタイムは撃破の瞬間で確定する(撃破演出/救出演出の時間を含めない)。
+    // クリアタイム・被ダメージは撃破の瞬間で確定する(撃破演出/救出演出中の変動を含めない)。
+    // 回復手段が存在しないため、被ダメージは maxHp との差で確定できる。
     const clearTimeMs = this.time.now - this.startTime;
+    const damageTaken = this.player.maxHp - this.player.hp;
     this.player.setVelocityX(0);
     getSound().stopBgm(); // ボス BGM を止めてから撃破音を鳴らす(GameOver と対称)
     getSound().playSe('bossDefeated');
@@ -824,6 +837,7 @@ export class GameScene extends Phaser.Scene {
     if (this.storyEnabled && this.stage.postBossCutsceneKey) {
       this.inPostBoss = true;
       this.pendingClearTimeMs = clearTimeMs;
+      this.pendingDamageTaken = damageTaken;
       // 死亡ボスを update ループから切り離し(参照を断ち)、演出後に破棄する。
       this.boss = undefined;
       this.effects.bossDeathSequence(boss.x, boss.y, () => this.enterRescuePhase(boss));
@@ -833,7 +847,9 @@ export class GameScene extends Phaser.Scene {
     // 従来(stage1-2)/演出キーなし(stage4): 撃破演出後にクリアへ。
     // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に静止させる。
     this.ended = true;
-    this.effects.bossDeathSequence(boss.x, boss.y, () => this.finishStageClear(clearTimeMs));
+    this.effects.bossDeathSequence(boss.x, boss.y, () =>
+      this.finishStageClear(clearTimeMs, damageTaken),
+    );
   }
 
   private shouldStartHardSecretBoss(boss: Boss): boolean {
@@ -848,12 +864,12 @@ export class GameScene extends Phaser.Scene {
    * ボス撃破後のクリア確定。撃破直後の内心(inner.bossDefeated)を持つステージ(stage4 など)は、
    * それを見せてから遷移する。持たないステージは即座に遷移する。
    */
-  private finishStageClear(clearTimeMs: number): void {
+  private finishStageClear(clearTimeMs: number, damageTaken: number): void {
     const endingKey = this.storyEnabled ? this.stage.endingCutsceneKey : undefined;
     const go = (): void => {
       // 最終ステージ(endingCutsceneKey あり): ClearScene を経ずエンディング演出へ。
       if (endingKey) {
-        this.startEnding(endingKey, clearTimeMs);
+        this.startEnding(endingKey, clearTimeMs, damageTaken);
         return;
       }
       this.inputController.destroy();
@@ -863,6 +879,8 @@ export class GameScene extends Phaser.Scene {
         clearTimeMs,
         stageId: this.stageId,
         nextStageId: this.stage.nextStageId,
+        damageTaken,
+        kills: this.kills,
       });
     };
 
@@ -884,14 +902,14 @@ export class GameScene extends Phaser.Scene {
    * 再生し(エンディング BGM へ切替)、完了後に全クリアを保存してタイトルへ帰還する。
    * 物理ステップ中の scene.pause() を避けるため、タイマー経由で状態を変更する(救出演出と同方式)。
    */
-  private startEnding(scriptKey: string, clearTimeMs: number): void {
+  private startEnding(scriptKey: string, clearTimeMs: number, damageTaken: number): void {
     this.inputController.destroy();
     this.time.delayedCall(300, () => {
       this.scene.pause(SCENE_KEYS.ui);
       this.scene.launch(SCENE_KEYS.cutscene, {
         scriptKey,
         bgm: 'ending',
-        onComplete: () => this.finalizeEnding(clearTimeMs),
+        onComplete: () => this.finalizeEnding(clearTimeMs, damageTaken),
       });
       this.scene.pause();
     });
@@ -902,16 +920,25 @@ export class GameScene extends Phaser.Scene {
    * 直接タイトルへ戻さず ClearScene を経由することで、エンディングの余韻のあとに到達の手応えを残す。
    * クリア記録はここで確定し、ClearScene は表示専用とする(stageId を渡さず二重保存を避ける)。
    */
-  private finalizeEnding(clearTimeMs: number): void {
+  private finalizeEnding(clearTimeMs: number, damageTaken: number): void {
     this.scene.resume(); // 演出のため pause していた自身を戻す(直後に遷移する)
     this.scene.stop(SCENE_KEYS.ui);
-    this.saveManager.markStageCleared(this.stageId, clearTimeMs);
+    // ランク・記録更新はここで確定する(ClearScene は表示専用。二重保存を避ける既存方針)。
+    const prevBest = this.saveManager.getData().bestTimeMs?.[this.stageId];
+    this.saveManager.markStageCleared(
+      this.stageId,
+      clearTimeMs,
+      resolveRank(damageTaken, this.player.maxHp),
+    );
     // nextStageId 無し = 最終クリア(ALL CLEAR / TAP TO TITLE)。余韻のため入力受付を一拍遅らせる。
     // offerNextLoop: 次の周回(New Game+)へ進む選択肢を ClearScene に提示させる。
     transitionTo(this, SCENE_KEYS.clear, {
       clearTimeMs,
       inputDelayMs: ENDING_CLEAR_INPUT_DELAY_MS,
       offerNextLoop: true,
+      damageTaken,
+      kills: this.kills,
+      newRecord: isNewRecord(prevBest, clearTimeMs),
     });
   }
 

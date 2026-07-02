@@ -495,6 +495,82 @@ describe('SaveManager', () => {
     expect(isValidSaveData(withoutVibration)).toBe(false);
   });
 
+  // ---- bestRank(クリアランクの記録) ----
+
+  describe('bestRank', () => {
+    it('markStageCleared にランクを渡すと保存・復元できる', () => {
+      const mgr = new SaveManager();
+      mgr.markStageCleared('stage1', 10_000, 'A');
+      const reloaded = new SaveManager();
+      expect(reloaded.getData().bestRank).toEqual({ stage1: 'A' });
+    });
+
+    it('より良いランクのみ上書きされる(S 保持中に B でクリアしても S のまま)', () => {
+      const mgr = new SaveManager();
+      mgr.markStageCleared('stage1', 10_000, 'S');
+      mgr.markStageCleared('stage1', 9_000, 'B');
+      expect(mgr.getData().bestRank).toEqual({ stage1: 'S' });
+      // 逆方向: B → S は更新される
+      mgr.markStageCleared('stage2', 20_000, 'B');
+      mgr.markStageCleared('stage2', 19_000, 'S');
+      expect(mgr.getData().bestRank).toEqual({ stage1: 'S', stage2: 'S' });
+    });
+
+    it('ランク未指定の markStageCleared では bestRank を変更しない(既存呼び出し互換)', () => {
+      const mgr = new SaveManager();
+      mgr.markStageCleared('stage1', 10_000, 'A');
+      mgr.markStageCleared('stage1', 9_000);
+      expect(mgr.getData().bestRank).toEqual({ stage1: 'A' });
+    });
+
+    it('advanceLoop 後も bestRank が保持される(bestTimeMs と同方針)', () => {
+      const mgr = new SaveManager();
+      mgr.markStageCleared('stage1', 10_000, 'S');
+      mgr.advanceLoop();
+      expect(mgr.getData().bestRank).toEqual({ stage1: 'S' });
+      expect(mgr.getData().clearedStages).toEqual([]);
+    });
+
+    it('bestRank なしの既存 v7 セーブがそのまま読み込める(バージョン繰り上げなし)', () => {
+      localStorage.setItem(
+        STORAGE_KEYS.save,
+        JSON.stringify({
+          version: SAVE_VERSION,
+          clearedStages: ['stage1'],
+          bestTimeMs: { stage1: 12_345 },
+          loopCount: 2,
+          settings: DEFAULT_SETTINGS,
+        }),
+      );
+      const mgr = new SaveManager();
+      const data = mgr.getData();
+      expect(data.clearedStages).toEqual(['stage1']);
+      expect(data.bestTimeMs).toEqual({ stage1: 12_345 });
+      expect(data.loopCount).toBe(2);
+      expect(data.bestRank).toBeUndefined();
+    });
+
+    it('bestRank が不正値のセーブは既定値へフォールバックする', () => {
+      localStorage.setItem(
+        STORAGE_KEYS.save,
+        JSON.stringify({
+          version: SAVE_VERSION,
+          clearedStages: ['stage1'],
+          bestRank: { stage1: 'SS' }, // 不正: 未知のランク
+          loopCount: 1,
+          settings: DEFAULT_SETTINGS,
+        }),
+      );
+      const mgr = new SaveManager();
+      expect(mgr.getData()).toEqual(defaultSaveData());
+    });
+
+    it('bestRank 付きの現行セーブは妥当と判定される(isValidSaveData)', () => {
+      const d = { ...defaultSaveData(), bestRank: { stage1: 'S', stage3: 'B' } };
+      expect(isValidSaveData(d)).toBe(true);
+    });
+  });
+
   // ---- advanceLoop ----
 
   describe('advanceLoop', () => {

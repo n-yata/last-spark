@@ -144,4 +144,19 @@ describe('buildStageCardModels(SaveData → 表示モデル)', () => {
     expect(models[2].locked).toBe(false); // stage2 の過去記録で解放
     expect(models[3].locked).toBe(true);
   });
+
+  it('bestRank がモデルへ反映される(記録なしのステージは undefined)', () => {
+    const models = buildStageCardModels({
+      clearedStages: ['stage1'],
+      bestTimeMs: { stage1: 61_000 },
+      bestRank: { stage1: 'S' },
+    });
+    expect(models[0].bestRank).toBe('S');
+    expect(models[1].bestRank).toBeUndefined();
+  });
+
+  it('bestRank フィールド自体が無いセーブでも全ステージ undefined で構築できる', () => {
+    const models = buildStageCardModels({ clearedStages: [], bestTimeMs: undefined });
+    expect(models.every((m) => m.bestRank === undefined)).toBe(true);
+  });
 });

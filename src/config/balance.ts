@@ -24,6 +24,12 @@ export const PLAYER = {
   height: 40,
 } as const;
 
+// クリアランク評価(被ダメージ基準)。S=無被弾は固定ルールで、A/B の境目だけを持つ。
+export const RANK = {
+  // 被ダメージが maxHp のこの比率以下なら A(ちょうど比率上は A)。それ超は B。
+  aDamageRatio: 0.25,
+} as const;
+
 export const SHOT = {
   normalDamage: 1,
   chargedDamage: 3,
