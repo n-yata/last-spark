@@ -221,6 +221,10 @@ export class GameScene extends Phaser.Scene {
     // ゲーム/UI を止め、演出完了後に再開して開始テキストへ。
     // (救出演出と同じく、物理ステップ中の scene.pause() を避けるためタイマー経由で状態変更する)
     this.time.delayedCall(300, () => {
+      // クリア遷移(transitionTo の fadeOut)開始後にこの遅延コールバックが発火すると、
+      // ここで scene.pause() してしまい fadeOut のカメラ更新が止まって FADE_OUT_COMPLETE が
+      // 来ないままデッドロックする。終了済みなら演出を起動しない。
+      if (this.ended) return;
       this.scene.pause(SCENE_KEYS.ui);
       this.scene.launch(SCENE_KEYS.cutscene, {
         scriptKey: key,

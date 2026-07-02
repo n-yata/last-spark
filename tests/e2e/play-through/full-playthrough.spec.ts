@@ -68,6 +68,10 @@ test('通しプレイ: タイトルからボス撃破クリアまでを実操作
   let movingRight = true;
 
   while (Date.now() - startedAt < 150_000) {
+    // 演出・回転案内等による scene.pause/resume を挟むと、Phaser は保持中キーの isDown を
+    // リセットしてしまい ArrowRight down が効かなくなる(down 済みでも前進しなくなる)。
+    // 毎周再送して自己回復させる(重複 down は repeat keydown になるだけで無害)。
+    if (movingRight) await page.keyboard.down('ArrowRight');
     const st = await readState(page);
     const t = Math.floor((Date.now() - startedAt) / 1000);
     if (t !== lastSample) {
