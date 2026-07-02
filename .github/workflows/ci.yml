@@ -1,7 +1,10 @@
 name: CI
 
-# PR で短い verify だけを回す。feature ブランチ push では PR と重複して待ち時間が増えるため起動しない。
-# Playwright E2E は workflow_dispatch から明示実行する。
+# PR では verify(typecheck/lint/unit/build)と e2e-smoke を並列で回す。feature ブランチ push では
+# PR と重複して待ち時間が増えるため起動しない。
+# e2e-smoke は必須チェックにしない(branch protection 対象外)。verify が緑になればマージ可能で、
+# smoke はマージ判断をブロックしない参考シグナルとして扱う(リリース速度を優先する個人開発の運用)。
+# フル E2E は従来どおり workflow_dispatch から明示実行する。
 on:
   pull_request:
   workflow_dispatch:
@@ -54,7 +57,9 @@ jobs:
 
   e2e-smoke:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.e2e_suite == 'smoke' }}
+    # pull_request でも実行する参考シグナル(非ブロッキング)。branch protection の必須チェック対象外なので、
+    # このジョブが失敗・遅延してもマージ判断はブロックしない。workflow_dispatch では smoke 選択時のみ起動。
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.e2e_suite == 'smoke') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -68,11 +73,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Smoke E2E は Pixel 5 landscape(chromium)のみ使用。webServer は playwright.config.ts が
-      # `npm run build && npm run preview` で自動起動するため、ここでの明示ビルドは不要。
-      - name: Install Playwright browser (chromium)
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # cache miss: ブラウザ本体 + OS依存ライブラリの両方を入れる。
+      - name: Install Playwright browser (chromium, with deps)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
+      # cache hit: ブラウザ本体はキャッシュから復元済みなので、OS依存ライブラリのみ入れる。
+      - name: Install Playwright OS dependencies only (chromium)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Smoke E2E は Pixel 5 landscape(chromium)のみ使用。webServer は playwright.config.ts が
+      # `npm run build && npm run preview` で自動起動するため、ここでの明示ビルドは不要。
       - name: Smoke E2E tests (Playwright)
         run: npm run test:e2e:smoke
 
@@ -92,8 +111,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browser (chromium)
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # cache miss: ブラウザ本体 + OS依存ライブラリの両方を入れる。
+      - name: Install Playwright browser (chromium, with deps)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      # cache hit: ブラウザ本体はキャッシュから復元済みなので、OS依存ライブラリのみ入れる。
+      - name: Install Playwright OS dependencies only (chromium)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Full E2E tests (Playwright)
         run: npm run test:e2e
