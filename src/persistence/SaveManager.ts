@@ -1,4 +1,4 @@
-import type { SaveData, GameSettings, DifficultyMode } from '../types/save';
+import { STAGE_RANK_ORDER, type SaveData, type GameSettings, type DifficultyMode, type StageRank } from '../types/save';
 import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
 // Persistence レイヤー: SaveData の読み書き・既定値生成・バージョン検証・旧形式マイグレーション。
@@ -83,6 +83,14 @@ function isValidBestTimes(value: unknown): value is Record<string, number> {
   );
 }
 
+/** bestRank(任意)が「ステージID→'S'|'A'|'B'」のレコードかを検証する。 */
+function isValidBestRanks(value: unknown): value is Record<string, StageRank> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every(
+    (v) => v === 'S' || v === 'A' || v === 'B',
+  );
+}
+
 /**
  * 読み込んだ値が現行バージョンの SaveData として妥当かを検証する。
  * 型・version 一致・値域をチェックし、改ざん/破損で進行不能にならないようにする。
@@ -93,6 +101,7 @@ export function isValidSaveData(value: unknown): value is SaveData {
   if (d.version !== SAVE_VERSION) return false;
   if (!isStringArray(d.clearedStages)) return false;
   if (d.bestTimeMs !== undefined && !isValidBestTimes(d.bestTimeMs)) return false;
+  if (d.bestRank !== undefined && !isValidBestRanks(d.bestRank)) return false;
   if (!isValidLoopCount(d.loopCount)) return false;
   if (!isValidSettings(d.settings)) return false;
   return true;
@@ -164,6 +173,7 @@ export class SaveManager {
       ...this.data,
       clearedStages: [...this.data.clearedStages],
       bestTimeMs: this.data.bestTimeMs ? { ...this.data.bestTimeMs } : undefined,
+      bestRank: this.data.bestRank ? { ...this.data.bestRank } : undefined,
       settings: { ...this.data.settings },
     };
   }
@@ -202,6 +212,7 @@ export class SaveManager {
       ...data,
       clearedStages: [...data.clearedStages],
       bestTimeMs: data.bestTimeMs ? { ...data.bestTimeMs } : undefined,
+      bestRank: data.bestRank ? { ...data.bestRank } : undefined,
       settings: { ...data.settings },
     };
     try {
@@ -211,8 +222,8 @@ export class SaveManager {
     }
   }
 
-  /** 指定ステージのクリアを記録する。最速タイムのみ更新する。 */
-  markStageCleared(stageId: string, timeMs?: number): void {
+  /** 指定ステージのクリアを記録する。最速タイム・最高ランク(S > A > B)のみ更新する。 */
+  markStageCleared(stageId: string, timeMs?: number, rank?: StageRank): void {
     const next = this.getData();
     if (!next.clearedStages.includes(stageId)) {
       next.clearedStages = [...next.clearedStages, stageId];
@@ -222,6 +233,13 @@ export class SaveManager {
       const prev = times[stageId];
       if (prev === undefined || timeMs < prev) {
         next.bestTimeMs = { ...times, [stageId]: timeMs };
+      }
+    }
+    if (rank !== undefined) {
+      const ranks = next.bestRank ?? {};
+      const prev = ranks[stageId];
+      if (prev === undefined || STAGE_RANK_ORDER[rank] > STAGE_RANK_ORDER[prev]) {
+        next.bestRank = { ...ranks, [stageId]: rank };
       }
     }
     this.save(next);
@@ -246,7 +264,7 @@ export class SaveManager {
 
   /**
    * 次の周回へ進む。loopCount を+1し、clearedStages をリセットして stage1 から
-   * 再開できる状態にする。bestTimeMs(過去の最速記録)は周回に関係しない記録なので保持する。
+   * 再開できる状態にする。bestTimeMs / bestRank(過去の記録)は周回に関係しない記録なので保持する。
    */
   advanceLoop(): void {
     const next = this.getData();

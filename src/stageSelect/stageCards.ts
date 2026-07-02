@@ -1,6 +1,6 @@
 import { STAGE_IDS } from '../config/stages';
 import { stageName } from './stages';
-import type { SaveData } from '../types/save';
+import type { SaveData, StageRank } from '../types/save';
 
 // ステージセレクトのカード表示用モデルとレイアウト計算(Phaser 非依存の純粋ロジック)。
 // 描画(stageSelect.ts)と分離し、解放判定・タイム整形・グリッド配置を vitest で直接検証できる。
@@ -16,6 +16,8 @@ export interface StageCardModel {
   cleared: boolean;
   /** ベストタイム(ms)。未クリアなら undefined。周回をまたいで保持される。 */
   bestTimeMs?: number;
+  /** 最高ランク(S/A/B)。未記録なら undefined。周回をまたいで保持される。 */
+  bestRank?: StageRank;
   /** 未解放か(暗転 + LOCKED 表示、タップ無効)。 */
   locked: boolean;
 }
@@ -106,7 +108,7 @@ export function cardGridLayout(
 
 /** SaveData から全ステージのカードモデルを構築する(STAGES 登録順)。 */
 export function buildStageCardModels(
-  save: Pick<SaveData, 'clearedStages' | 'bestTimeMs'>,
+  save: Pick<SaveData, 'clearedStages' | 'bestTimeMs' | 'bestRank'>,
   stageIds: readonly string[] = STAGE_IDS,
 ): StageCardModel[] {
   return stageIds.map((id, index) => ({
@@ -115,6 +117,7 @@ export function buildStageCardModels(
     name: stageName(id),
     cleared: save.clearedStages.includes(id),
     bestTimeMs: save.bestTimeMs?.[id],
+    bestRank: save.bestRank?.[id],
     locked: !isStageUnlocked(index, save.clearedStages, save.bestTimeMs, stageIds),
   }));
 }
