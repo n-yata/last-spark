@@ -5,6 +5,7 @@ import { getSound } from '../systems/SoundManager';
 import { transitionTo, fadeIn } from '../systems/sceneTransition';
 import { scaled, scaledFontPx } from '../config/uiScale';
 import { formatBestTime } from '../stageSelect/stageCards';
+import { createNeonButton } from '../ui/neonButton';
 
 interface ClearData {
   clearTimeMs: number;
@@ -117,52 +118,45 @@ export class ClearScene extends Phaser.Scene {
 
   /**
    * 最終クリア(ALL CLEAR)時、次の周回へ進むかタイトルへ戻るかの2択を提示する(New Game+導線)。
-   * タップ領域は誤操作を避けるため画面下半分を上下に分け、それぞれ十分広く確保する。
+   * ボタンは即座に見せる(減光状態)が、演出を読ませるため入力受付は inputDelayMs 後に開く。
+   * 誤操作対策の広いタップ領域は、旧実装の画面下半分ゾーンに代えてボタン自体の
+   * minWidth・パディングで確保する(表示と判定の一致を優先)。
    */
   private createLoopChoice(width: number, height: number, inputDelayMs: number): void {
-    const optionY = height * 0.78;
+    const optionY = height * 0.76;
 
-    const nextLoopText = this.add
-      .text(width / 2, optionY, '次の周回へ進む', {
-        fontFamily: 'monospace',
-        fontSize: scaledFontPx(22),
-        color: '#fff27a',
-      })
-      .setOrigin(0.5);
-    this.tweens.add({ targets: nextLoopText, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
+    const goNextLoop = (): void => {
+      getSound().playSe('uiTap');
+      new SaveManager().advanceLoop();
+      transitionTo(this, SCENE_KEYS.game, { stageId: 'stage1' });
+    };
+    const goTitle = (): void => {
+      getSound().playSe('uiTap');
+      transitionTo(this, SCENE_KEYS.title);
+    };
 
-    this.add
-      .text(width / 2, optionY + scaled(48), 'タイトルへ戻る', {
-        fontFamily: 'monospace',
-        fontSize: scaledFontPx(16),
-        color: '#7fe9dd',
-      })
-      .setOrigin(0.5);
+    const nextLoopBtn = createNeonButton(this, width / 2, optionY, '次の周回へ進む', goNextLoop, {
+      variant: 'primary',
+      fontSize: 22,
+      minWidth: 340,
+    });
+    const titleBtn = createNeonButton(
+      this,
+      width / 2,
+      optionY + scaled(56),
+      'タイトルへ戻る',
+      goTitle,
+      { fontSize: 16, minWidth: 340 },
+    );
 
-    // 演出を読ませるため、短い猶予の後に入力を受け付ける。
+    // 演出を読ませるため、短い猶予の間は減光+入力無効にしておく。
+    nextLoopBtn.setEnabled(false);
+    titleBtn.setEnabled(false);
     this.time.delayedCall(inputDelayMs, () => {
-      // 画面下半分を上下に分け、それぞれ十分広いタップ領域を確保する(モバイル誤操作対策)。
-      const nextLoopZone = this.add
-        .zone(0, height * 0.68, width, height * 0.16)
-        .setOrigin(0)
-        .setInteractive();
-      const titleZone = this.add
-        .zone(0, height * 0.84, width, height * 0.16)
-        .setOrigin(0)
-        .setInteractive();
-
-      nextLoopZone.on(Phaser.Input.Events.POINTER_DOWN, () => {
-        getSound().playSe('uiTap');
-        new SaveManager().advanceLoop();
-        transitionTo(this, SCENE_KEYS.game, { stageId: 'stage1' });
-      });
-      titleZone.on(Phaser.Input.Events.POINTER_DOWN, () => {
-        getSound().playSe('uiTap');
-        transitionTo(this, SCENE_KEYS.title);
-      });
-
+      nextLoopBtn.setEnabled(true);
+      titleBtn.setEnabled(true);
       // キーボード操作は既定で「次の周回へ」を選ぶ(タップ環境の主導線を優先)。
-      this.input.keyboard?.once('keydown', () => nextLoopZone.emit(Phaser.Input.Events.POINTER_DOWN));
+      this.input.keyboard?.once('keydown', goNextLoop);
     });
   }
 

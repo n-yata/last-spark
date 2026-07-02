@@ -4,7 +4,7 @@ import { getHaptics } from '../systems/haptics';
 import { SaveManager } from '../persistence/SaveManager';
 import type { GameSettings } from '../types/save';
 import { scaled, scaledFontPx } from '../config/uiScale';
-import { makeMenuButton } from './menuButton';
+import { createNeonButton, type NeonButtonStyle } from './neonButton';
 import { PLAYABLE_STAGES } from '../stageSelect/stages';
 import { isStageUnlocked } from '../stageSelect/stageCards';
 import { getControlEntries } from './controlsData';
@@ -45,13 +45,14 @@ export interface OptionsMenu {
   destroy(): void;
 }
 
-// 配色(既存パレットに準拠)。
+// 配色(既存パレットに準拠)。ボタンの配色は neonButton の variant 側で持つ。
 const COLOR_TITLE = '#37f7d8';
 const COLOR_LABEL = '#cfe9e2';
 const COLOR_VALUE = '#9fffe8';
 const COLOR_MUTED = '#5a6b6a';
-const COLOR_DANGER = '#ff9a8a';
-const COLOR_DANGER_HOVER = '#ffd27a';
+
+/** 縦並びメニューのパネル幅を揃える下限(ベースpx)。 */
+const MENU_MIN_WIDTH = 240;
 
 /**
  * 共通オプションオーバーレイを生成してシーンに追加する。
@@ -92,6 +93,18 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
     root.add(panel);
   };
 
+  // NeonButton を生成して Container へ追加する薄いヘルパー(呼び出しの重複を減らす)。
+  const addButton = (
+    c: Phaser.GameObjects.Container,
+    x: number,
+    y: number,
+    label: string,
+    onClick: () => void,
+    style?: NeonButtonStyle,
+  ): void => {
+    c.add(createNeonButton(scene, x, y, label, onClick, style).container);
+  };
+
   // --- ルート(メニュー項目) ---
   const buildRoot = (): Phaser.GameObjects.Container => {
     const c = scene.add.container(0, 0);
@@ -119,10 +132,15 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
       () => { playTap(); config.onClose(); },
     ]);
 
-    const top = height * 0.32;
-    const bottom = height * 0.82;
+    // パネル型ボタンはテキストより背が高いため、縦レンジを旧実装(0.32〜0.82)より広く取る。
+    const top = height * 0.28;
+    const bottom = height * 0.87;
     const gap = Math.min(scaled(60), (bottom - top) / Math.max(1, items.length - 1));
-    items.forEach(([label, fn], i) => c.add(makeMenuButton(scene, width / 2, top + gap * i, label, fn)));
+    items.forEach(([label, fn], i) => {
+      // 最後の項目(ゲームに戻る/とじる)は主導線として primary で強調する。
+      const variant = i === items.length - 1 ? 'primary' : 'default';
+      addButton(c, width / 2, top + gap * i, label, fn, { variant, minWidth: MENU_MIN_WIDTH });
+    });
     return c;
   };
 
@@ -171,50 +189,45 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
       };
       refresh();
       c.add(bar);
-      c.add(
-        makeMenuButton(scene, width / 2 - scaled(120), rowY + scaled(28), '◂', () => {
-          changeVolume(role, -1);
-          refresh();
-        }, { fontSize: 24 }),
-      );
-      c.add(
-        makeMenuButton(scene, width / 2 + scaled(120), rowY + scaled(28), '▸', () => {
-          changeVolume(role, 1);
-          refresh();
-        }, { fontSize: 24 }),
-      );
+      addButton(c, width / 2 - scaled(120), rowY + scaled(28), '◂', () => {
+        changeVolume(role, -1);
+        refresh();
+      }, { variant: 'ghost', fontSize: 24 });
+      addButton(c, width / 2 + scaled(120), rowY + scaled(28), '▸', () => {
+        changeVolume(role, 1);
+        refresh();
+      }, { variant: 'ghost', fontSize: 24 });
       y += rowGap;
     };
 
     addChannel('BGM', 'bgm');
     addChannel('SE', 'se');
+    // チャンネル行(ラベル+バー)はパネル型ボタンより背が低い前提の rowGap のため、
+    // パネル型の MUTE がバー行に食い込まないよう追加の余白を挟む。
+    y += scaled(14);
 
     // ミュートトグル: 切替後はバー色も変わるためパネルを作り直す。
-    c.add(
-      makeMenuButton(scene, width / 2, y, `MUTE: ${settings.muted ? 'ON' : 'OFF'}`, () => {
-        settings = { ...settings, muted: !settings.muted };
-        save.updateSettings({ muted: settings.muted });
-        sound.applySettings(settings);
-        playTap();
-        setPanel(buildVolume);
-      }),
-    );
+    addButton(c, width / 2, y, `MUTE: ${settings.muted ? 'ON' : 'OFF'}`, () => {
+      settings = { ...settings, muted: !settings.muted };
+      save.updateSettings({ muted: settings.muted });
+      sound.applySettings(settings);
+      playTap();
+      setPanel(buildVolume);
+    }, { fontSize: 18, minWidth: MENU_MIN_WIDTH });
     y += rowGap * 0.85;
 
     // 振動トグル: ON へ切り替えた瞬間に試し振動を出し、手元で効果を確認できるようにする。
-    c.add(
-      makeMenuButton(scene, width / 2, y, `しんどう: ${settings.vibration ? 'ON' : 'OFF'}`, () => {
-        settings = { ...settings, vibration: !settings.vibration };
-        save.updateSettings({ vibration: settings.vibration });
-        getHaptics().setEnabled(settings.vibration);
-        if (settings.vibration) getHaptics().vibrateHit();
-        playTap();
-        setPanel(buildVolume);
-      }),
-    );
+    addButton(c, width / 2, y, `しんどう: ${settings.vibration ? 'ON' : 'OFF'}`, () => {
+      settings = { ...settings, vibration: !settings.vibration };
+      save.updateSettings({ vibration: settings.vibration });
+      getHaptics().setEnabled(settings.vibration);
+      if (settings.vibration) getHaptics().vibrateHit();
+      playTap();
+      setPanel(buildVolume);
+    }, { fontSize: 18, minWidth: MENU_MIN_WIDTH });
     y += rowGap * 0.85;
 
-    c.add(makeMenuButton(scene, width / 2, y, '◂ BACK', () => { playTap(); showRoot(); }));
+    addButton(c, width / 2, y, '◂ BACK', () => { playTap(); showRoot(); }, { variant: 'ghost' });
     return c;
   };
 
@@ -254,7 +267,9 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
       );
       y += scaled(54);
     }
-    c.add(makeMenuButton(scene, width / 2, y + scaled(8), '◂ BACK', () => { playTap(); showRoot(); }));
+    addButton(c, width / 2, y + scaled(8), '◂ BACK', () => { playTap(); showRoot(); }, {
+      variant: 'ghost',
+    });
     return c;
   };
 
@@ -265,30 +280,24 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
     if (!nav) return c; // enableStageNav=true のとき必ず stageNav がある前提
     let y = height * 0.34;
     const gap = scaled(62);
-    c.add(
-      makeMenuButton(scene, width / 2, y, '↻ もう一度プレイ', () => {
-        playTap();
-        setPanel(() => buildConfirm('もう一度\n最初からプレイしますか？', nav.onRetry));
-      }),
-    );
+    addButton(c, width / 2, y, '↻ もう一度プレイ', () => {
+      playTap();
+      setPanel(() => buildConfirm('もう一度\n最初からプレイしますか？', nav.onRetry));
+    }, { minWidth: MENU_MIN_WIDTH });
     y += gap;
-    c.add(
-      makeMenuButton(scene, width / 2, y, '⌂ タイトルへ戻る', () => {
-        playTap();
-        setPanel(() =>
-          buildConfirm('タイトルへ戻りますか？\n進行中のプレイは失われます', nav.onReturnTitle),
-        );
-      }),
-    );
+    addButton(c, width / 2, y, '⌂ タイトルへ戻る', () => {
+      playTap();
+      setPanel(() =>
+        buildConfirm('タイトルへ戻りますか？\n進行中のプレイは失われます', nav.onReturnTitle),
+      );
+    }, { minWidth: MENU_MIN_WIDTH });
     y += gap;
-    c.add(
-      makeMenuButton(scene, width / 2, y, 'ステージ選択', () => {
-        playTap();
-        setPanel(buildStageList);
-      }),
-    );
+    addButton(c, width / 2, y, 'ステージ選択', () => {
+      playTap();
+      setPanel(buildStageList);
+    }, { minWidth: MENU_MIN_WIDTH });
     y += gap;
-    c.add(makeMenuButton(scene, width / 2, y, '◂ BACK', () => { playTap(); showRoot(); }));
+    addButton(c, width / 2, y, '◂ BACK', () => { playTap(); showRoot(); }, { variant: 'ghost' });
     return c;
   };
 
@@ -308,18 +317,15 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
         })
         .setOrigin(0.5),
     );
-    c.add(
-      makeMenuButton(scene, width / 2 - scaled(80), height * 0.58, 'はい', () => {
-        playTap();
-        onYes();
-      }, { color: COLOR_DANGER, hoverColor: COLOR_DANGER_HOVER }),
-    );
-    c.add(
-      makeMenuButton(scene, width / 2 + scaled(80), height * 0.58, 'いいえ', () => {
-        playTap();
-        showStageNav();
-      }),
-    );
+    // 破壊的操作(はい)は danger で強調し、取り消し(いいえ)と誤認しにくくする。
+    addButton(c, width / 2 - scaled(80), height * 0.58, 'はい', () => {
+      playTap();
+      onYes();
+    }, { variant: 'danger', minWidth: 120 });
+    addButton(c, width / 2 + scaled(80), height * 0.58, 'いいえ', () => {
+      playTap();
+      showStageNav();
+    }, { minWidth: 120 });
     return c;
   };
 
@@ -347,19 +353,15 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
         );
         return;
       }
-      c.add(
-        makeMenuButton(scene, width / 2, top + gap * i, stage.label, () => {
-          // 効果音・遷移は onSelectStage 側に委譲し二重再生を避ける。
-          nav.onSelectStage(stage.id);
-        }, { fontSize: 18 }),
-      );
+      addButton(c, width / 2, top + gap * i, stage.label, () => {
+        // 効果音・遷移は onSelectStage 側に委譲し二重再生を避ける。
+        nav.onSelectStage(stage.id);
+      }, { fontSize: 18, minWidth: MENU_MIN_WIDTH });
     });
-    c.add(
-      makeMenuButton(scene, width / 2, top + gap * PLAYABLE_STAGES.length, '◂ BACK', () => {
-        playTap();
-        showStageNav();
-      }),
-    );
+    addButton(c, width / 2, top + gap * PLAYABLE_STAGES.length, '◂ BACK', () => {
+      playTap();
+      showStageNav();
+    }, { variant: 'ghost' });
     return c;
   };
 

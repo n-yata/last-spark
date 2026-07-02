@@ -172,7 +172,7 @@ State を持つ System クラス:
 **役割**: HUD・仮想ボタンなど、見た目に関する再利用コンポーネント。
 
 **配置ファイル**:
-- `LifeBar.ts`, `BossHpBar.ts`, `ChargeGauge.ts`, `TouchControls.ts`, `MovePad.ts`(左手の追従パッド), `StoryOverlay.ts`(ストーリーテキストのキュー再生) 等
+- `LifeBar.ts`, `BossHpBar.ts`, `ChargeGauge.ts`, `TouchControls.ts`, `MovePad.ts`(左手の追従パッド), `StoryOverlay.ts`(ストーリーテキストのキュー再生), `neonButton.ts`(メニュー系共通ボタン。パネル/ghost の variant と押下フィードバックを持つ) 等
 
 **依存関係**:
 - 依存可能: `config/`, `types/`、および `systems/` 内の **Phaser 非依存の純粋関数モジュール**(camelCase ファイル: `hudFx.ts` 等。entities と同じく最下位ロジック扱い)
@@ -188,7 +188,7 @@ State を持つ System クラス:
 - `stages.ts`: ステージ一覧データ(`PLAYABLE_STAGES` / `stageName`。Phaser 非依存)
 
 **依存関係**:
-- 依存可能: `config/`(`stageBackground` のテーマ/シルエット生成を含む), `types/`, `persistence/`(進捗の読み取り), `ui/`(`menuButton`), `systems/SoundManager`(効果音)
+- 依存可能: `config/`(`stageBackground` のテーマ/シルエット生成を含む), `types/`, `persistence/`(進捗の読み取り), `ui/`(`neonButton`), `systems/SoundManager`(効果音)
 - 依存禁止: `scenes/`, `entities/`
 
 #### src/types/ (共通型定義)

@@ -35,7 +35,8 @@ test('タイトルの OPTIONS から hard mode を切り替えて保存できる
   const size = await gameSize(page);
   await clickGamePoint(page, 55 * size.uiScale, size.height - 24 * size.uiScale); // OPTIONS
 
-  const modeY = size.height * 0.32;
+  // ルートメニュー先頭(MODE)ボタンの中心。optionsMenu の buildRoot は top=0.28H から並べる。
+  const modeY = size.height * 0.28;
   await clickGamePoint(page, size.width / 2, modeY); // MODE: NORMAL -> HARD
 
   await expect.poll(() => savedDifficulty(page)).toBe('hard');

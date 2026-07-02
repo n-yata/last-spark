@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// E2E 用サーバーのポート。既定 4173。複数セッション(worktree)が並行で E2E を回すと、
+// reuseExistingServer が「別 worktree のサーバー」を掴んで自分のビルドを検証しない事故が
+// 起きるため、E2E_PORT で worktree ごとに専用ポートへ分離できるようにする。
+const port = Number(process.env.E2E_PORT ?? 4173);
+
 // 横向き(ランドスケープ)・両手持ち専用の前提を E2E でも再現する。
 export default defineConfig({
   testDir: './tests/e2e',
@@ -12,7 +17,7 @@ export default defineConfig({
   workers: 2,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL: `http://localhost:${port}`,
     trace: 'on-first-retry',
   },
   projects: [
@@ -24,8 +29,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173',
-    url: 'http://localhost:4173',
+    // strictPort: 指定ポートが塞がっていたら別ポートへ逃げず失敗させる。逃げてしまうと
+    // Playwright は url(旧ポート=他人のサーバー)に対してテストを流してしまう。
+    command: `npm run build && npm run preview -- --port ${port} --strictPort`,
+    url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
