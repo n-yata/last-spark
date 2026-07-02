@@ -9,6 +9,7 @@ import { scaled, scaledFontPx } from '../config/uiScale';
 import { TITLE_TEX } from '../config/assetKeys';
 import { loopRayTint } from '../config/balance';
 import { createOptionsMenu } from '../ui/optionsMenu';
+import { createNeonButton } from '../ui/neonButton';
 import { formatBestTime } from '../stageSelect/stageCards';
 // 型のみの import はビルド時に消去される。
 import type { StageSelect } from '../stageSelect/stageSelect';
@@ -134,18 +135,15 @@ export class TitleScene extends Phaser.Scene {
 
     // 「OPTIONS」導線。STAGE SELECT(右下)と対になるよう左下に控えめに配置する。
     // startZone の後に追加するため topOnly(既定)で前面となりスタートに巻き込まれない。
-    const optionsBtn = this.add
-      .text(scaled(16), height - scaled(16), '⚙ OPTIONS', {
-        fontFamily: 'monospace',
-        fontSize: scaledFontPx(16),
-        color: '#7fe9dd',
-      })
-      .setOrigin(0, 1)
-      .setShadow(0, scaled(2), '#05080d', scaled(5), true, true)
-      .setInteractive({ useHandCursor: true });
-    optionsBtn.on(Phaser.Input.Events.POINTER_OVER, () => optionsBtn.setColor('#fff27a'));
-    optionsBtn.on(Phaser.Input.Events.POINTER_OUT, () => optionsBtn.setColor('#7fe9dd'));
-    optionsBtn.on(Phaser.Input.Events.POINTER_DOWN, () => this.openOptions());
+    // 小型パネル(NeonButton)は暗背景を持つため、キービジュアルの明部でも読める。
+    // NeonButton は中央原点の Container なので、左下アンカーは寸法確定後に座標へ換算する。
+    const optionsBtn = createNeonButton(this, 0, 0, '⚙ OPTIONS', () => this.openOptions(), {
+      fontSize: 16,
+    });
+    optionsBtn.container.setPosition(
+      scaled(16) + optionsBtn.container.width / 2,
+      height - scaled(16) - optionsBtn.container.height / 2,
+    );
 
     // タイトル BGM(初回タップで AudioContext が解放されると鳴り出す)
     getSound().playBgm('title');

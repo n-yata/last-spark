@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { getSound } from '../systems/SoundManager';
 import { scaled, scaledFontPx } from '../config/uiScale';
-import { makeMenuButton } from '../ui/menuButton';
+import { createNeonButton } from '../ui/neonButton';
 import {
   getStageBackground,
   generateSilhouetteColumns,
@@ -265,30 +265,25 @@ export function createStageSelect(
 
     // BACK: 効果音を鳴らして閉じる。グリッドの下に配置する。
     o.add(
-      makeMenuButton(scene, width / 2, height * 0.92, '◂ BACK', () => {
+      createNeonButton(scene, width / 2, height * 0.92, '◂ BACK', () => {
         getSound().playSe('uiTap');
         destroyOverlay();
-      }),
+      }, { variant: 'ghost' }).container,
     );
 
     overlay = o;
   };
 
-  // STAGE SELECT 導線。右下に控えめに配置する。
-  const button = scene.add
-    .text(width - scaled(16), height - scaled(16), 'STAGE SELECT ▸', {
-      fontFamily: 'monospace',
-      fontSize: scaledFontPx(16),
-      color: '#7fe9dd',
-    })
-    .setOrigin(1, 1)
-    .setInteractive({ useHandCursor: true });
-  button.on(Phaser.Input.Events.POINTER_OVER, () => button.setColor('#fff27a'));
-  button.on(Phaser.Input.Events.POINTER_OUT, () => button.setColor('#7fe9dd'));
-  button.on(Phaser.Input.Events.POINTER_DOWN, () => {
+  // STAGE SELECT 導線。右下に控えめに配置する(小型パネル。暗背景で背景絵の上でも読める)。
+  // NeonButton は中央原点の Container なので、右下アンカーは寸法確定後に座標へ換算する。
+  const button = createNeonButton(scene, 0, 0, 'STAGE SELECT ▸', () => {
     getSound().playSe('uiTap');
     openStageSelect();
-  });
+  }, { fontSize: 16 });
+  button.container.setPosition(
+    width - scaled(16) - button.container.width / 2,
+    height - scaled(16) - button.container.height / 2,
+  );
 
   return { isOverlayOpen: () => overlay !== undefined };
 }
