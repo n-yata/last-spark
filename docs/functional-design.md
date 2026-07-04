@@ -599,6 +599,7 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 - **音量**: BGM/SE を連続スライダーではなく 5 段階ボタン(`src/ui/volumeSteps.ts`)で調整し、ミュートを切替。量子化・上下限・往復一致を純関数化してテスト可能にし、タッチ/マウス/キーボードのいずれでも操作できる(Phaser に標準スライダーが無い問題の現実解)。
 - **難易度**: `normal` / `hard` を切替。`hard` はプレイヤー被ダメージ、雑魚敵 HP、walker 速度、turret 発射間隔に係数を掛け、エリア探索中の道中雑魚配置数も増やす。さらに、ゲームプレイ集中モードとしてストーリー本文・開始/救出/エンディング演出を表示しない。stage4 の Purifier は hard 中のみ bloom(汚染床設置)頻度を下げ、汚染床ダメージは normal と同じ倍率にする。stage6 では ECLIPSE 撃破直後に RAY 同サイズの裏ボス `ShadowRayBoss` を追加出現させる。設定は保存され、新規開始・リトライ・次ステージから反映される。
 - **ポーズ/再開**: プレイ中は `PauseButton` から開き、ゲームを一時停止する。停止は物理ステップ境界に逃がし、再開・破壊的遷移(リトライ/タイトル等)は必ずポーズ解除後に行う。
+- **エフェクト(画質モード)**: プレイ画面ポストFX(色調補正/ブルーム/ビネット)のモードを `AUTO` → `HIGH` → `OFF` で巡回切替(`GameSettings.graphicsFx`、既定 `auto`)。`AUTO` は端末による自動判定(後述「ポストFX の段階的有効化」)、`HIGH` は WebGL なら DPR 不問で全FX有効、`OFF` は全FX無効(低スペック端末の fps 確保)。ポーズ中の変更は registry イベント(`config/registryKeys.ts` の `SETTINGS.graphicsFx`)で `GameScene` へ通知され、postFX を組み直して再開時に反映される。フィールドを持たない既存セーブは読み込み時に `auto` へ補完される(セーブ構造バージョン据え置き)。
 - **しんどう(振動)**: 触覚フィードバック(被弾・ボス撃破時の振動)の ON/OFF を音量パネル内で切替。ON へ切り替えた瞬間に試し振動を出して手元で確認できる。非対応環境ではトグルは表示されるが振動しない(無害)。
 - **操作説明**: 操作一覧を `src/ui/controlsData.ts` のデータから表示。
 - **ステージ移動**: リトライ / タイトルへ戻る / ステージ選択へ遷移。
@@ -631,7 +632,7 @@ public/assets/
 - **Arcade Physics 限定**: 重い物理(Matter)は使わず AABB のみでモバイル 60fps を狙う。
 - **オフスクリーン非更新**: 画面外の敵は更新/描画を抑制(必要範囲のみアクティブ化)。
 - **Service Worker キャッシュ**: 2回目以降の起動を高速化。
-- **ポストFX の段階的有効化**: プレイ画面(`GameScene` 本体カメラ)に色調補正/ブルーム/ビネットを適用し、カットシーン(厚塗り一枚絵)との質感差を縮める。ただし postFX は WebGL 専用で bloom は塗りつぶし負荷が高いため、`src/config/graphicsQuality.ts` の `resolveGraphicsQuality({webgl, dpr})` で有効可否を集約判定する。Canvas フォールバック時は全FX無効、生 DPR が `BLOOM_MAX_DPR`(=2)を超える高密度端末では bloom のみ無効化し、軽量な色調補正/ビネットを残して 60fps を守る。HUD/ストーリーテキストは別カメラ(`UIScene`)描画のため postFX の影響を受けない。
+- **ポストFX の段階的有効化**: プレイ画面(`GameScene` 本体カメラ)に色調補正/ブルーム/ビネットを適用し、カットシーン(厚塗り一枚絵)との質感差を縮める。ただし postFX は WebGL 専用で bloom は塗りつぶし負荷が高いため、`src/config/graphicsQuality.ts` の `resolveGraphicsQuality({webgl, dpr, mode})` で有効可否を集約判定する。既定(`mode='auto'`)では Canvas フォールバック時は全FX無効、生 DPR が `BLOOM_MAX_DPR`(=2)を超える高密度端末では bloom のみ無効化し、軽量な色調補正/ビネットを残して 60fps を守る。オプションメニューの「エフェクト」設定(`GameSettings.graphicsFx`)で `HIGH`(DPR 不問で全FX有効) / `OFF`(全FX無効)に上書きできる(Canvas では設定に関わらず全FX無効)。HUD/ストーリーテキストは別カメラ(`UIScene`)描画のため postFX の影響を受けない。
 
 ## セキュリティ考慮事項
 

@@ -1,4 +1,4 @@
-import { STAGE_RANK_ORDER, type SaveData, type GameSettings, type DifficultyMode, type StageRank } from '../types/save';
+import { STAGE_RANK_ORDER, type SaveData, type GameSettings, type DifficultyMode, type GraphicsFxMode, type StageRank } from '../types/save';
 import { STORAGE_KEYS, SAVE_VERSION } from '../config/storageKeys';
 
 // Persistence レイヤー: SaveData の読み書き・既定値生成・バージョン検証・旧形式マイグレーション。
@@ -13,6 +13,7 @@ export function defaultSettings(): GameSettings {
     difficulty: 'normal',
     busterMode: false,
     vibration: true,
+    graphicsFx: 'auto',
   };
 }
 
@@ -40,6 +41,10 @@ function isDifficultyMode(value: unknown): value is DifficultyMode {
   return value === 'normal' || value === 'hard';
 }
 
+function isGraphicsFxMode(value: unknown): value is GraphicsFxMode {
+  return value === 'auto' || value === 'high' || value === 'off';
+}
+
 function normalizeSettings(value: unknown): GameSettings | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const s = value as Record<string, unknown>;
@@ -49,6 +54,7 @@ function normalizeSettings(value: unknown): GameSettings | undefined {
   if (s.difficulty !== undefined && !isDifficultyMode(s.difficulty)) return undefined;
   if (s.busterMode !== undefined && typeof s.busterMode !== 'boolean') return undefined;
   if (s.vibration !== undefined && typeof s.vibration !== 'boolean') return undefined;
+  if (s.graphicsFx !== undefined && !isGraphicsFxMode(s.graphicsFx)) return undefined;
   return {
     muted: s.muted,
     bgmVolume: s.bgmVolume,
@@ -56,6 +62,7 @@ function normalizeSettings(value: unknown): GameSettings | undefined {
     difficulty: s.difficulty ?? 'normal',
     busterMode: s.busterMode ?? false,
     vibration: s.vibration ?? true,
+    graphicsFx: s.graphicsFx ?? 'auto',
   };
 }
 
@@ -192,7 +199,9 @@ export class SaveManager {
       const parsed: unknown = JSON.parse(raw);
       let valid: SaveData;
       if (isValidSaveData(parsed)) {
-        valid = parsed;
+        // graphicsFx はバージョン据え置きの任意フィールドのため、現行形式でも欠けていることが
+        // ある。normalizeSettings を通して既定値('auto')を補完する(完全な settings には no-op)。
+        valid = { ...parsed, settings: normalizeSettings(parsed.settings) ?? defaultSettings() };
       } else {
         // 現行形式でなければ旧形式からの移行を試みる。
         valid = migrate(parsed) ?? defaultSaveData();

@@ -19,9 +19,19 @@ export interface GameSettings {
    * 非対応環境(iOS Safari / PC)では設定に関わらず何も起きない。
    */
   vibration: boolean;
+  /**
+   * プレイ画面ポストFXの画質モード(既定 'auto')。auto=端末による自動判定、
+   * high=WebGL なら DPR 不問で全FX有効、off=全FX無効。判定の実体は config/graphicsQuality。
+   * bestRank と同様の任意フィールド戦略でセーブ構造バージョンは据え置き
+   * (フィールドを持たない既存セーブは読み込み時に 'auto' へ補完される)。
+   */
+  graphicsFx: GraphicsFxMode;
 }
 
 export type DifficultyMode = 'normal' | 'hard';
+
+/** ポストFX画質モード。オプションメニューから auto → high → off の順で巡回する。 */
+export type GraphicsFxMode = 'auto' | 'high' | 'off';
 
 /** ステージクリアのランク評価(被ダメージ基準)。順序は S > A > B。 */
 export type StageRank = 'S' | 'A' | 'B';
