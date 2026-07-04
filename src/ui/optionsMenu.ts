@@ -10,6 +10,8 @@ import { isStageUnlocked } from '../stageSelect/stageCards';
 import { getControlEntries } from './controlsData';
 import { adjustStep, stepToVolume, volumeToStep, volumeBar, volumePercent } from './volumeSteps';
 import { difficultyLabel, toggleDifficulty } from '../systems/difficulty';
+import { graphicsFxLabel, cycleGraphicsFx } from '../config/graphicsQuality';
+import { SETTINGS } from '../config/registryKeys';
 
 // タイトル/ポーズ双方から開ける共通オプションオーバーレイ(ファクトリ関数)。
 // stageSelect.ts の「Container オーバーレイ + 暗幕 + 縦並びボタン」流儀を一般化し、
@@ -118,6 +120,15 @@ export function createOptionsMenu(config: OptionsMenuConfig): OptionsMenu {
       [`BUSTER: ${settings.busterMode ? 'ON' : 'OFF'}`, () => {
         settings = { ...settings, busterMode: !settings.busterMode };
         save.updateSettings({ busterMode: settings.busterMode });
+        playTap();
+        setPanel(buildRoot);
+      }],
+      [`エフェクト: ${graphicsFxLabel(settings.graphicsFx)}`, () => {
+        settings = { ...settings, graphicsFx: cycleGraphicsFx(settings.graphicsFx) };
+        save.updateSettings({ graphicsFx: settings.graphicsFx });
+        // 実行中の GameScene へ即時反映を通知する(ポーズ中でも postFX を付け替えられる)。
+        // タイトルから開いた場合は購読者不在で無害。正本はあくまで SaveManager。
+        scene.registry.set(SETTINGS.graphicsFx, settings.graphicsFx);
         playTap();
         setPanel(buildRoot);
       }],

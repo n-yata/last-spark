@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS } from '../config/sceneKeys';
 import { TEX } from '../config/assetKeys';
-import { HUD } from '../config/registryKeys';
+import { HUD, SETTINGS } from '../config/registryKeys';
 import { STAGE, BOSS, FLYING_BOSS, HAZARD, SHADOW_RAY, loopRayTint } from '../config/balance';
 import { GAME_HEIGHT } from '../config/dimensions';
 import { resolveControlBand } from '../config/controlBand';
@@ -583,8 +583,12 @@ export class GameScene extends Phaser.Scene {
     this.applyCameraLayout();
     // RESIZE でキャンバスが伸縮しても、ワールドの縦の見え方(高さ540相当)を一定に保つ
     this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
+    // オプションメニュー(ポーズ中)での「エフェクト」変更を購読し、postFX を付け替える。
+    // registry はイベント搬送路で、適用値は applyPostFx が SaveManager から読み直す。
+    this.registry.events.on(`changedata-${SETTINGS.graphicsFx}`, this.reapplyPostFx, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraLayout, this);
+      this.registry.events.off(`changedata-${SETTINGS.graphicsFx}`, this.reapplyPostFx, this);
     });
   }
 
@@ -597,7 +601,8 @@ export class GameScene extends Phaser.Scene {
   private applyPostFx(): void {
     if (this.sys.renderer.type !== Phaser.WEBGL) return;
     const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const quality = resolveGraphicsQuality({ webgl: true, dpr });
+    const mode = this.saveManager.getData().settings.graphicsFx;
+    const quality = resolveGraphicsQuality({ webgl: true, dpr, mode });
     const cam = this.cameras.main;
     if (quality.colorGrade) {
       // 暗め基調を締める: わずかに暗く + コントラストUP + 彩度を少し上げて発光を引き立てる。
@@ -611,6 +616,18 @@ export class GameScene extends Phaser.Scene {
       // 四隅を沈め、中央へ視線を集める。
       cam.postFX.addVignette(0.5, 0.5, 0.78, 0.4);
     }
+  }
+
+  /**
+   * 「エフェクト」設定変更時に postFX を組み直す。メインカメラの常設 postFX は
+   * applyPostFx が積む3種のみなので clear で全消し→再適用できる(他の常設FXを
+   * 積む変更を入れる場合は、ハンドル保持による個別 remove へ切り替えること)。
+   */
+  private reapplyPostFx(): void {
+    this.cameras.main.postFX.clear();
+    // 設定変更で最新の localStorage を読み直す(オプションメニュー側の SaveManager とは別インスタンスのため)。
+    this.saveManager = new SaveManager();
+    this.applyPostFx();
   }
 
   private applyCameraLayout(): void {

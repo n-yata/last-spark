@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   difficulty: 'normal',
   busterMode: false,
   vibration: true,
+  graphicsFx: 'auto',
 } as const;
 
 describe('defaultSaveData', () => {
@@ -568,6 +569,111 @@ describe('SaveManager', () => {
     it('bestRank 付きの現行セーブは妥当と判定される(isValidSaveData)', () => {
       const d = { ...defaultSaveData(), bestRank: { stage1: 'S', stage3: 'B' } };
       expect(isValidSaveData(d)).toBe(true);
+    });
+  });
+
+  // ---- graphicsFx(画質モード) ----
+  // bestRank と同じ「任意フィールド・バージョン据え置き」戦略。graphicsFx を持たない
+  // 既存セーブは 'auto' 補完で読み込み、進捗(クリア状況・記録)を失わないことが最重要。
+
+  describe('graphicsFx', () => {
+    it("graphicsFx なしの現行セーブが 'auto' 補完で読める(進捗保持・バージョン繰り上げなし)", () => {
+      localStorage.setItem(
+        STORAGE_KEYS.save,
+        JSON.stringify({
+          version: SAVE_VERSION,
+          clearedStages: ['stage1', 'stage2'],
+          bestTimeMs: { stage1: 12_345 },
+          loopCount: 2,
+          settings: {
+            muted: true,
+            bgmVolume: 0.4,
+            seVolume: 0.7,
+            difficulty: 'hard',
+            busterMode: true,
+            vibration: false,
+          },
+        }),
+      );
+      const mgr = new SaveManager();
+      const data = mgr.getData();
+      // クリア進捗・記録・周回数が失われていない
+      expect(data.version).toBe(SAVE_VERSION);
+      expect(data.clearedStages).toEqual(['stage1', 'stage2']);
+      expect(data.bestTimeMs).toEqual({ stage1: 12_345 });
+      expect(data.loopCount).toBe(2);
+      // 既存の設定は引き継がれ、graphicsFx は 'auto' で補完される
+      expect(data.settings.difficulty).toBe('hard');
+      expect(data.settings.vibration).toBe(false);
+      expect(data.settings.graphicsFx).toBe('auto');
+    });
+
+    it("graphicsFx なしの旧 v6 セーブも 'auto' 補完で移行できる", () => {
+      localStorage.setItem(
+        STORAGE_KEYS.save,
+        JSON.stringify({
+          version: 6,
+          clearedStages: ['stage1'],
+          loopCount: 1,
+          settings: { muted: false, bgmVolume: 0.6, seVolume: 0.8, difficulty: 'normal', busterMode: false },
+        }),
+      );
+      const mgr = new SaveManager();
+      expect(mgr.getData().clearedStages).toEqual(['stage1']);
+      expect(mgr.getData().settings.graphicsFx).toBe('auto');
+    });
+
+    it('graphicsFx が不正値のセーブは既定値へフォールバックする', () => {
+      localStorage.setItem(
+        STORAGE_KEYS.save,
+        JSON.stringify({
+          version: SAVE_VERSION,
+          clearedStages: ['stage1'],
+          loopCount: 1,
+          settings: { ...DEFAULT_SETTINGS, graphicsFx: 'ultra' }, // 不正: 未知のモード
+        }),
+      );
+      const mgr = new SaveManager();
+      expect(mgr.getData()).toEqual(defaultSaveData());
+    });
+
+    it("updateSettings({graphicsFx: 'high'}) が保存・復元される(他の設定は維持)", () => {
+      const mgr = new SaveManager();
+      mgr.updateSettings({ graphicsFx: 'high' });
+      const reloaded = new SaveManager();
+      expect(reloaded.getData().settings.graphicsFx).toBe('high');
+      expect(reloaded.getData().settings.bgmVolume).toBe(0.6);
+    });
+
+    it("graphicsFx: 'off' も保存・復元される", () => {
+      const mgr = new SaveManager();
+      mgr.updateSettings({ graphicsFx: 'off' });
+      expect(new SaveManager().getData().settings.graphicsFx).toBe('off');
+    });
+
+    it('graphicsFx の各有効値(auto/high/off)は isValidSaveData で妥当と判定される', () => {
+      for (const mode of ['auto', 'high', 'off'] as const) {
+        const d = defaultSaveData();
+        d.settings.graphicsFx = mode;
+        expect(isValidSaveData(d)).toBe(true);
+      }
+    });
+
+    it('graphicsFx フィールドを欠く現行セーブも妥当と判定される(進捗初期化の回避)', () => {
+      const withoutGraphicsFx: Record<string, unknown> = {
+        version: SAVE_VERSION,
+        clearedStages: [],
+        loopCount: 1,
+        settings: {
+          muted: false,
+          bgmVolume: 0.6,
+          seVolume: 0.8,
+          difficulty: 'normal',
+          busterMode: false,
+          vibration: true,
+        },
+      };
+      expect(isValidSaveData(withoutGraphicsFx)).toBe(true);
     });
   });
 

@@ -22,3 +22,10 @@ export const HUD = {
   // UIScene のポーズボタン → GameScene へのポーズ要求(疎結合のトリガ)。
   pauseRequested: 'hud.pause.requested',
 } as const;
+
+// オプションメニュー → GameScene の設定変更通知に使うレジストリキー。
+// 値の正本は SaveManager(localStorage)であり、registry は「実行中セッションへの
+// 変更イベントの搬送路」としてのみ使う(GameScene は changedata を購読して再適用する)。
+export const SETTINGS = {
+  graphicsFx: 'settings.graphicsFx',
+} as const;

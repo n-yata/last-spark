@@ -20,6 +20,7 @@ const settings = (over: Partial<GameSettings> = {}): GameSettings => ({
   difficulty: 'normal',
   busterMode: false,
   vibration: true,
+  graphicsFx: 'auto',
   ...over,
 });
 
