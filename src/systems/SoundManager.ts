@@ -49,6 +49,7 @@ export class SoundManager {
     difficulty: 'normal',
     busterMode: false,
     vibration: true,
+    graphicsFx: 'auto',
   };
 
   private currentBgmKey?: BgmKey;
