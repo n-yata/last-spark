@@ -11,6 +11,8 @@ import { loopRayTint } from '../config/balance';
 import { createOptionsMenu } from '../ui/optionsMenu';
 import { createNeonButton } from '../ui/neonButton';
 import { formatBestTime } from '../stageSelect/stageCards';
+import { EFFECTS } from '../config/effects';
+import { logoFlickerAlpha, createMotes, motePosition, type Mote } from '../systems/titleFx';
 // 型のみの import はビルド時に消去される。
 import type { StageSelect } from '../stageSelect/stageSelect';
 import type { OptionsMenu } from '../ui/optionsMenu';
@@ -19,6 +21,9 @@ import type { OptionsMenu } from '../ui/optionsMenu';
 // 「STAGE SELECT」導線を動的 import で追加し、任意のステージから始められる(一般向け機能)。
 // UI は表示確定後に遅延ロードして初期表示を軽く保つ。
 
+// 漂う光の粒(残り火)のシード。固定値にして毎回同じ軌道(決定論)にする。
+const TITLE_MOTE_SEED = 0x7a57;
+
 export class TitleScene extends Phaser.Scene {
   // スタート用の全画面入力ゾーン。ステージ選択を開いている間は無効化する。
   private startZone?: Phaser.GameObjects.Zone;
@@ -26,6 +31,12 @@ export class TitleScene extends Phaser.Scene {
   private stageSelect?: StageSelect;
   // オプションメニュー(音量・操作説明)。開いている間はスタートを抑止する。
   private optionsMenu?: OptionsMenu;
+  // ロゴテキスト参照(update でスパーク明滅の alpha を反映する)。
+  private logoText?: Phaser.GameObjects.Text;
+  // 漂う光の粒(残り火)。パラメータは create で決定論生成し、update で毎フレーム描画する。
+  private motes: Mote[] = [];
+  private moteGfx?: Phaser.GameObjects.Graphics;
+  private moteColor = 0x37f7d8;
 
   constructor() {
     super(SCENE_KEYS.title);
@@ -38,12 +49,20 @@ export class TitleScene extends Phaser.Scene {
     // シーン再入(クリア→タイトル復帰など)に備えて状態を初期化する。
     this.stageSelect = undefined;
     this.optionsMenu = undefined;
+    this.logoText = undefined;
+    this.motes = [];
+    this.moteGfx = undefined;
 
     const save = new SaveManager().getData();
 
     // 背景: キービジュアルの一枚絵があれば cover 配置で敷く。未ロード時は簡易シルエットへ。
     // 周回数に応じて発光ラインの色味を変え、見た目の報酬(タイトル演出変化)とする。
     this.drawBackground(width, height, save.loopCount);
+
+    // 漂う光の粒(残り火)。背景の直上・ロゴの背面に描く(create の描画順=Phaser の既定深度順)。
+    this.motes = createMotes(TITLE_MOTE_SEED, EFFECTS.title.moteCount);
+    this.moteColor = save.loopCount >= 2 ? loopRayTint(save.loopCount) : 0x37f7d8;
+    this.moteGfx = this.add.graphics();
 
     // スタート判定は全画面ゾーンで受ける。最背面(最初に追加)に置くことで、後から重ねる
     // STAGE SELECT ボタンが Phaser の topOnly(既定 true)で前面となり、スタートに巻き込まれない。
@@ -55,8 +74,8 @@ export class TitleScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
     });
 
-    // ロゴ
-    this.add
+    // ロゴ(スパーク明滅は update で alpha へ反映する)
+    this.logoText = this.add
       .text(width / 2, height * 0.34, 'LAST SPARK', {
         fontFamily: 'monospace',
         fontSize: scaledFontPx(64),
@@ -147,6 +166,20 @@ export class TitleScene extends Phaser.Scene {
 
     // タイトル BGM(初回タップで AudioContext が解放されると鳴り出す)
     getSound().playBgm('title');
+  }
+
+  override update(time: number): void {
+    if (this.logoText) {
+      this.logoText.setAlpha(logoFlickerAlpha(time, EFFECTS.title.flickerMinAlpha));
+    }
+    if (this.moteGfx) {
+      const { width, height } = this.scale;
+      this.moteGfx.clear();
+      for (const mote of this.motes) {
+        const p = motePosition(mote, time, width, height);
+        this.moteGfx.fillStyle(this.moteColor, p.alpha).fillCircle(p.x, p.y, scaled(mote.size));
+      }
+    }
   }
 
   // キーボード操作: ステージ選択/オプションを開いている間は開始を抑止する(誤発進防止)。

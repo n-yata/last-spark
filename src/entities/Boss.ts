@@ -103,6 +103,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     return this.phase;
   }
 
+  /** フェーズ2移行の HP 比率(HUD の目盛り表示に使う)。 */
+  get phase2HpRatio(): number {
+    return this.cfg.phase2HpRatio;
+  }
+
   getCurrentAction(): BossAction {
     return this.currentAction;
   }

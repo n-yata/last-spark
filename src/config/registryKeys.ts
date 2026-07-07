@@ -10,6 +10,8 @@ export const HUD = {
   bossMaxHp: 'hud.boss.maxHp',
   // ボスの固有名(HP バーのラベルに表示)。ステージごとに出し分ける。
   bossName: 'hud.boss.name',
+  // フェーズ2移行の HP 比率(BossHpBar の目盛り描画に使う)。未設定/0 は目盛り非表示。
+  bossPhase2Ratio: 'hud.boss.phase2Ratio',
   // 仮想ボタンの押下状態(押下フィードバック描画用)
   shootHeld: 'hud.touch.shootHeld',
   jumpHeld: 'hud.touch.jumpHeld',
