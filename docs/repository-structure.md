@@ -79,11 +79,13 @@ last-spark/
 - `Hazard.ts`: ダメージ床(毒だまり等。重なり判定のみ・物理衝突なし)
 - `CharacterRig.ts`: キャラ見た目の関節リグ(物理 `Arcade.Sprite` から表示を分離する表示専用コンポーネント)
 - `Boss.ts`: 接地型ボス基底(フェーズ/アクション)。各系統はこれを継承する:
-  - `FlyingBoss.ts`: 飛行/浮遊型(stage2/5)
+  - `FlyingBoss.ts`: 飛行/浮遊型(stage2)。さらに `EnvoyBoss.ts`(高速型・stage5 の使者)がこれを継承する
   - `WardenBoss.ts`: 収容番人・重装ミサイル型(stage3)
   - `PurifierBoss.ts`: 浄化型・扇状の範囲攻撃(stage4)
   - `CoreBoss.ts`: ECLIPSE 本体・非人型コア(stage6 ラスボス)
   - `ShadowRayBoss.ts`: hard mode 専用の裏ボス(stage6・ECLIPSE 撃破直後・RAY 同サイズ)
+- `Beam.ts`: 強化バスターモード(`GameSettings.busterMode`)用のチャージビーム。単発の `Projectile` と異なり発射中追従する持続攻撃のため、別 Entity として分離
+- `SpriteRig.ts`: `CharacterRig` のドロップイン置換となる、外部生成キービジュアル(RAY 立ち絵切り出し)ベースのリグ。**現在は休眠中(未使用)**。敵/世界の手続き画風から RAY だけ浮くため、プレイヤーは手続きの `CharacterRig` に差し戻し済み。`config/raySprite.ts` のヘッダに再有効化手順を記載(将来の再利用のため温存)
 
 **命名規則**: PascalCase(エンティティ名)。
 
@@ -156,6 +158,8 @@ State を持つ System クラス:
 - `sceneKeys.ts` / `registryKeys.ts` / `assetKeys.ts` / `storageKeys.ts`: シーンキー / registry キー / アセットキー / localStorage キー(`lastspark:save`)の定数
 - `controlBand.ts` / `touchLayout.ts`: 下部コントロール帯・仮想ボタンのレイアウト定数
 - `characterRig.ts`: キャラ見た目リグの系統別構成データ
+- `graphicsQuality.ts`: プレイ画面ポストFX(色調補正/ブルーム/ビネット)の画質判定ロジック(`resolveGraphicsQuality`)。AUTO/HIGH/OFF の解決を担う純粋関数
+- `raySprite.ts`: `SpriteRig` 用の RAY カットアウト・リグ幾何データ。**現在は休眠中**(`SpriteRig.ts` 参照。将来の再利用のため温存)
 - `stages.ts`: `StageData` 型と全ステージ定義(`STAGES` / `getStageData` / `nextStageId`)
 - `stageBackground.ts`: ステージ背景テーマ(`getStageBackground`、純データ+決定論ロジック)
 - `storyEvents.ts`: ステージ進行とストーリーイベントの対応データ
@@ -338,7 +342,7 @@ scenes/ → persistence/ (OK)
 ### 機能の追加
 - **ステージ追加**: `config/stages.ts` の `STAGES` テーブルに `StageData` をコード定義で追加し、`SpawnSystem` が `stageId` で `getStageData` を引く。Tiled 等の外部マップは使わない。
 - **新しい敵/ボス**: `src/entities/` にクラス追加。共通挙動が増えたら基底クラス/共通モジュールへ抽出。
-- **武器交換(Post-MVP)**: `Projectile` の種別を拡張。種別が増えたら `src/entities/projectiles/` へサブディレクトリ化。
+- **ショット種別の拡張**: `Projectile` の種別(`kind`)は `'normal' | 'charged' | 'missile' | 'lance'` へ拡張済み。持続系攻撃は `Beam.ts` のように別 Entity として分離する。種別がさらに増えたら `src/entities/projectiles/` へサブディレクトリ化を検討する。
 
 ### ファイルサイズの管理
 - 1ファイル 300行以下を推奨。300–500行で分割検討、500行以上は分割を強く推奨。
