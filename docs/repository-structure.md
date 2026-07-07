@@ -109,7 +109,8 @@ State を持つ System クラス:
 - `bossAi.ts`: ボス行動抽選(`pickNext*BossAction` 等。系統別の重みテーブル)
 - `difficulty.ts`: 難易度設定(`normal`/`hard`)からステージ係数・被ダメージ倍率・汚染床ダメージ倍率・ストーリー表示可否・裏ボス出現可否・表示ラベルを解決する純粋関数
 - `soundSynth.ts`: 音量計算・音名→周波数・BGM ノートスケジュール・探索 BGM 選択
-- `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅)の純粋関数(ui からも参照可)
+- `hudFx.ts`: HUD 演出(ボスバー出現フィル・被ダメ点滅・残像ゲージ減衰 `nextLagRatio`・発光パルス `chargePulseAlpha`)の純粋関数(ui からも参照可)
+- `titleFx.ts`: タイトル画面演出(ロゴのスパーク明滅 `logoFlickerAlpha`・粒子の決定論生成 `createMotes`/軌道計算 `motePosition`)の純粋関数(scenes/TitleScene からも参照可)
 - `shot.ts` / `shotControl.ts`: ショット仕様の生成と、タップ/チャージ/連射の状態機械(`stepShot`)
 - `playerMovement.ts`: 着地判定・ジャンプ開始(コヨーテタイム/先行入力バッファ `resolveJumpStart`)・梯子把持/昇降の純粋関数(`shouldLandOnOneWay` / `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity`)
 - `combatRules.ts` / `hazardRules.ts`: ダメージ・無敵・ハザード(スリップダメージ)判定の純粋ロジック

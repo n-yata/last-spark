@@ -42,8 +42,22 @@ export function flashBlinkOn(nowMs: number, damagedAtMs: number, intervalMs: num
 }
 
 /**
+ * 残像ゲージ(実値より遅れて減る琥珀バー)の次フレーム値を返す。
+ * 実値が残像より小さい間は drainPerFrame ずつ縮み、実値までで止まる(下回らない)。
+ * 実値が残像以上(回復・リセット・初期化)なら即座に実値へ追従する。
+ * BossHpBar / LifeBar が共有する(被弾量を残像の長さで読ませる共通の視覚言語)。
+ */
+export function nextLagRatio(lag: number, actual: number, drainPerFrame: number): number {
+  if (actual < lag) {
+    return Math.max(actual, lag - drainPerFrame);
+  }
+  return actual;
+}
+
+/**
  * チャージ完了時の発光パルスのアルファ値を返す。
  * sin 波でゆっくり明滅させ、満タン状態が静止表示に埋もれないようにする。
+ * (危機時のライフバー枠パルスにも再利用する汎用の sin パルス)
  */
 export function chargePulseAlpha(
   nowMs: number,

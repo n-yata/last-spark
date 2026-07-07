@@ -97,7 +97,9 @@ export class UIScene extends Phaser.Scene {
       this.bossShown = true;
       // 戦うボスの固有名を渡す(GameScene がボス出現時に registry へ積む)。
       const bossName = (reg.get(HUD.bossName) as string) ?? '';
-      this.bossHpBar.show(bossName);
+      // 未設定(旧経路・テスト起動)は 0 = 目盛り非表示(嘘の位置に出さない)。
+      const phase2Ratio = (reg.get(HUD.bossPhase2Ratio) as number) ?? 0;
+      this.bossHpBar.show(bossName, phase2Ratio);
     }
     if (bossActive) {
       const bossHp = (reg.get(HUD.bossHp) as number) ?? 0;

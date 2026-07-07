@@ -712,6 +712,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossName, this.stage.bossName);
     // 設定値ではなく実際のボスの maxHp を使う(系統で硬さが異なっても HUD が一致する)。
     this.registry.set(HUD.bossMaxHp, this.boss.maxHp);
+    this.registry.set(HUD.bossPhase2Ratio, this.boss.phase2HpRatio);
     getSound().playBgm('boss');
   }
 
@@ -733,6 +734,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossName, HARD_SECRET_BOSS_NAME);
     this.registry.set(HUD.bossMaxHp, shadow.maxHp);
     this.registry.set(HUD.bossHp, shadow.hp);
+    this.registry.set(HUD.bossPhase2Ratio, shadow.phase2HpRatio);
     getSound().playBgm('boss');
   }
 
@@ -769,6 +771,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossHp, 0);
     this.registry.set(HUD.bossMaxHp, BOSS.maxHp);
     this.registry.set(HUD.bossName, '');
+    this.registry.set(HUD.bossPhase2Ratio, 0);
     this.registry.set(HUD.pauseRequested, false);
   }
 

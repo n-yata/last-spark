@@ -189,6 +189,22 @@ export const EFFECTS = {
     /** チャージ完了リングの最小/最大アルファ */
     chargeFullPulseAlphaMin: 0.35,
     chargeFullPulseAlphaMax: 0.85,
+    /** ボス HP バー残像(琥珀)の1フレームあたり減衰量(比率) */
+    bossBarLagDrainPerFrame: 0.012,
+    /** ライフバー残像(琥珀ゴースト)の1フレームあたり減衰量(比率)。ボスよりやや遅く読ませる */
+    lifeBarLagDrainPerFrame: 0.01,
+    /** 危機(HP25%以下)時のパネル枠警告パルス周期と最小/最大アルファ */
+    criticalPulseMs: 900,
+    criticalPulseAlphaMin: 0.25,
+    criticalPulseAlphaMax: 0.85,
+  },
+
+  /** タイトル画面の演出。 */
+  title: {
+    /** 漂う光の粒(残り火)の数 */
+    moteCount: 14,
+    /** ロゴのスパーク明滅の下限アルファ(可読性を保つため完全には消えない) */
+    flickerMinAlpha: 0.55,
   },
 
   /** タッチ仮想ボタンの押下フィードバック。 */

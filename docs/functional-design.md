@@ -114,7 +114,7 @@ interface GameSettings {
 
 **見た目の報酬**:
 - `config/balance.ts` の `loopRayTint(loopCount)` が周回数に応じた配色(1周目は無着色)を返し、`Player.setLoopTint()` → `CharacterRig.setTint()` で全パーツへ適用する。被弾フラッシュ(白)の立ち下がりでも `CharacterRig` が保持する基準ティント(`baseTint`)へ復帰し、周回配色が消えないようにする。
-- `TitleScene` は周回数に応じて `LOOP {n}` を表示し、背景の発光ライン・薄いオーバーレイの色味を変える。
+- `TitleScene` は周回数に応じて `LOOP {n}` を表示し、背景の発光ライン・薄いオーバーレイの色味を変える。ロゴは `systems/titleFx.ts` の `logoFlickerAlpha`(非整数比の sin 合成)で常時ゆっくり明滅し、背景の直上・ロゴの背面には固定シードの粒子(残り火、`createMotes`/`motePosition`)がゆっくり上昇しながら漂う。粒色は周回数2以上で `loopRayTint` に切り替わり、見た目の報酬を上乗せする。
 
 ### 実行時モデル: 主要 Entity
 
@@ -561,8 +561,8 @@ function pickNextAction(phase: BossPhase, last: BossAction): BossAction {
 
 | 項目 | 説明 | 表示 |
 |------|------|------|
-| プレイヤーライフ | 現在/最大HP | 左上のエナジーバー(セグメント式) |
-| ボスHP | ボス戦中のみ | 画面下部または上部のボスゲージ |
+| プレイヤーライフ | 現在/最大HP | 左上のエナジーバー(セグメント式)。被弾直後は失った区間に琥珀色のゴースト残像(`nextLagRatio`)が残り、毎フレーム縮んで被弾量を読み取りやすくする。HP 25%以下ではパネル枠が警告色で明滅する危機パルス(`chargePulseAlpha` 再利用)が入る |
+| ボスHP | ボス戦中のみ | 画面下部または上部のボスゲージ。実HPと同じくゴースト残像を持つほか、`BossConfig.phase2HpRatio` の位置に目盛りを描画し、フェーズ1中は控えめ・フェーズ2突入後は発光色で強調して境界を予告する |
 | チャージゲージ | チャージ蓄積量 | ショットボタン付近に円/バーで表示、しきい値で発光 |
 
 ### タッチUI(横向き・両手専用)
