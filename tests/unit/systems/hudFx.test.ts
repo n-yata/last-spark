@@ -4,6 +4,7 @@ import {
   damageFlashActive,
   flashBlinkOn,
   chargePulseAlpha,
+  nextLagRatio,
 } from '../../../src/systems/hudFx';
 
 describe('entranceFillRatio', () => {
@@ -40,6 +41,27 @@ describe('entranceFillRatio', () => {
   it('fillMs が 0 以下なら常に 1(ゼロ除算しない)', () => {
     expect(entranceFillRatio(0, 0)).toBe(1);
     expect(entranceFillRatio(100, -1)).toBe(1);
+  });
+});
+
+describe('nextLagRatio(残像ゲージの減衰)', () => {
+  it('実値が残像より小さい間は drainPerFrame ずつ縮む', () => {
+    expect(nextLagRatio(1.0, 0.5, 0.012)).toBeCloseTo(0.988);
+    expect(nextLagRatio(0.988, 0.5, 0.012)).toBeCloseTo(0.976);
+  });
+
+  it('実値を下回らない(クランプ)', () => {
+    expect(nextLagRatio(0.505, 0.5, 0.012)).toBe(0.5);
+  });
+
+  it('実値が残像以上なら即時追従する', () => {
+    expect(nextLagRatio(0.5, 0.5, 0.012)).toBe(0.5); // 同値
+    expect(nextLagRatio(0.3, 0.8, 0.012)).toBe(0.8); // 回復・リセット
+  });
+
+  it('境界: drain 0 では縮まないが実値以上は保つ', () => {
+    expect(nextLagRatio(0.8, 0.5, 0)).toBe(0.8);
+    expect(nextLagRatio(0.4, 0.5, 0)).toBe(0.5);
   });
 });
 
