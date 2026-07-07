@@ -242,6 +242,10 @@ class CombatSystem {
 
 **依存関係**: Arcade Physics、Entity 群、`UIScene`(HP 反映)。
 
+**被弾吸収(チャージ吸収)**: プレイヤーがチャージ中に**敵の通常弾**を受けると、ダメージの代わりにチャージゲージへ変換して吸収する(`SHOT.absorbChargeMs`)。対象は通常弾のみで、ミサイル・槍型弾等の特殊弾は吸収対象にせず、従来どおり回避が必要な攻撃として扱う(万能防御にはしない)。
+
+**ボスシールド**: ボスは任意で `shieldHp`(被弾を吸収するシールド値)を持てる。被弾時は `resolveBossShieldHit`(純粋関数)がシールド優先で減算し、シールドが尽きてから本体 HP へダメージが通る。シールド残量は HUD 上には表示しない(内部ロジックのみで完結させ、見た目はボス本体 HP バーの動きで表現する)。
+
 ### SpawnSystem(Systemレイヤー)
 
 **責務**: ステージ進行(カメラ位置/トリガ)に応じた雑魚敵の出現、ボス戦エリアへの到達検知。
@@ -294,7 +298,7 @@ class SpawnSystem {
 | `introCutsceneKey?` | ステージ開始時に再生する演出スクリプトキー(任意) |
 | `introCutsceneCoversStartText?` | 開始演出が開始テキスト(stageIntro+開始内心)を兼ねるか(任意。stage1=true) |
 | `postBossCutsceneKey?` | ボス撃破後に再生する演出キー(任意。stage3 の救出など) |
-| `endingCutsceneKey?` | 撃破後のエンディング演出キー(任意。stage6=最終。ClearScene を経由せず全クリア保存→タイトル) |
+| `endingCutsceneKey?` | 撃破後のエンディング演出キー(任意。stage6=最終。エンディング演出完了後は `ClearScene`(ALL CLEAR画面)を経由し、そこで次周回/タイトルへの選択・全クリア保存を行う) |
 | `backgroundColor?` | カメラ背景色(任意・CSS 色)。未定義時はテーマの地平線色(`skyBottom`) |
 | `nextStageId?` | クリア後に続けて開始する次ステージ ID(任意) |
 
@@ -439,12 +443,12 @@ stateDiagram-v2
     Game --> Clear: ボス撃破(stage1-2,4-5: 即クリア)
     Game --> Cutscene: ボス撃破→ケージ接触(stage3: 救出後演出)
     Game --> Cutscene: ボス撃破(stage6: エンディング演出)
-    Cutscene --> Clear: 演出完了(stage3)
-    Cutscene --> Title: エンディング完了→全クリア保存→タイトル(stage6)
+    Cutscene --> Clear: 演出完了(stage3, stage6)
     GameOver --> Game: リトライ
     GameOver --> Title: タイトルへ
     Clear --> Game: 次ステージへ継続(nextStageId あり)
-    Clear --> Title: 最終クリア→タイトル(クリア状況を保存)
+    Clear --> Title: 最終クリア→タイトルへ戻る(クリア状況を保存)
+    Clear --> Game: 最終クリア→次の周回へ(advanceLoop・stage1から再開)
 
     note right of Game
         UIScene を並行起動(HUD)
@@ -455,7 +459,8 @@ stateDiagram-v2
         CutsceneScene を起動
         最終ステージ(stage6)は撃破→撃破内心→
         エンディング演出(CutsceneScene)→
-        全クリア保存→タイトルへ直行
+        ClearScene(ALL CLEAR)で
+        次の周回へ/タイトルへを選択
     end note
 ```
 
