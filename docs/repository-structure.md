@@ -335,6 +335,7 @@ scenes/ → persistence/ (OK)
 
 ### 循環依存の回避
 - レイヤー間で相互参照が必要になった場合は、共有の型/インターフェースを `src/types/` に抽出して解決する。
+  - 例: ランクの順序(`STAGE_RANK_ORDER`)は `systems/clearResult.ts`(判定ロジック)と `persistence/SaveManager.ts`(永続化)の双方から必要になるが、`persistence/` は `systems/` に依存できない。共有データを最下位の `types/save.ts` に置くことで、両レイヤーがそこから参照する形にして依存禁止ルールを維持している。
 - System → Scene 方向の通知は、Scene 側が System のイベントを購読する形にして逆依存を避ける。
 
 ## スケーリング戦略
