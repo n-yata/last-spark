@@ -1,0 +1,8 @@
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+
+[plugins."frontend-design@claude-plugins-official"]
+enabled = true

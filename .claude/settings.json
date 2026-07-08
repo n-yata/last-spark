@@ -6,7 +6,12 @@
       "Skill(architecture-design)",
       "Skill(repository-structure)",
       "Skill(development-guidelines)",
-      "Skill(glossary)"
+      "Skill(glossary)",
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "Bash(git merge-base *)",
+      "Bash(npx tsc --noEmit *)",
+      "Bash(npx vitest run *)"
     ],
     "deny": [],
     "ask": []
