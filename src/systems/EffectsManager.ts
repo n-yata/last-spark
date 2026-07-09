@@ -48,14 +48,12 @@ export class EffectsManager {
     this.explode(x, y, EFFECTS.explosion.boss);
   }
 
-  /**
-   * プレイヤー被弾の手応え(カメラシェイク)。
-   * 画面全体の赤フラッシュは酔いを誘発するため使わない(被弾の視覚情報は
-   * リグの白フラッシュ+LifeBar の点滅で伝える)。
-   */
+  /** プレイヤー被弾の手応え。短いフラッシュとシェイクで痛みを即座に返す。 */
   playerDamaged(): void {
     const { durationMs, intensity } = EFFECTS.shake.playerDamage;
     this.scene.cameras.main.shake(durationMs, intensity);
+    const flash = EFFECTS.playerDamageFlash;
+    this.screenFlash(flash.color, flash.alpha, flash.durationMs, 24);
   }
 
   /**
@@ -90,17 +88,27 @@ export class EffectsManager {
    * HUD/本文とは別系統の演出なので、既存のストーリーテキストは変更しない。
    */
   bossIntro(name: string, color: number): number {
-    const introMs = 850;
+    const p = EFFECTS.bossPresentation;
+    const introMs = p.introMs;
     const cam = this.scene.cameras.main;
     const width = cam.width;
+    this.screenFlash(color, p.introOverlayAlpha, introMs, 27);
     const topBand = this.scene.add
-      .rectangle(width / 2, 56, width, 52, color, 0.2)
+      .rectangle(width / 2, 56, width, p.introBandHeight, color, p.introBandAlpha)
       .setScrollFactor(0)
       .setDepth(30);
     const flash = this.scene.add
-      .rectangle(width / 2, 56, width, 52, color, 0.55)
+      .rectangle(width / 2, 56, width, p.introBandHeight, color, p.introFlashAlpha)
       .setScrollFactor(0)
       .setDepth(29);
+    const sweep = this.scene.add
+      .image(-width * 0.1, 56, TEX.hit)
+      .setScrollFactor(0)
+      .setDepth(31)
+      .setScale(5.6, 0.42)
+      .setTint(color)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.9);
     const label = this.scene.add
       .text(width / 2, 56, name, {
         fontFamily: 'monospace',
@@ -112,7 +120,15 @@ export class EffectsManager {
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(31);
-    this.scene.cameras.main.shake(220, 0.0025);
+    this.scene.cameras.main.shake(220, 0.0032);
+    this.scene.tweens.add({
+      targets: sweep,
+      x: width * 1.1,
+      alpha: 0,
+      duration: introMs,
+      ease: 'Cubic.Out',
+      onComplete: () => sweep.destroy(),
+    });
     this.scene.tweens.add({
       targets: [topBand, flash, label],
       alpha: 0,
@@ -129,16 +145,32 @@ export class EffectsManager {
 
   /** フェーズ移行の瞬間を強調するリング発光。 */
   bossPhaseShift(x: number, y: number, color: number): void {
-    const ring = this.scene.add.circle(x, y, 24, 0x000000, 0).setStrokeStyle(5, color, 0.9);
+    const p = EFFECTS.bossPresentation;
+    const ring = this.scene.add
+      .circle(x, y, p.phaseShiftRingRadiusStart, 0x000000, 0)
+      .setStrokeStyle(p.phaseShiftRingStroke, color, 0.9);
+    const secondRing = this.scene.add
+      .circle(x, y, p.phaseShiftRingRadiusStart * 0.75, 0x000000, 0)
+      .setStrokeStyle(p.phaseShiftRingStroke - 1, 0xffffff, 0.85);
     ring.setDepth(20);
-    this.scene.cameras.main.shake(220, 0.0032);
+    secondRing.setDepth(20);
+    this.scene.cameras.main.shake(220, 0.0038);
+    this.screenFlash(color, p.phaseShiftFlashAlpha, p.phaseShiftDurationMs, 23);
     this.scene.tweens.add({
       targets: ring,
-      radius: 120,
+      radius: p.phaseShiftRingRadiusEnd,
       alpha: 0,
-      duration: 320,
+      duration: p.phaseShiftDurationMs,
       ease: 'Quad.Out',
       onComplete: () => ring.destroy(),
+    });
+    this.scene.tweens.add({
+      targets: secondRing,
+      radius: p.phaseShiftRingRadiusEnd * 0.72,
+      alpha: 0,
+      duration: p.phaseShiftDurationMs,
+      ease: 'Quad.Out',
+      onComplete: () => secondRing.destroy(),
     });
   }
 
@@ -177,7 +209,20 @@ export class EffectsManager {
   }
 
   /** 弾命中の放射状スパーク(撃破前の通常ヒットの手応え)。 */
-  impactSpark(x: number, y: number): void {
+  impactSpark(x: number, y: number, target: 'enemy' | 'boss' = 'enemy'): void {
+    if (target === 'boss') {
+      const c = EFFECTS.impactSpark;
+      this.explode(x, y, {
+        count: Math.round(c.count * c.bossCountMul),
+        speedMin: Math.round(c.speedMin * c.bossSpeedMul),
+        speedMax: Math.round(c.speedMax * c.bossSpeedMul),
+        lifespanMs: c.lifespanMs,
+        scaleStart: c.scaleStart * c.bossScaleMul,
+      });
+      const shake = EFFECTS.shake.bossHit;
+      this.scene.cameras.main.shake(shake.durationMs, shake.intensity);
+      return;
+    }
     this.explode(x, y, EFFECTS.impactSpark);
   }
 
@@ -193,6 +238,28 @@ export class EffectsManager {
     this.explodeSmall(x, y);
     const k = EFFECTS.shake.enemyKill;
     this.scene.cameras.main.shake(k.durationMs, k.intensity);
+  }
+
+  /** 高所着地のダスト。hard=true はより重い着地として扱う。 */
+  landingDust(x: number, y: number, hard: boolean): void {
+    const l = EFFECTS.landing;
+    const scaleMul = hard ? l.hardScaleMul : 1;
+    const emitter = this.scene.add.particles(x, y, TEX.spark, {
+      speedX: { min: -l.dustSpeedMax, max: l.dustSpeedMax },
+      speedY: { min: -l.dustSpeedMin * 0.45, max: -l.dustSpeedMax * 0.2 },
+      lifespan: l.lifespanMs,
+      scale: { start: l.scaleStart * scaleMul, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      blendMode: Phaser.BlendModes.ADD,
+      emitting: false,
+    });
+    emitter.setDepth(9);
+    emitter.explode(Math.round(l.dustCount * scaleMul));
+    const shake = hard ? EFFECTS.shake.landingHard : EFFECTS.shake.landingSoft;
+    this.scene.cameras.main.shake(shake.durationMs, shake.intensity);
+    this.scene.time.delayedCall(l.lifespanMs + EFFECTS.explosion.cleanupMarginMs, () =>
+      emitter.destroy(),
+    );
   }
 
   /** 発射のマズルフラッシュ: 銃口の閃光 + 前方へ飛ぶ火花。dir は向き(+1右/-1左)。 */
@@ -311,6 +378,24 @@ export class EffectsManager {
     const v = this.scene.cameras.main.worldView;
     this.ambientZone.setTo(v.x, v.y, v.width, v.height);
   };
+
+  /** 画面全体の短いフラッシュ。視認性を壊さないよう淡く出してすぐ抜く。 */
+  private screenFlash(color: number, alpha: number, durationMs: number, depth: number): Phaser.GameObjects.Rectangle {
+    const cam = this.scene.cameras.main;
+    const flash = this.scene.add
+      .rectangle(cam.width / 2, cam.height / 2, cam.width, cam.height, color, alpha)
+      .setScrollFactor(0)
+      .setDepth(depth)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: durationMs,
+      ease: 'Quad.Out',
+      onComplete: () => flash.destroy(),
+    });
+    return flash;
+  }
 
   /** 使い捨て emitter で単発爆発を出し、寿命後に必ず破棄する(リーク防止)。 */
   private explode(x: number, y: number, conf: ExplosionConfig): void {

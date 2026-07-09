@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../config/assetKeys';
-import { PLAYER, LADDER, SHOT } from '../config/balance';
+import { PLAYER, LADDER, SHOT, STAGE } from '../config/balance';
 import type { InputState } from '../types/input';
 import type { Damageable } from '../types/combat';
 import type { LadderRect } from '../config/stages';
@@ -15,12 +15,13 @@ import {
 } from '../systems/shotControl';
 import { isDead, isInvincible, resolveInvincibleDamage } from '../systems/combatRules';
 import {
-  resolveHorizontalVelocity,
+  resolveHorizontalMotion,
   resolveJumpStart,
   resolveFacing,
   facingSign,
   shouldCutJump,
   cutJumpVelocity,
+  applyAirGravityTuning,
   overlapsAnyLadder,
   resolveLadderState,
   climbVelocity,
@@ -57,6 +58,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   private beams?: Phaser.GameObjects.Group;
   /** ビーム発動中の再発火を抑止する終了時刻(ms)。発動中(now < beamActiveUntil)は新規ショットを受けない。 */
   private beamActiveUntil = 0;
+  private wasGroundedLastFrame = true;
+  private strongestFallSpeed = 0;
   private readonly rig: CharacterRig;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -137,6 +140,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
   /** 入力に基づいて移動・ジャンプ・発射を行う。 */
   applyInput(input: InputState, now: number): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
+    const deltaMs = this.scene.game.loop.delta;
+    const groundedNow = this.onGround;
+    if (!groundedNow && body.velocity.y > 0) {
+      this.strongestFallSpeed = Math.max(this.strongestFallSpeed, body.velocity.y);
+    }
 
     // 梯子状態の更新(重なり + 上下入力で把持、ジャンプ/離脱で解除)。
     const playerBox: Box = {
@@ -189,9 +197,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.setVelocityY(climbVelocity(input.climbDir, LADDER.climbSpeed));
       this.facing = resolveFacing(this.facing, input.moveDir);
       this.isJumping = false;
+      this.strongestFallSpeed = 0;
       // 梯子把持中はコヨーテ/先行入力を適用しない(離脱ジャンプは別経路で処理済み)。
       this.lastGroundedAt = Number.NEGATIVE_INFINITY;
       this.jumpBufferedAt = Number.NEGATIVE_INFINITY;
+      this.wasGroundedLastFrame = false;
       this.updateShot(input, now);
       this.updateBlink(now);
       this.updateRig(input, now);
@@ -209,13 +219,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       }
     }
 
-    this.setVelocityX(resolveHorizontalVelocity(input.moveDir));
+    this.setVelocityX(
+      resolveHorizontalMotion({
+        currentVx: body.velocity.x,
+        moveDir: input.moveDir,
+        onGround: groundedNow,
+        deltaMs,
+      }),
+    );
     this.facing = resolveFacing(this.facing, input.moveDir);
 
     // コヨーテタイム/先行入力バッファの状態更新。
     // 接地中は最終接地時刻を更新し、空中の立ち上がり入力は着地時の自動発動用に記録する。
     // 梯子離脱ジャンプの入力は離脱処理で消費済みのため記録しない(着地時の二重発動防止)。
-    if (this.onGround) {
+    if (groundedNow) {
       this.lastGroundedAt = now;
     } else if (input.jumpPressed && !wasOnLadder) {
       this.jumpBufferedAt = now;
@@ -225,7 +242,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
     if (
       resolveJumpStart({
         jumpPressed: input.jumpPressed,
-        onGround: this.onGround,
+        onGround: groundedNow,
         isJumping: this.isJumping,
         now,
         lastGroundedAt: this.lastGroundedAt,
@@ -247,10 +264,37 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements Damageable {
       this.setVelocityY(cutJumpVelocity(body.velocity.y, PLAYER.jumpCutMultiplier));
       this.isJumping = false;
     }
+    this.setVelocityY(
+      applyAirGravityTuning({
+        velocityY: body.velocity.y,
+        onGround: groundedNow,
+        jumpHeld: input.jumpHeld,
+        deltaMs,
+        gravityY: STAGE.gravityY,
+      }),
+    );
     // 着地(または下降開始)で上昇フェーズを終える
-    if (this.onGround && body.velocity.y >= 0) {
+    if (groundedNow && body.velocity.y >= 0) {
       this.isJumping = false;
     }
+
+    if (groundedNow && !this.wasGroundedLastFrame) {
+      const landingSpeed = this.strongestFallSpeed;
+      if (landingSpeed >= PLAYER.landingEffectMinSpeed) {
+        this.scene.events.emit(
+          'player-landed',
+          this.x,
+          body.bottom,
+          landingSpeed,
+          landingSpeed >= PLAYER.hardLandingMinSpeed,
+        );
+      }
+      this.strongestFallSpeed = 0;
+    }
+    if (groundedNow && body.velocity.y >= 0) {
+      this.strongestFallSpeed = 0;
+    }
+    this.wasGroundedLastFrame = groundedNow;
 
     this.updateShot(input, now);
 
