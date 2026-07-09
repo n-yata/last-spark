@@ -33,8 +33,11 @@ export const PLAYER = {
   jumpBufferMs: 120,
   invincibleMs: 800, // 被弾後の無敵時間
   blinkIntervalMs: 80, // 無敵中の点滅間隔
-  landingEffectMinSpeed: 260, // これ以上の落下速度で着地演出を出す
-  hardLandingMinSpeed: 520, // 強い着地として扱う境界
+  // 通常の段差(最大140px、fallGravityMultiplier込みで約630px/s)では出さず、
+  // フルジャンプの着地(約670px/s)以上でのみ演出を出す。
+  landingEffectMinSpeed: 650, // これ以上の落下速度で着地演出を出す
+  // maxFallSpeed(760)近傍、つまり長い落下(奈落越え等)でのみ強い着地として扱う。
+  hardLandingMinSpeed: 740, // 強い着地として扱う境界
   width: 28,
   height: 40,
 } as const;

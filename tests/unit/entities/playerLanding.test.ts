@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PLAYER } from '../../../src/config/balance';
+import { PLAYER, STAGE } from '../../../src/config/balance';
 import type { InputState } from '../../../src/types/input';
 
 const phaserMocks = vi.hoisted(() => {
@@ -213,5 +213,66 @@ describe('Player landing event', () => {
     player.applyInput(idleInput, 16);
 
     expect(landed).not.toHaveBeenCalled();
+  });
+
+  it('ステージの通常の段差(最大140px)を降りる程度の着地速度では player-landed を発火しない', () => {
+    // fallGravityMultiplier(1.18)込みの重力で140px落下した場合の理論落下速度(≈629px/s)。
+    // 段差の昇り降りは頻出動作のため、これ以下では演出を出さない仕様を固定する。
+    const ledgeFallSpeed = Math.sqrt(2 * STAGE.gravityY * PLAYER.fallGravityMultiplier * 140);
+    expect(ledgeFallSpeed).toBeLessThan(PLAYER.landingEffectMinSpeed);
+
+    const scene = makeScene();
+    const player = new Player(scene as never, 96, 120);
+    const body = player.body as {
+      blocked: { down: boolean };
+      touching: { down: boolean };
+      velocity: { y: number };
+      bottom: number;
+    };
+    const landed = vi.fn();
+    scene.events.on('player-landed', landed);
+
+    body.blocked.down = false;
+    body.touching.down = false;
+    body.velocity.y = ledgeFallSpeed;
+    player.applyInput(idleInput, 0);
+
+    body.blocked.down = true;
+    body.velocity.y = 0;
+    body.bottom = 250;
+    player.applyInput(idleInput, 16);
+
+    expect(landed).not.toHaveBeenCalled();
+  });
+
+  it('フルジャンプ相当の着地速度では soft の player-landed を発火する(強い着地までは扱わない)', () => {
+    // jumpVelocity(-620)からのフルジャンプ着地は約670px/s。演出は出るが、hard(maxFallSpeed近傍)には満たない。
+    const fullJumpLandingSpeed = 670;
+    expect(fullJumpLandingSpeed).toBeGreaterThan(PLAYER.landingEffectMinSpeed);
+    expect(fullJumpLandingSpeed).toBeLessThan(PLAYER.hardLandingMinSpeed);
+
+    const scene = makeScene();
+    const player = new Player(scene as never, 96, 120);
+    const body = player.body as {
+      blocked: { down: boolean };
+      touching: { down: boolean };
+      velocity: { y: number };
+      bottom: number;
+    };
+    const landed = vi.fn();
+    scene.events.on('player-landed', landed);
+
+    body.blocked.down = false;
+    body.touching.down = false;
+    body.velocity.y = fullJumpLandingSpeed;
+    player.applyInput(idleInput, 0);
+
+    body.blocked.down = true;
+    body.velocity.y = 0;
+    body.bottom = 260;
+    player.applyInput(idleInput, 16);
+
+    expect(landed).toHaveBeenCalledTimes(1);
+    expect(landed).toHaveBeenCalledWith(player.x, 260, fullJumpLandingSpeed, false);
   });
 });
