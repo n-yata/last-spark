@@ -549,7 +549,7 @@ export class GameScene extends Phaser.Scene {
       {
         onHit: (x, y, target) => {
           this.spawnHitEffect(x, y);
-          this.effects.impactSpark(x, y);
+          this.effects.impactSpark(x, y, target);
           getSound().playSe(target === 'boss' ? 'bossHit' : 'enemyHit');
         },
         onEnemyDefeated: (enemy) => {
@@ -598,6 +598,14 @@ export class GameScene extends Phaser.Scene {
     this.events.on('player-beam-fired', onPlayerBeamFired);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
       this.events.off('player-beam-fired', onPlayerBeamFired),
+    );
+
+    const onPlayerLanded = (_x: number, y: number, _speed: number, hard: boolean): void => {
+      this.effects.landingDust(this.player.x, y, hard);
+    };
+    this.events.on('player-landed', onPlayerLanded);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      this.events.off('player-landed', onPlayerLanded),
     );
 
     this.spawn = new SpawnSystem(this, this.enemies, this.enemyShots);

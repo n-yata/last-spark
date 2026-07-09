@@ -28,6 +28,9 @@ export const EFFECTS = {
     playerDamage: { durationMs: 120, intensity: 0.008 },
     absorb: { durationMs: 70, intensity: 0.004 },
     enemyKill: { durationMs: 90, intensity: 0.006 }, // 雑魚撃破の小さな手応え
+    bossHit: { durationMs: 70, intensity: 0.0042 },
+    landingSoft: { durationMs: 70, intensity: 0.0028 },
+    landingHard: { durationMs: 110, intensity: 0.0052 },
     bossDefeat: { durationMs: 700, intensity: 0.012 },
   },
 
@@ -38,6 +41,9 @@ export const EFFECTS = {
     speedMax: 260,
     lifespanMs: 320,
     scaleStart: 0.9,
+    bossCountMul: 1.5,
+    bossScaleMul: 1.35,
+    bossSpeedMul: 1.18,
   },
 
   /** チャージ吸収成功時の小スパーク。 */
@@ -47,6 +53,23 @@ export const EFFECTS = {
     speedMax: 180,
     lifespanMs: 280,
     scaleStart: 0.85,
+  },
+
+  /** 高所着地のダスト/着地感。 */
+  landing: {
+    dustCount: 10,
+    dustSpeedMin: 40,
+    dustSpeedMax: 190,
+    lifespanMs: 340,
+    scaleStart: 0.95,
+    hardScaleMul: 1.35,
+  },
+
+  /** プレイヤー被弾時の短い画面フラッシュ。視認性を壊さないよう淡く短く出す。 */
+  playerDamageFlash: {
+    alpha: 0.22,
+    durationMs: 95,
+    color: 0xf4f8ff,
   },
 
   /** 発射時のマズルフラッシュ(銃口の閃光+前方スパーク)。 */
@@ -160,6 +183,20 @@ export const EFFECTS = {
   hitFlash: {
     color: 0xffffff,
     durationMs: 90,
+  },
+
+  /** ボス登場/フェーズ移行の画面演出。 */
+  bossPresentation: {
+    introMs: 850,
+    introBandHeight: 52,
+    introBandAlpha: 0.24,
+    introFlashAlpha: 0.58,
+    introOverlayAlpha: 0.12,
+    phaseShiftDurationMs: 320,
+    phaseShiftFlashAlpha: 0.2,
+    phaseShiftRingRadiusStart: 24,
+    phaseShiftRingRadiusEnd: 120,
+    phaseShiftRingStroke: 5,
   },
 
   /** リグの一過性モーション(CharacterRig)。 */

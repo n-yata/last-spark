@@ -190,7 +190,14 @@ type BossVariant = 'purifier' | 'envoy';
 export const PLAYER = {
   maxHp: 16,
   moveSpeed: 160,        // px/s
-  jumpVelocity: -420,    // px/s(上向き負)
+  groundAccel: 2400,     // 地上加速
+  groundDecel: 3000,     // 地上減速
+  airAccel: 1800,        // 空中加速
+  airDecel: 1100,        // 空中減速
+  jumpVelocity: -620,    // px/s(上向き負)
+  apexGravityMultiplier: 0.72, // 頂点付近のハングタイム
+  fallGravityMultiplier: 1.18, // 落下をきびきびさせる追加重力
+  maxFallSpeed: 760,
   invincibleMs: 800,     // 被弾後の無敵時間
 } as const;
 
@@ -218,6 +225,10 @@ export const BOSS = {
 - 画面左半分=追従パッド(横変位=左右移動、縦変位=梯子昇降の `climbDir`)、右側=ジャンプ/ショットの仮想ボタンを管理する。縦は誤反応抑制のため横より大きい不感帯(`CLIMB_DEADZONE_PX`)を用い、`climbDir` は梯子に重なっている時のみ Player 側で使用する。
 - 左親指=移動/昇降、右親指=ジャンプ/ショットに役割を分離する。3 ポインタのマルチタッチで移動とジャンプ・ショットを同時に扱う。キーボード(開発時、矢印 上下=昇降)もフォールバックで受ける。
 
+**操作感ブラッシュアップ**:
+- `Player` 側では `resolveHorizontalMotion` を使い、横移動を即時固定ではなく「地上/空中別の加減速 + 逆方向入力での素早い切り返し」で制御する。
+- ジャンプ中は `applyAirGravityTuning` により、頂点付近では少しだけ重力を弱めて間を作り、落下中は追加重力を掛けて下降をきびきびさせる。
+
 **インターフェース**:
 ```typescript
 interface InputState {
@@ -244,6 +255,10 @@ class InputController {
 - 弾⇔敵、弾⇔ボス、プレイヤー⇔敵/ボス/敵弾 の衝突処理とダメージ適用。
 - 被弾時の無敵・点滅、撃破時のヒット表現発火。
 - `GameSettings.difficulty` に応じて、プレイヤー被ダメージ倍率を適用する。
+
+**演出の返し**:
+- 通常ヒットでは `impactSpark` を出し、ボスへの命中時は粒子量とシェイクを少し強めて「当たった感」を上げる。
+- プレイヤー被弾時は HUD の点滅だけでなく、短い画面フラッシュとシェイクで即時フィードバックを返す。
 
 **インターフェース**:
 ```typescript
@@ -331,19 +346,20 @@ class SpawnSystem {
 
 **梯子(ladder)**: `StageData.ladders` の矩形を `GameScene.buildLadders` が見た目(タイル)として敷き、矩形配列を `Player.setLadders` へ渡す(物理衝突はさせない)。Player は純粋関数 `overlapsAnyLadder` / `resolveLadderState` / `climbVelocity` で把持状態を判定し、把持中は重力を切って(`setAllowGravity(false)`)上下入力で鉛直移動する。離脱時に重力を必ず戻す。梯子昇降中はプレイヤーの足場 collider を抑制し、ワンウェイ床を貫通して登り降りできる(梯子上端=直上の足場上端に揃え、登り切ると足場に乗れる動線)。これらの純粋ロジックは `systems/playerMovement.ts` に集約しユニットテスト可能にする。
 
-**ジャンプの手触り(コヨーテタイム / 先行入力バッファ)**: ジャンプ開始判定は純粋関数 `resolveJumpStart`(`systems/playerMovement.ts`)で行い、接地中の立ち上がり入力に加えて次の 2 つの猶予を認める。(1) **コヨーテタイム**: 足場を離れてから `PLAYER.coyoteMs`(100ms)以内の入力はジャンプ成立(足場の端ギリギリで「押したのに跳ばない」を防ぐ)。(2) **先行入力バッファ**: 空中の入力を `PLAYER.jumpBufferMs`(120ms)保持し、着地の瞬間に自動発動する(連続ジャンプのリズムを途切れさせない)。ジャンプ離陸済み(`isJumping`)の間は発動せず(空中二段ジャンプ防止)、発動時にタイムスタンプ(`lastGroundedAt` / `jumpBufferedAt`)を `-Infinity` へリセットして二重消費を防ぐ。梯子把持中は両方とも適用しない。
+**ジャンプの手触り(コヨーテタイム / 先行入力バッファ / 頂点ハング / 着地演出)**: ジャンプ開始判定は純粋関数 `resolveJumpStart`(`systems/playerMovement.ts`)で行い、接地中の立ち上がり入力に加えて次の 2 つの猶予を認める。(1) **コヨーテタイム**: 足場を離れてから `PLAYER.coyoteMs`(100ms)以内の入力はジャンプ成立(足場の端ギリギリで「押したのに跳ばない」を防ぐ)。(2) **先行入力バッファ**: 空中の入力を `PLAYER.jumpBufferMs`(120ms)保持し、着地の瞬間に自動発動する(連続ジャンプのリズムを途切れさせない)。さらに、空中では `applyAirGravityTuning` が **頂点付近のハングタイム** と **落下加速** を付与し、上昇と下降のリズムを気持ちよく整える。高所からの着地時は `Player` が `player-landed` を `GameScene` へ通知し、`EffectsManager.landingDust` がダストと小シェイクを出す。ジャンプ離陸済み(`isJumping`)の間は発動せず(空中二段ジャンプ防止)、発動時にタイムスタンプ(`lastGroundedAt` / `jumpBufferedAt`)を `-Infinity` へリセットして二重消費を防ぐ。梯子把持中は両方とも適用しない。
 
 **触覚フィードバック(Haptics)**: `systems/haptics.ts` のシングルトン(`getHaptics`)が Vibration API をラップし、プレイヤー被弾(実ダメージ時のみ・無敵中は発火しない)とボス撃破時に短い振動を出す。`navigator.vibrate` 非対応環境(iOS Safari / PC)では no-op で例外を出さない。`GameSettings.vibration`(オプションの「しんどう」トグル)で ON/OFF でき、`BootScene` 起動時と設定変更時に `setEnabled` で反映する。振動パターンは演出値のため `haptics.ts` 内の定数で持つ(`balance.ts` には置かない)。
 
 ### EffectsManager(Systemレイヤー)
 
-**責務**: 戦闘演出(撃破パーティクル爆発・カメラシェイク・ヒットストップ・ボス登場演出・phase移行強調・ボス撃破シーケンス/余韻発光)を統括する。`GameScene` が所有し、`CombatSystem` のコールバックやボス出現/フェーズ変化の検知から呼ばれる。チューニング値は `src/config/effects.ts` に集約する。
+**責務**: 戦闘演出(撃破パーティクル爆発・着地ダスト・カメラシェイク・被弾フラッシュ・ボス登場演出・phase移行強調・ボス撃破シーケンス/余韻発光)を統括する。`GameScene` が所有し、`CombatSystem` のコールバックやボス出現/フェーズ変化の検知、`Player` の着地イベントから呼ばれる。チューニング値は `src/config/effects.ts` に集約する。
 
 ```typescript
 class EffectsManager {
   explodeSmall(x, y): void;   // 雑魚撃破の小爆発
   explodeBoss(x, y): void;    // ボス撃破バーストの大爆発
-  playerDamaged(): void;      // 被弾の手応え(カメラシェイク)
+  playerDamaged(): void;      // 被弾の手応え(カメラシェイク+短い画面フラッシュ)
+  landingDust(x, y, hard): void; // 高所着地のダスト
   bossIntro(name, color): number; // 短い登場演出。戻り値は hold する時間(ms)
   bossPhaseShift(x, y, color): void; // フェーズ移行の強調
   bossAfterglow(x, y, color, onComplete): void; // 撃破直後の余韻
@@ -352,7 +368,7 @@ class EffectsManager {
 ```
 
 **演出ポリシー(プレイテストで確定した制約)**:
-- **画面全体のフラッシュ(`camera.flash`)は使わない**。点滅が酔い・不快感を誘発するため。被弾の視覚フィードバックはカメラシェイク+リグの白フラッシュ(`setTintFill`)+ライフバーの点滅で伝える。
+- **`camera.flash` は使わない**。点滅が酔い・不快感を誘発するため。必要な画面フラッシュは `EffectsManager` が ADD 合成の淡い矩形を短時間だけ重ねて実現し、被弾やフェーズ移行の手応えを上げつつ視認性を壊さない。
 - **ヒットストップ(`physics.world.pause`)は戦闘中に使わない**。ワールド全体が止まるため、ダメージを受けていないプレイヤーの操作まで固まり操作感を損なう。許容するのはボス撃破の瞬間(戦闘終了後の演出)のみ。
 - ボス撃破時はプレイヤーを静止(`setVelocityX(0)`)させる。撃破後は入力反映が止まるため、残速度の滑走をカメラが追従して画面が流れるのを防ぐ。
 - クリアタイムは撃破の瞬間に確定する(約1.4秒の撃破シーケンスをベストタイムに含めない)。

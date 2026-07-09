@@ -6,12 +6,25 @@ import type { BossAction } from '../types/boss';
 export const PLAYER = {
   maxHp: 16,
   moveSpeed: 160, // px/s
+  // 地上/空中での加減速。即時速度変更ではなく、入力へ素早く反応しつつも
+  // 「伸びる」「切り返す」感触を出すための係数。
+  groundAccel: 2400, // px/s^2
+  groundDecel: 3000, // px/s^2
+  airAccel: 1800, // px/s^2
+  airDecel: 1100, // px/s^2
+  turnAccelMultiplier: 1.35, // 逆方向入力時は素早く切り返す
   // 上向き負。押し続けた場合の最高到達点 ≈ jumpVelocity^2 / (2 * gravityY)。
   // -620 / 重力1200 で約160px 上昇し、ステージの段差(最大140px)・奈落の中継足場(120px)に届く。
   jumpVelocity: -620, // px/s(最大ジャンプ初速)
   // 可変ジャンプ: ボタンを離した瞬間に上昇中なら上向き速度をこの倍率にカットする。
   // 短押し=低いジャンプ(約40px)、押し続け=最大(約160px)。押している長さで高さが変わる。
   jumpCutMultiplier: 0.5,
+  // ジャンプ頂点付近で少しだけ重力を弱め、上昇→下降の切り替わりに間を作る。
+  apexHangVy: 110,
+  apexGravityMultiplier: 0.72,
+  // 落下中は追加重力を掛けて、上昇より下降をきびきびさせる。
+  fallGravityMultiplier: 1.18,
+  maxFallSpeed: 760,
   // コヨーテタイム: 足場を離れてからこの猶予(ms)内はジャンプ入力を受理する
   // (足場の端ギリギリでの「押したのに跳ばない」を防ぐ。約6フレーム@60fps)。
   coyoteMs: 100,
@@ -20,6 +33,8 @@ export const PLAYER = {
   jumpBufferMs: 120,
   invincibleMs: 800, // 被弾後の無敵時間
   blinkIntervalMs: 80, // 無敵中の点滅間隔
+  landingEffectMinSpeed: 260, // これ以上の落下速度で着地演出を出す
+  hardLandingMinSpeed: 520, // 強い着地として扱う境界
   width: 28,
   height: 40,
 } as const;

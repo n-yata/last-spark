@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveHorizontalVelocity,
+  resolveHorizontalMotion,
   shouldJump,
   resolveJumpStart,
   type JumpStartParams,
@@ -8,6 +9,7 @@ import {
   facingSign,
   shouldCutJump,
   cutJumpVelocity,
+  applyAirGravityTuning,
   shouldLandOnOneWay,
   boxesOverlap,
   overlapsAnyLadder,
@@ -34,6 +36,62 @@ describe('resolveHorizontalVelocity', () => {
     expect(resolveHorizontalVelocity(-1)).toBe(-PLAYER.moveSpeed);
     expect(resolveHorizontalVelocity(0)).toBe(0);
     expect(resolveHorizontalVelocity(1)).toBe(PLAYER.moveSpeed);
+  });
+});
+
+describe('resolveHorizontalMotion', () => {
+  it('地上では即時固定ではなく、加速で目標速度へ近づく', () => {
+    expect(
+      resolveHorizontalMotion({
+        currentVx: 0,
+        moveDir: 1,
+        onGround: true,
+        deltaMs: 16,
+      }),
+    ).toBeCloseTo(38.4, 4);
+  });
+
+  it('入力を離した地上では減速し、十分遅ければ 0 に吸着する', () => {
+    expect(
+      resolveHorizontalMotion({
+        currentVx: 20,
+        moveDir: 0,
+        onGround: true,
+        deltaMs: 16,
+      }),
+    ).toBe(0);
+  });
+
+  it('逆方向入力では切り返し倍率が掛かり、空中より素早く向きを変える', () => {
+    const groundTurn = resolveHorizontalMotion({
+      currentVx: 120,
+      moveDir: -1,
+      onGround: true,
+      deltaMs: 16,
+    });
+    const airTurn = resolveHorizontalMotion({
+      currentVx: 120,
+      moveDir: -1,
+      onGround: false,
+      deltaMs: 16,
+    });
+    expect(Math.abs(groundTurn)).toBeLessThan(Math.abs(airTurn));
+  });
+
+  it('空中減速は地上より緩く、慣性が少し残る', () => {
+    const groundBrake = resolveHorizontalMotion({
+      currentVx: 100,
+      moveDir: 0,
+      onGround: true,
+      deltaMs: 16,
+    });
+    const airBrake = resolveHorizontalMotion({
+      currentVx: 100,
+      moveDir: 0,
+      onGround: false,
+      deltaMs: 16,
+    });
+    expect(Math.abs(airBrake)).toBeGreaterThan(Math.abs(groundBrake));
   });
 });
 
@@ -166,6 +224,53 @@ describe('cutJumpVelocity', () => {
     const cutVy = cutJumpVelocity(PLAYER.jumpVelocity, PLAYER.jumpCutMultiplier);
     const cutHeight = cutVy ** 2 / (2 * g);
     expect(cutHeight).toBeLessThan(maxHeight);
+  });
+});
+
+describe('applyAirGravityTuning', () => {
+  it('接地中は速度を変えない', () => {
+    expect(
+      applyAirGravityTuning({
+        velocityY: 0,
+        onGround: true,
+        jumpHeld: false,
+        deltaMs: 16,
+        gravityY: 1200,
+      }),
+    ).toBe(0);
+  });
+
+  it('頂点付近で押し続けている間は重力を弱め、少しだけハングする', () => {
+    const next = applyAirGravityTuning({
+      velocityY: -80,
+      onGround: false,
+      jumpHeld: true,
+      deltaMs: 16,
+      gravityY: 1200,
+    });
+    expect(next).toBeLessThan(-80);
+  });
+
+  it('落下中は追加重力を掛けて下降をきびきびさせる', () => {
+    const next = applyAirGravityTuning({
+      velocityY: 200,
+      onGround: false,
+      jumpHeld: false,
+      deltaMs: 16,
+      gravityY: 1200,
+    });
+    expect(next).toBeGreaterThan(200);
+  });
+
+  it('最大落下速度を超えない', () => {
+    const next = applyAirGravityTuning({
+      velocityY: PLAYER.maxFallSpeed + 120,
+      onGround: false,
+      jumpHeld: false,
+      deltaMs: 16,
+      gravityY: 1200,
+    });
+    expect(next).toBe(PLAYER.maxFallSpeed);
   });
 });
 
