@@ -794,6 +794,9 @@ export class GameScene extends Phaser.Scene {
   private spawnHardSecretBoss(): void {
     if (this.boss || this.shadowRayActive) return;
     this.shadowRayActive = true;
+    // ECLIPSE 撃破演出中の handleClear 再入ガードを解除する(裏ボスが実体化したので、
+    // 以後の ShadowRayBoss 撃破は通常のクリアフローで処理させる)。
+    this.inPostBoss = false;
     this.clearActiveEnemyPressure();
 
     const spawnX = this.stage.bossSpawn.x;
@@ -926,6 +929,12 @@ export class GameScene extends Phaser.Scene {
     if (this.shouldStartHardSecretBoss(boss)) {
       this.shadowRaySpawned = true;
       this.boss = undefined;
+      // 撃破演出(afterglow→death→spawn)の間は handleClear の再入を止める。
+      // このガードが無いと、演出中に再度 handleClear が走った場合
+      // shadowRaySpawned が既に true のため裏ボス分岐に入れず、通常クリア分岐
+      // (ended=true → finishStageClear)へ落ちて裏ボスの spawn を横取りしてしまう。
+      // 裏ボス出現後(spawnHardSecretBoss 内)に解除し、以後の ShadowRayBoss 撃破は通常どおり処理する。
+      this.inPostBoss = true;
       this.registry.set(HUD.bossActive, false);
       this.effects.bossAfterglow(boss.x, boss.y, this.currentBossPresentationColor(), () =>
         this.effects.bossDeathSequence(boss.x, boss.y, () => {
