@@ -29,12 +29,13 @@ const FLYING_WEIGHTS: PhaseWeights = {
 
 /**
  * 収容番人(stage3)のフェーズ別重み(相対値)。接地アクション(move/shoot/idle/jump)に
- * 固有の missile(放物線ミサイル)を加える。missile は両フェーズで主力級、phase2 で増量して
- * 「降り注ぐミサイル」で stage1/2 と明確に差別化する。
+ * 固有の missile(放物線ミサイル) / containment(一時拘束フィールド)を加える。missile は両フェーズで
+ * 主力級、phase2 で増量して「降り注ぐミサイル」で stage1/2 と明確に差別化する。containment は
+ * ミサイルの前段として横移動の自由を狭め、「収容する側/逃れる側」の構図をプレイへ落とす。
  */
 const WARDEN_WEIGHTS: PhaseWeights = {
-  phase1: { move: 25, shoot: 25, missile: 25, idle: 10, jump: 15 },
-  phase2: { move: 20, shoot: 25, missile: 35, idle: 5, jump: 15 },
+  phase1: { move: 22, shoot: 22, missile: 24, containment: 16, idle: 6, jump: 10 },
+  phase2: { move: 16, shoot: 20, missile: 30, containment: 24, idle: 3, jump: 7 },
 };
 
 /**

@@ -417,7 +417,7 @@ stateDiagram-v2
 
 **定義**: ボスが実行する個々の行動。フェーズ別の重み付き抽選で選ばれる。
 
-**取りうる値**: 全10種。系統ごとに重みテーブルで使用アクションを限定する(共通アクション + 系統固有アクション)。
+**取りうる値**: 全12種。系統ごとに重みテーブルで使用アクションを限定する(共通アクション + 系統固有アクション)。
 
 | アクション | 意味 | 使用系統 |
 |-----------|------|---------|
@@ -429,14 +429,22 @@ stateDiagram-v2
 | `hover` | 滞空(空中の基準高度を保つ) | 飛行型(stage2/5) |
 | `dive` | プレイヤーへ急降下し高度復帰 | 飛行型(stage2/5) |
 | `missile` | 放物線で降り注ぐアーティラリー | 収容番人(stage3) |
+| `containment` | 左右のエネルギー柱で一時拘束し、横移動の自由を狭める | 収容番人(stage3) |
 | `spray` | 扇状の範囲攻撃(毒霧スプレー) | 浄化型(stage4) |
+| `bloom` | プレイヤー足元へ時限式の汚染床を増殖させる | 浄化型(stage4) |
 | `summon` | 配下 Enemy の動的召喚 | ECLIPSE 本体(stage6) |
 
 **関連アルゴリズム**: [ボス行動抽選](#ボス行動抽選-picknextbossaction)
 
-**実装(型)**: `type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'missile' | 'spray' | 'summon';`(`src/types/boss.ts`)
+**実装(型)**: `type BossAction = 'idle' | 'move' | 'shoot' | 'jump' | 'stagger' | 'dive' | 'hover' | 'missile' | 'containment' | 'spray' | 'bloom' | 'summon';`(`src/types/boss.ts`)
 
-> ※ 突進(`charge`)は MVP の調整で廃止し、`jump` と前後移動(`move`)に置き換えた。`missile` / `spray` / `summon` は各系統専用の重みテーブルに閉じる。
+> ※ 突進(`charge`)は MVP の調整で廃止し、`jump` と前後移動(`move`)に置き換えた。`missile` / `containment` / `spray` / `bloom` / `summon` は各系統専用の重みテーブルに閉じる。
+
+### 弱点露出 (Exposed Window)
+
+**定義**: ボスが一定条件を満たしたときだけ本体へダメージが通る短い攻撃機会。
+
+**説明**: 現在は Stage 6 の `CoreBoss` に使われる。phase1 の ECLIPSE 本体は配下を召喚した直後は閉じており、召喚雑魚を掃討すると一定時間だけコアが露出する。プレイヤーは「雑魚処理で攻撃機会を作る」手順を学習してから本体火力へ移る。
 
 ### 画面遷移(シーン遷移)
 

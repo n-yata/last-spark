@@ -44,6 +44,7 @@ import { resolveRank, isNewRecord } from '../systems/clearResult';
 import { getStageStory } from '../config/story';
 import { getCutscene } from '../config/story/cutscenes';
 import { SaveManager } from '../persistence/SaveManager';
+import type { BossPhase } from '../types/boss';
 import type { StageStory, StoryEvent, TextRequest } from '../types/story';
 import type { DifficultyMode } from '../types/save';
 
@@ -94,6 +95,8 @@ export class GameScene extends Phaser.Scene {
   private spawn!: SpawnSystem;
   private effects!: EffectsManager;
   private boss?: Boss;
+  /** 現在追跡中のボスフェーズ。変化を検知して演出を出す。 */
+  private lastBossPhase?: BossPhase;
   private startTime = 0;
   private ended = false;
   /** 現在ステージの確定テキスト(未登録ステージなら undefined)。 */
@@ -131,6 +134,8 @@ export class GameScene extends Phaser.Scene {
   private paused = false;
   /** ポーズ起動キー(ESC / P)。キーボードプレイ時の導線。 */
   private pauseKeys?: { esc: Phaser.Input.Keyboard.Key; p: Phaser.Input.Keyboard.Key };
+  /** stage3 containment フィールドの掃除関数。新規生成やシーン終了で呼ぶ。 */
+  private clearContainmentField?: () => void;
 
   constructor() {
     super(SCENE_KEYS.game);
@@ -149,6 +154,9 @@ export class GameScene extends Phaser.Scene {
     // シーンはステージ継続(stage1→stage2)で再利用される。前ステージのボス参照が残ると
     // spawnBoss の早期 return で次ステージのボスが出ないため、必ずクリアする。
     this.boss = undefined;
+    this.lastBossPhase = undefined;
+    this.clearContainmentField?.();
+    this.clearContainmentField = undefined;
     this.firstEnemyInnerDone = false;
     this.inPostBoss = false;
     this.shadowRayActive = false;
@@ -187,6 +195,10 @@ export class GameScene extends Phaser.Scene {
     // 探索 BGM。TERRA 同行後(Stage 3 クリア以降)は温もりのある stageWarm へ切り替える。
     getSound().playBgm(selectExplorationBgm(new SaveManager().getData().clearedStages));
     this.startIntro();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.clearContainmentField?.();
+      this.clearContainmentField = undefined;
+    });
   }
 
   /**
@@ -311,6 +323,48 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(lifespanMs, () => {
       if (hazard.active) hazard.destroy();
     });
+  }
+
+  /**
+   * stage3 containment: プレイヤー周辺へ左右のエネルギー柱を立て、短時間だけ横移動の自由を狭める。
+   * 収容番人に「逃げ道を切られる」感覚をプレイへ落とす。新規生成前に既存フィールドは掃除する。
+   */
+  private spawnContainmentField(centerX: number, widthPx: number, durationMs: number): void {
+    this.clearContainmentField?.();
+    const halfWidth = widthPx / 2;
+    const clampedCenter = Phaser.Math.Clamp(centerX, halfWidth + 24, this.stage.width - halfWidth - 24);
+    const wallXs = [clampedCenter - halfWidth, clampedCenter + halfWidth];
+    const walls = wallXs.map((x) => {
+      const wall = this.add.rectangle(x, STAGE.height / 2, 12, STAGE.height, 0x90f0ff, 0.2);
+      wall.setDepth(7);
+      this.physics.add.existing(wall, true);
+      return wall;
+    });
+    const colliders = walls.map((wall) => this.physics.add.collider(this.player, wall));
+    walls.forEach((wall) => {
+      this.tweens.add({
+        targets: wall,
+        alpha: { from: 0.16, to: 0.34 },
+        duration: 220,
+        yoyo: true,
+        repeat: Math.max(0, Math.floor(durationMs / 220) - 1),
+      });
+    });
+    const cleanup = () => {
+      colliders.forEach((collider) => collider.destroy());
+      walls.forEach((wall) => wall.destroy());
+    };
+    this.clearContainmentField = cleanup;
+    this.time.delayedCall(durationMs, () => {
+      if (this.clearContainmentField === cleanup) {
+        cleanup();
+        this.clearContainmentField = undefined;
+      }
+    });
+  }
+
+  private currentBossPresentationColor(): number {
+    return hexToNum(this.bgTheme.accent);
   }
 
   /** 収容ケージ(stage3 など)の見た目を作る。撃破後に解錠アニメを再生する。 */
@@ -673,7 +727,12 @@ export class GameScene extends Phaser.Scene {
       this.boss = core;
     } else if (this.stage.bossKind === 'warden') {
       // stage3: 収容番人(重装ミサイル型)。接地型なので地面コライダーを付ける。
-      this.boss = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      const warden = new WardenBoss(this, this.stage.bossSpawn.x, this.stage.bossSpawn.y);
+      warden.setContainmentContext({
+        spawnField: (centerX, widthPx, durationMs) =>
+          this.spawnContainmentField(centerX, widthPx, durationMs),
+      });
+      this.boss = warden;
     } else if (this.stage.bossVariant === 'purifier') {
       // stage4: 環境管理機(浄化型・扇状の範囲攻撃 spray + 動的汚染床 bloom)。接地型。
       // 動的 Hazard の生成・登録・時限破棄は GameScene が担い、ボスへ生成関数を注入する(疎結合)。
@@ -713,6 +772,14 @@ export class GameScene extends Phaser.Scene {
     // 設定値ではなく実際のボスの maxHp を使う(系統で硬さが異なっても HUD が一致する)。
     this.registry.set(HUD.bossMaxHp, this.boss.maxHp);
     this.registry.set(HUD.bossPhase2Ratio, this.boss.phase2HpRatio);
+    this.lastBossPhase = this.boss.getPhase();
+    if (this.stageId === 'stage3' || this.stageId === 'stage4' || this.stageId === 'stage5' || this.stageId === 'stage6') {
+      const introMs = this.effects.bossIntro(
+        this.stage.bossName,
+        this.currentBossPresentationColor(),
+      );
+      this.boss.holdFor(introMs);
+    }
     getSound().playBgm('boss');
   }
 
@@ -735,6 +802,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set(HUD.bossMaxHp, shadow.maxHp);
     this.registry.set(HUD.bossHp, shadow.hp);
     this.registry.set(HUD.bossPhase2Ratio, shadow.phase2HpRatio);
+    this.lastBossPhase = shadow.getPhase();
     getSound().playBgm('boss');
   }
 
@@ -798,6 +866,11 @@ export class GameScene extends Phaser.Scene {
     if (this.boss) {
       this.boss.update(time, this.player.x, this.player.y);
       this.registry.set(HUD.bossHp, this.boss.hp);
+      const phase = this.boss.getPhase();
+      if (this.lastBossPhase && phase !== this.lastBossPhase) {
+        this.effects.bossPhaseShift(this.boss.x, this.boss.y, this.currentBossPresentationColor());
+      }
+      this.lastBossPhase = phase;
     }
 
     this.checkFallDeath();
@@ -846,10 +919,12 @@ export class GameScene extends Phaser.Scene {
       this.shadowRaySpawned = true;
       this.boss = undefined;
       this.registry.set(HUD.bossActive, false);
-      this.effects.bossDeathSequence(boss.x, boss.y, () => {
-        boss.destroy();
-        this.spawnHardSecretBoss();
-      });
+      this.effects.bossAfterglow(boss.x, boss.y, this.currentBossPresentationColor(), () =>
+        this.effects.bossDeathSequence(boss.x, boss.y, () => {
+          boss.destroy();
+          this.spawnHardSecretBoss();
+        }),
+      );
       return;
     }
 
@@ -864,15 +939,19 @@ export class GameScene extends Phaser.Scene {
       this.pendingDamageTaken = damageTaken;
       // 死亡ボスを update ループから切り離し(参照を断ち)、演出後に破棄する。
       this.boss = undefined;
-      this.effects.bossDeathSequence(boss.x, boss.y, () => this.enterRescuePhase(boss));
+      this.effects.bossAfterglow(boss.x, boss.y, this.currentBossPresentationColor(), () =>
+        this.effects.bossDeathSequence(boss.x, boss.y, () => this.enterRescuePhase(boss)),
+      );
       return;
     }
 
     // 従来(stage1-2)/演出キーなし(stage4): 撃破演出後にクリアへ。
     // ended 後は applyInput が呼ばれず最後の速度で滑走し続けるため、撃破の瞬間に静止させる。
     this.ended = true;
-    this.effects.bossDeathSequence(boss.x, boss.y, () =>
-      this.finishStageClear(clearTimeMs, damageTaken),
+    this.effects.bossAfterglow(boss.x, boss.y, this.currentBossPresentationColor(), () =>
+      this.effects.bossDeathSequence(boss.x, boss.y, () =>
+        this.finishStageClear(clearTimeMs, damageTaken),
+      ),
     );
   }
 

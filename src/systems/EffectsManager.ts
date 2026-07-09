@@ -86,6 +86,79 @@ export class EffectsManager {
   }
 
   /**
+   * ボス登場時の短いシネマ演出。画面上に色帯とボス名を出し、戦闘の節目を明確にする。
+   * HUD/本文とは別系統の演出なので、既存のストーリーテキストは変更しない。
+   */
+  bossIntro(name: string, color: number): number {
+    const introMs = 850;
+    const cam = this.scene.cameras.main;
+    const width = cam.width;
+    const topBand = this.scene.add
+      .rectangle(width / 2, 56, width, 52, color, 0.2)
+      .setScrollFactor(0)
+      .setDepth(30);
+    const flash = this.scene.add
+      .rectangle(width / 2, 56, width, 52, color, 0.55)
+      .setScrollFactor(0)
+      .setDepth(29);
+    const label = this.scene.add
+      .text(width / 2, 56, name, {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(31);
+    this.scene.cameras.main.shake(220, 0.0025);
+    this.scene.tweens.add({
+      targets: [topBand, flash, label],
+      alpha: 0,
+      duration: introMs,
+      ease: 'Quad.Out',
+      onComplete: () => {
+        topBand.destroy();
+        flash.destroy();
+        label.destroy();
+      },
+    });
+    return introMs;
+  }
+
+  /** フェーズ移行の瞬間を強調するリング発光。 */
+  bossPhaseShift(x: number, y: number, color: number): void {
+    const ring = this.scene.add.circle(x, y, 24, 0x000000, 0).setStrokeStyle(5, color, 0.9);
+    ring.setDepth(20);
+    this.scene.cameras.main.shake(220, 0.0032);
+    this.scene.tweens.add({
+      targets: ring,
+      radius: 120,
+      alpha: 0,
+      duration: 320,
+      ease: 'Quad.Out',
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  /** 撃破直後の余韻発光。ボス爆散の前に一拍置いて決着感を作る。 */
+  bossAfterglow(x: number, y: number, color: number, onComplete: () => void): void {
+    const glow = this.scene.add.circle(x, y, 42, color, 0.38).setDepth(19);
+    this.scene.tweens.add({
+      targets: glow,
+      radius: 160,
+      alpha: 0,
+      duration: 280,
+      ease: 'Quad.Out',
+      onComplete: () => {
+        glow.destroy();
+        onComplete();
+      },
+    });
+  }
+
+  /**
    * 物理を一時停止して手応えを作る。復帰は delayedCall 一本化し、
    * 多重発火時は復帰予定を後ろへ伸ばすだけにして二重 resume を防ぐ。
    */

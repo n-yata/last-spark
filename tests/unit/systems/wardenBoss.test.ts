@@ -37,6 +37,22 @@ describe('stage3 収容番人(WardenBoss)', () => {
     expect(CONTAINMENT_WARDEN.actionDurationMs.missile).toBeGreaterThan(0);
   });
 
+  it('containment アクションの継続時間が定義されている', () => {
+    expect(CONTAINMENT_WARDEN.actionDurationMs.containment).toBeGreaterThan(0);
+  });
+
+  it('phase2 の containment は phase1 より狭い(拘束が強まる)', () => {
+    expect(CONTAINMENT_WARDEN.containmentWidthP2).toBeLessThan(
+      CONTAINMENT_WARDEN.containmentWidthP1,
+    );
+  });
+
+  it('phase2 の containment は phase1 より長い(逃げにくくなる)', () => {
+    expect(CONTAINMENT_WARDEN.containmentDurationMsP2).toBeGreaterThan(
+      CONTAINMENT_WARDEN.containmentDurationMsP1,
+    );
+  });
+
   it('ミサイルは発射点(ボス上部)から着弾点(地面付近)へ放物線で届く', () => {
     const boss = getStageData('stage3').bossSpawn;
     const startX = boss.x;

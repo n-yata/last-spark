@@ -9,6 +9,7 @@ import {
 } from '../config/balance';
 import { pickNextCoreBossAction, bossActionDuration } from '../systems/bossAi';
 import { computeSummonXs } from '../systems/coreSummon';
+import { isCoreDamageOpen, shouldOpenCoreExposure } from '../systems/coreExposure';
 import type { EnemyPattern } from '../types/enemy';
 import type { ShieldHitKind } from '../systems/combatRules';
 import { Boss, DEFAULT_ACTION_DURATION_MS } from './Boss';
@@ -31,9 +32,14 @@ export class CoreBoss extends Boss {
   private readonly core: CoreBossConfig;
   /** 配下召喚の外部参照(未注入なら召喚しない=安全側)。 */
   private summonCtx?: SummonContext;
+  /** summon 後に配下掃討を待っているか。 */
+  private awaitingExposure = false;
+  /** phase1 でコアへ HP ダメージが通る露出ウィンドウの終了時刻(ms)。 */
+  private exposedUntil = 0;
   /** 非人型コアの専用ビジュアル(本体ポリゴン + 発光する眼)。基底の人型リグは隠す。 */
   private readonly coreVisual: Phaser.GameObjects.Container;
   private readonly coreEye: Phaser.GameObjects.Arc;
+  private readonly coreRing: Phaser.GameObjects.Arc;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, { config: ECLIPSE_CORE, rigFamily: 'boss', gravity: false });
@@ -41,7 +47,8 @@ export class CoreBoss extends Boss {
     // 基底が生成する人型リグは使わない(コアは非人型)。専用ビジュアルへ差し替える。
     this.rig.setVisible(false);
     this.coreEye = this.buildEye();
-    this.coreVisual = this.buildCoreVisual(this.coreEye);
+    this.coreRing = this.buildRing();
+    this.coreVisual = this.buildCoreVisual(this.coreEye, this.coreRing);
     this.coreVisual.setPosition(x, y);
   }
 
@@ -50,8 +57,15 @@ export class CoreBoss extends Boss {
     return this.scene.add.circle(0, 0, this.core.width * 0.16, 0x37f7d8).setDepth(10);
   }
 
+  private buildRing(): Phaser.GameObjects.Arc {
+    return this.scene.add.circle(0, 0, this.core.width * 0.24, 0x000000, 0).setDepth(10);
+  }
+
   /** 巨大コアの本体(八角形の暗い装甲 + 発光リング)を組み立て、眼を中央に重ねる。 */
-  private buildCoreVisual(eye: Phaser.GameObjects.Arc): Phaser.GameObjects.Container {
+  private buildCoreVisual(
+    eye: Phaser.GameObjects.Arc,
+    ring: Phaser.GameObjects.Arc,
+  ): Phaser.GameObjects.Container {
     const w = this.core.width;
     const h = this.core.height;
     const body = this.scene.add.graphics();
@@ -78,7 +92,7 @@ export class CoreBoss extends Boss {
     body.fillPath();
     body.strokePath();
     // 眼を囲む発光リング(塗りなし=ストロークのみ)。
-    const ring = this.scene.add.circle(0, 0, w * 0.24, 0x000000, 0).setStrokeStyle(3, 0x37f7d8, 0.7);
+    ring.setStrokeStyle(3, 0x37f7d8, 0.7);
     const container = this.scene.add.container(0, 0, [body, ring, eye]).setDepth(9);
     // 眼の脈動(常時)。太陽を遮る「闇の核」の不穏さを出す。
     this.scene.tweens.add({
@@ -91,6 +105,12 @@ export class CoreBoss extends Boss {
       ease: 'Sine.InOut',
     });
     return container;
+  }
+
+  override update(time: number, playerX: number, playerY: number): void {
+    super.update(time, playerX, playerY);
+    if (!this.isAlive || this.isDead()) return;
+    this.updateExposureState(time);
   }
 
   /** 配下召喚の外部参照を注入する。未注入なら summon は no-op(安全側)。 */
@@ -156,8 +176,31 @@ export class CoreBoss extends Boss {
       // Group.add() がグループ既定値でボディを上書きするため、追加後に再適用して接地を保証する。
       minion.configureBody();
     }
+    if (this.phase === 'phase1') {
+      this.awaitingExposure = true;
+      this.exposedUntil = 0;
+    }
     // 召喚の溜め演出として眼を一瞬強発光させる。
     this.scene.tweens.add({ targets: this.coreEye, alpha: 1, duration: 120, yoyo: true });
+  }
+
+  private updateExposureState(now: number): void {
+    const activeMinions = this.summonCtx?.enemies.countActive(true) ?? 0;
+    if (shouldOpenCoreExposure(this.phase, this.awaitingExposure, activeMinions)) {
+      this.awaitingExposure = false;
+      this.exposedUntil = now + this.core.exposedDurationMs;
+      this.scene.tweens.add({
+        targets: [this.coreEye, this.coreRing],
+        alpha: 1,
+        duration: 140,
+        yoyo: true,
+        repeat: 2,
+      });
+    }
+    if (this.phase === 'phase2') {
+      this.awaitingExposure = false;
+      this.exposedUntil = Number.POSITIVE_INFINITY;
+    }
   }
 
   /**
@@ -167,11 +210,29 @@ export class CoreBoss extends Boss {
   protected override updateRig(_time: number, _playerX: number): void {
     this.coreVisual.setPosition(this.x, this.y);
     const staggering = this.currentAction === 'stagger';
-    const eyeColor = staggering ? 0xff6b6b : this.phase === 'phase2' ? 0xff5a5a : 0x37f7d8;
+    const exposed = isCoreDamageOpen(this.phase, this.exposedUntil, this.scene.time.now);
+    const eyeColor = staggering
+      ? 0xff6b6b
+      : this.phase === 'phase2'
+        ? 0xff5a5a
+        : exposed
+          ? 0xf7f29d
+          : 0x37f7d8;
     this.coreEye.setFillStyle(eyeColor);
+    this.coreRing.setStrokeStyle(3, eyeColor, exposed ? 0.95 : 0.55);
+    this.coreEye.setAlpha(exposed ? 1 : 0.75);
   }
 
   override takeDamage(amount: number, hitKind?: ShieldHitKind): void {
+    if (!isCoreDamageOpen(this.phase, this.exposedUntil, this.scene.time.now)) {
+      this.scene.tweens.add({
+        targets: this.coreRing,
+        alpha: 0.35,
+        duration: 90,
+        yoyo: true,
+      });
+      return;
+    }
     super.takeDamage(amount, hitKind);
     // 撃破で専用ビジュアルも消す(基底はリグを隠すが、コアは独自ビジュアルのため別途消す)。
     if (this.isDead()) {
