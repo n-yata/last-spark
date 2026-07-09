@@ -1,10 +1,7 @@
 name: CI
 
-# PR では verify(typecheck/lint/unit/build)と e2e-smoke を並列で回す。feature ブランチ push では
-# PR と重複して待ち時間が増えるため起動しない。
-# e2e-smoke は必須チェックにしない(branch protection 対象外)。verify が緑になればマージ可能で、
-# smoke はマージ判断をブロックしない参考シグナルとして扱う(リリース速度を優先する個人開発の運用)。
-# フル E2E は従来どおり workflow_dispatch から明示実行する。
+# PR では verify(typecheck/lint/unit/build)だけを回し、待ち時間を最小化する。
+# e2e-smoke / e2e-full は workflow_dispatch から明示実行する。
 on:
   pull_request:
   workflow_dispatch:
@@ -57,9 +54,8 @@ jobs:
 
   e2e-smoke:
     runs-on: ubuntu-latest
-    # pull_request でも実行する参考シグナル(非ブロッキング)。branch protection の必須チェック対象外なので、
-    # このジョブが失敗・遅延してもマージ判断はブロックしない。workflow_dispatch では smoke 選択時のみ起動。
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.e2e_suite == 'smoke') }}
+    # リリース速度優先のため、PR では走らせない。必要な時だけ手動で smoke を実行する。
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.e2e_suite == 'smoke' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
