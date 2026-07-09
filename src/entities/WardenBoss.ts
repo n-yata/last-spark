@@ -13,10 +13,16 @@ import { Projectile } from './Projectile';
 export class WardenBoss extends Boss {
   /** WardenBossConfig として参照するための型付きエイリアス。 */
   private readonly warden: WardenBossConfig;
+  /** containment の外部参照(未注入なら no-op)。 */
+  private containmentCtx?: ContainmentContext;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, { config: CONTAINMENT_WARDEN, rigFamily: 'bossWarden', gravity: true });
     this.warden = CONTAINMENT_WARDEN;
+  }
+
+  setContainmentContext(ctx: ContainmentContext): void {
+    this.containmentCtx = ctx;
   }
 
   protected override beginNextAction(now: number, playerX: number): void {
@@ -37,6 +43,8 @@ export class WardenBoss extends Boss {
       this.fireVolley(playerX);
     } else if (next === 'missile') {
       this.fireMissiles(playerX);
+    } else if (next === 'containment') {
+      this.fireContainment(playerX);
     } else if (next === 'move') {
       this.paceDir = this.chooseMoveDir();
     } else if (next === 'jump') {
@@ -77,4 +85,24 @@ export class WardenBoss extends Boss {
     }
     this.rig.triggerAttack(this.scene.time.now);
   }
+
+  /**
+   * containment: プレイヤー周辺へ左右の拘束フィールドを立て、横移動の自由を狭めたうえで
+   * ミサイルを落とす。「収容番人に追い詰められる」体験を stage3 の攻略テーマとして明示する。
+   */
+  private fireContainment(playerX: number): void {
+    const ctx = this.containmentCtx;
+    const isPhase2 = this.phase === 'phase2';
+    const widthPx = isPhase2 ? this.warden.containmentWidthP2 : this.warden.containmentWidthP1;
+    const durationMs = isPhase2
+      ? this.warden.containmentDurationMsP2
+      : this.warden.containmentDurationMsP1;
+    const centerX = Phaser.Math.Clamp(playerX, this.arenaMinX, this.arenaMaxX);
+    ctx?.spawnField(centerX, widthPx, durationMs);
+    this.fireMissiles(centerX);
+  }
+}
+
+export interface ContainmentContext {
+  spawnField(centerX: number, widthPx: number, durationMs: number): void;
 }

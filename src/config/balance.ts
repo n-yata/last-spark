@@ -207,6 +207,12 @@ export interface WardenBossConfig extends BossConfig {
   missileCountP2: number;
   /** ミサイル着弾点を散らす左右間隔(px)。プレイヤー X を中心に配る。 */
   missileSpread: number;
+  /** containment 中に確保する横幅(px)。phase2 で狭くし、拘束を強める。 */
+  containmentWidthP1: number;
+  containmentWidthP2: number;
+  /** containment の持続時間(ms)。 */
+  containmentDurationMsP1: number;
+  containmentDurationMsP2: number;
 }
 
 /**
@@ -233,6 +239,7 @@ export const CONTAINMENT_WARDEN = {
     shoot: 900,
     jump: 1000,
     missile: 1100,
+    containment: 1200,
     stagger: 800,
   },
   phase2SpeedFactor: 0.75,
@@ -240,6 +247,10 @@ export const CONTAINMENT_WARDEN = {
   missileCountP1: 2,
   missileCountP2: 3,
   missileSpread: 120,
+  containmentWidthP1: 220,
+  containmentWidthP2: 180,
+  containmentDurationMsP1: 1200,
+  containmentDurationMsP2: 1500,
 } as const satisfies WardenBossConfig;
 
 /**
@@ -451,6 +462,8 @@ export interface CoreBossConfig extends BossConfig {
   summonSafeRadius: number;
   /** 同じ側に複数体を並べて召喚するときの体間隔(px)。外側へこの距離ずつ離す。 */
   summonSpacing: number;
+  /** 配下掃討後にコアが露出する時間(ms)。 */
+  exposedDurationMs: number;
 }
 
 /**
@@ -485,6 +498,7 @@ export const ECLIPSE_CORE = {
   // かつ無敵時間(800ms)・移動速度(160px/s)で離脱できる距離を確保し、召喚即接触の理不尽を防ぐ。
   summonSafeRadius: 140,
   summonSpacing: 120, // 同じ側に2体目以降を並べるときの体間隔(外側へずらす)
+  exposedDurationMs: 2600,
 } as const satisfies CoreBossConfig;
 
 /**

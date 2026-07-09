@@ -47,6 +47,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
   protected currentAction: BossAction = 'idle';
   protected lastAction: BossAction = 'idle';
   protected actionEndsAt = 0;
+  protected heldUntil = 0;
   protected staggerAccumulated = 0;
   protected projectiles?: Phaser.Physics.Arcade.Group;
   protected isAlive = true; // Phaser の active と区別する撃破フラグ
@@ -112,12 +113,27 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements Damageable {
     return this.currentAction;
   }
 
+  /** 登場演出などのため、短時間だけ自律行動を止める。 */
+  holdFor(durationMs: number): void {
+    this.heldUntil = Math.max(this.heldUntil, this.scene.time.now + durationMs);
+    this.actionEndsAt = this.heldUntil;
+    this.currentAction = 'idle';
+    this.setVelocity(0, 0);
+  }
+
   /** フェーズ/アクション遷移を駆動する。 */
   override update(time: number, playerX: number, playerY: number): void {
     if (!this.isAlive || this.isDead()) return;
     this.phase = bossPhaseForHp(this.hp, this.maxHp);
     // 射撃はプレイヤーの高さを狙う(ボス中心はプレイヤーより高く、水平発射だと頭上を越すため)。
     this.targetY = playerY;
+
+    if (time < this.heldUntil) {
+      this.currentAction = 'idle';
+      this.setVelocity(0, 0);
+      this.updateRig(time, playerX);
+      return;
+    }
 
     if (time >= this.actionEndsAt) {
       this.beginNextAction(time, playerX);
